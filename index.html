@@ -47,14 +47,19 @@ label{font-size:13px;font-weight:650;display:block;margin-top:8px}input{width:10
 <script>
 const SUPABASE_URL = 'https://rxikasycoyihqbrvqluu.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_EcwbSaSOp_Qb8yX0gmpKQw_-Ad3vwCx';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+let supabase = null;
+try {
+  if (window.supabase && typeof window.supabase.createClient === 'function') {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  }
+} catch (e) { console.error('Supabase initialization failed:', e); }
 const $ = id => document.getElementById(id);
 function message(text, kind=''){const el=$('authMessage');el.textContent=text;el.className='status '+kind;}
 function showMode(mode){$('loginCard').classList.toggle('hidden',mode!=='login');$('signupCard').classList.toggle('hidden',mode!=='signup');message('');}
 $('showLogin').onclick=()=>showMode('login');$('showSignup').onclick=()=>showMode('signup');
-$('loginBtn').onclick=async()=>{const email=$('loginEmail').value.trim(),password=$('loginPassword').value;if(!email||!password)return message('اكتب البريد الإلكتروني وكلمة المرور.','error');$('loginBtn').disabled=true;message('جارٍ تسجيل الدخول…');const {error}=await supabase.auth.signInWithPassword({email,password});$('loginBtn').disabled=false;if(error)return message(error.message,'error');await loadAccount();};
-$('signupBtn').onclick=async()=>{const full_name=$('fullName').value.trim(),email=$('signupEmail').value.trim(),password=$('signupPassword').value,referral_code=$('referralCode').value.trim();if(!full_name||!email||password.length<6)return message('اكتب الاسم والبريد وكلمة مرور من 6 أحرف على الأقل.','error');$('signupBtn').disabled=true;message('جارٍ إنشاء الحساب…');const {data,error}=await supabase.auth.signUp({email,password,options:{data:{full_name,referral_code}}});$('signupBtn').disabled=false;if(error)return message(error.message,'error');if(data.session){await loadAccount();}else{message('تم إرسال طلب التسجيل. افتح بريدك الإلكتروني وأكّد الحساب، ثم ارجع وسجّل الدخول.','ok');}};
-async function loadAccount(){const {data:{user},error:authError}=await supabase.auth.getUser();if(authError||!user){$('authView').classList.remove('hidden');$('accountView').classList.add('hidden');return;}$('authView').classList.add('hidden');$('accountView').classList.remove('hidden');$('userEmail').textContent=user.email||'';$('userName').textContent=user.user_metadata?.full_name||'مستخدم رزق';$('walletBalance').textContent='—';$('walletCurrency').textContent='';$('myReferralCode').value='—';$('referralSummary').textContent='جارٍ التحميل…';
+$('loginBtn').onclick=async()=>{if(!supabase)return message('تعذر تحميل خدمة الحسابات. تأكد من اتصال الإنترنت ثم حدّث الصفحة.','error');const email=$('loginEmail').value.trim(),password=$('loginPassword').value;if(!email||!password)return message('اكتب البريد الإلكتروني وكلمة المرور.','error');$('loginBtn').disabled=true;message('جارٍ تسجيل الدخول…');const {error}=await supabase.auth.signInWithPassword({email,password});$('loginBtn').disabled=false;if(error)return message(error.message,'error');await loadAccount();};
+$('signupBtn').onclick=async()=>{if(!supabase)return message('تعذر تحميل خدمة الحسابات. تأكد من اتصال الإنترنت ثم حدّث الصفحة.','error');const full_name=$('fullName').value.trim(),email=$('signupEmail').value.trim(),password=$('signupPassword').value,referral_code=$('referralCode').value.trim();if(!full_name||!email||password.length<6)return message('اكتب الاسم والبريد وكلمة مرور من 6 أحرف على الأقل.','error');$('signupBtn').disabled=true;message('جارٍ إنشاء الحساب…');const {data,error}=await supabase.auth.signUp({email,password,options:{data:{full_name,referral_code}}});$('signupBtn').disabled=false;if(error)return message(error.message,'error');if(data.session){await loadAccount();}else{message('تم إرسال طلب التسجيل. افتح بريدك الإلكتروني وأكّد الحساب، ثم ارجع وسجّل الدخول.','ok');}};
+async function loadAccount(){if(!supabase){$('authView').classList.remove('hidden');$('accountView').classList.add('hidden');message('تعذر تحميل خدمة الحسابات. حدّث الصفحة وتأكد من الإنترنت.','error');return;}const {data:{user},error:authError}=await supabase.auth.getUser();if(authError||!user){$('authView').classList.remove('hidden');$('accountView').classList.add('hidden');return;}$('authView').classList.add('hidden');$('accountView').classList.remove('hidden');$('userEmail').textContent=user.email||'';$('userName').textContent=user.user_metadata?.full_name||'مستخدم رزق';$('walletBalance').textContent='—';$('walletCurrency').textContent='';$('myReferralCode').value='—';$('referralSummary').textContent='جارٍ التحميل…';
 const [profileResult,walletResult,refResult]=await Promise.all([
 supabase.from('profiles').select('full_name,referral_code').eq('id',user.id).maybeSingle(),
 supabase.from('wallets').select('balance,currency').eq('user_id',user.id).maybeSingle(),
@@ -65,8 +70,8 @@ if(walletResult.error){$('walletBalance').textContent='غير متاح';$('walle
 if(refResult.error){$('referralSummary').textContent='تعذر قراءة الإحالات: '+refResult.error.message;}else{$('referralSummary').textContent='عدد الأشخاص المسجلين بكودك: '+(refResult.data?.length||0);}
 }
 $('copyCodeBtn').onclick=async()=>{const v=$('myReferralCode').value;if(!v||v==='—'||v==='لم يتم إنشاء كود بعد')return;try{await navigator.clipboard.writeText(v);$('copyCodeBtn').textContent='تم النسخ';setTimeout(()=>$('copyCodeBtn').textContent='نسخ',1500);}catch(e){$('myReferralCode').select();document.execCommand('copy');$('copyCodeBtn').textContent='تم النسخ';}};
-$('refreshBtn').onclick=loadAccount;$('logoutBtn').onclick=async()=>{await supabase.auth.signOut();$('accountView').classList.add('hidden');$('authView').classList.remove('hidden');showMode('login');};
-supabase.auth.onAuthStateChange((_event,session)=>{if(session)setTimeout(loadAccount,0);});
-(async()=>{const {data:{session}}=await supabase.auth.getSession();if(session)await loadAccount();})();
+$('refreshBtn').onclick=loadAccount;$('logoutBtn').onclick=async()=>{if(!supabase)return message('خدمة الحسابات غير متاحة حاليًا.','error');await supabase.auth.signOut();$('accountView').classList.add('hidden');$('authView').classList.remove('hidden');showMode('login');};
+if(supabase){supabase.auth.onAuthStateChange((_event,session)=>{if(session)setTimeout(loadAccount,0);});
+(async()=>{const {data:{session}}=await supabase.auth.getSession();if(session)await loadAccount();})();}
 </script>
 </body></html>
