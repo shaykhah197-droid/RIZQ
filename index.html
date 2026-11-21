@@ -7,36 +7,39 @@
 <title>رزق RIZQ</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-:root{--bg:#f3f6f4;--card:#fff;--ink:#17251e;--muted:#718078;--green:#087b50;--light:#e6f4ed;--border:#e2e9e4;--red:#c0392b}
+:root{--bg:#f3f6f4;--card:#fff;--ink:#17251e;--muted:#718078;--green:#087b50;--light:#e6f4ed;--border:#e2e9e4;--red:#c0392b;--gold:#fff5d9}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Tahoma,sans-serif}
 header{background:#075b3e;color:white;padding:20px 16px}
 header h1{margin:0;font-size:26px}
 header p{margin:7px 0 0;color:#d6eee3;font-size:13px}
-main{max-width:850px;margin:18px auto;padding:0 12px}
+main{max-width:900px;margin:18px auto;padding:0 12px}
 .card{background:var(--card);border:1px solid var(--border);border-radius:15px;padding:17px;margin-bottom:14px;box-shadow:0 3px 12px #102a1b08}
 h2{font-size:18px;margin:0 0 14px}
 h3{font-size:16px;margin:0 0 8px}
 input,textarea,select{width:100%;padding:12px;margin:6px 0 12px;border:1px solid var(--border);border-radius:9px;font-size:15px;background:white;color:var(--ink)}
 textarea{min-height:75px;resize:vertical}
-button{border:0;border-radius:9px;padding:12px 16px;background:var(--green);color:white;font-size:15px;font-weight:bold;cursor:pointer}
+button{border:0;border-radius:9px;padding:12px 15px;background:var(--green);color:white;font-size:14px;font-weight:bold;cursor:pointer;margin:3px}
 button.secondary{background:var(--light);color:var(--green)}
 button.danger{background:#fff0ef;color:var(--red)}
 button:disabled{opacity:.5;cursor:not-allowed}
 .row{display:flex;gap:9px;flex-wrap:wrap}
-.row>*{flex:1}
+.row>*{flex:1;min-width:0}
 .muted{color:var(--muted);font-size:13px}
 .notice{padding:11px;border-radius:9px;background:var(--light);color:#075b3e;font-size:13px;margin:10px 0}
 .error{background:#fff0ef;color:var(--red)}
 .stat{background:var(--light);padding:14px;border-radius:12px;flex:1;min-width:130px}
 .stat strong{display:block;font-size:23px;margin-top:7px}
-.item{padding:12px 0;border-bottom:1px solid var(--border)}
+.item{padding:13px 0;border-bottom:1px solid var(--border)}
 .item:last-child{border:0}
 .tag{display:inline-block;padding:4px 9px;border-radius:20px;background:var(--light);color:var(--green);font-size:12px}
+.pending{background:var(--gold);color:#805b00}
 .hidden{display:none!important}
-nav{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
-nav button{font-size:13px;padding:10px 12px}
+nav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
+nav button{font-size:13px;padding:10px}
 footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
+.admin-head{background:#153e31;color:white;border-radius:12px;padding:14px;margin-bottom:12px}
+.small{font-size:12px}
 </style>
 </head>
 <body>
@@ -55,16 +58,16 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
       <input id="fullName" placeholder="اكتب اسمك">
     </div>
     <label>البريد الإلكتروني</label>
-    <input id="email" type="email" placeholder="name@example.com" autocomplete="email">
+    <input id="email" type="email" placeholder="name@example.com">
     <label>كلمة المرور</label>
-    <input id="password" type="password" placeholder="كلمة المرور" autocomplete="current-password">
+    <input id="password" type="password" placeholder="كلمة المرور">
     <div id="refWrap" class="hidden">
       <label>كود الإحالة (اختياري)</label>
       <input id="refCode" placeholder="كود دعوة صديقك">
     </div>
     <button id="authBtn" onclick="authenticate()">دخول</button>
     <button class="secondary" onclick="toggleAuth()" id="toggleBtn">إنشاء حساب جديد</button>
-    <p class="muted">التسجيل متاح بالبريد الإلكتروني فقط.</p>
+    <p class="muted">التسجيل والدخول بالبريد الإلكتروني.</p>
   </section>
 
   <section id="app" class="hidden">
@@ -73,6 +76,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
         <div style="flex:2">
           <h2 style="margin-bottom:5px">أهلاً <span id="userName">بك</span></h2>
           <div class="muted" id="userEmail"></div>
+          <div id="roleLabel" class="hidden"><span class="tag">مدير المنصة</span></div>
         </div>
         <button class="secondary" onclick="logout()">تسجيل الخروج</button>
       </div>
@@ -84,18 +88,13 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
       <button class="secondary" onclick="showTab('deposit')">إيداع</button>
       <button class="secondary" onclick="showTab('withdraw')">سحب</button>
       <button class="secondary" onclick="showTab('history')">السجل</button>
+      <button id="adminNav" class="hidden" onclick="showTab('admin')">لوحة المدير</button>
     </nav>
 
     <section id="tab-home" class="tab">
       <div class="row">
-        <div class="stat">
-          <span class="muted">رصيد المحفظة</span>
-          <strong id="balance">0.00 ج.م</strong>
-        </div>
-        <div class="stat">
-          <span class="muted">عدد الإحالات</span>
-          <strong id="refCount">0</strong>
-        </div>
+        <div class="stat"><span class="muted">رصيد المحفظة</span><strong id="balance">0.00 ج.م</strong></div>
+        <div class="stat"><span class="muted">عدد الإحالات</span><strong id="refCount">0</strong></div>
       </div>
       <div class="card" style="margin-top:14px">
         <h2>كود دعوتك</h2>
@@ -103,7 +102,6 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
           <input id="myReferral" readonly>
           <button onclick="copyReferral()">نسخ الكود</button>
         </div>
-        <p class="muted">شارك الكود مع أصدقائك. تُسجل الإحالات داخل حسابك.</p>
       </div>
       <div class="card">
         <h2>آخر الحركات</h2>
@@ -112,31 +110,25 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
     </section>
 
     <section id="tab-tasks" class="tab hidden">
-      <div class="card">
-        <h2>المهام المتاحة</h2>
-        <div id="tasksList">جارٍ تحميل المهام...</div>
-      </div>
-      <div class="card">
-        <h2>مهامي المرسلة</h2>
-        <div id="mySubmissions">جارٍ التحميل...</div>
-      </div>
+      <div class="card"><h2>المهام المتاحة</h2><div id="tasksList">جارٍ التحميل...</div></div>
+      <div class="card"><h2>مهامي المرسلة</h2><div id="mySubmissions">جارٍ التحميل...</div></div>
     </section>
 
     <section id="tab-deposit" class="tab hidden">
       <div class="card">
         <h2>طلب إيداع</h2>
-        <div class="notice">حوّل المبلغ إلى وسيلة الدفع المعروضة، ثم أرسل رقم العملية. لن يُضاف الرصيد إلا بعد التحقق من وصول المبلغ واعتماد الطلب.</div>
+        <div class="notice">حوّل المبلغ إلى بيانات الاستلام المعروضة، ثم أرسل رقم العملية. لن يُضاف الرصيد إلا بعد التحقق من وصول التحويل واعتماد المدير.</div>
         <div id="paymentMethods">جارٍ تحميل وسائل الدفع...</div>
         <label>المبلغ بالجنيه المصري</label>
-        <input id="depositAmount" type="number" min="1" step="0.01" placeholder="مثال: 100">
+        <input id="depositAmount" type="number" min="1" step="0.01" placeholder="المبلغ">
         <label>وسيلة التحويل</label>
         <select id="depositMethod"></select>
         <label>رقم العملية / مرجع التحويل</label>
         <input id="depositReference" placeholder="رقم العملية">
-        <label>ملاحظات أو تفاصيل الإثبات</label>
-        <textarea id="depositNote" placeholder="اكتب أي تفاصيل تساعد في مراجعة التحويل"></textarea>
+        <label>ملاحظات الإثبات</label>
+        <textarea id="depositNote" placeholder="تفاصيل التحويل"></textarea>
         <button onclick="sendDeposit()">إرسال طلب الإيداع</button>
-        <h3 style="margin-top:20px">طلباتي السابقة</h3>
+        <h3 style="margin-top:18px">طلباتي السابقة</h3>
         <div id="depositHistory">جارٍ التحميل...</div>
       </div>
     </section>
@@ -144,7 +136,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
     <section id="tab-withdraw" class="tab hidden">
       <div class="card">
         <h2>طلب سحب</h2>
-        <div class="notice">طلب السحب يُراجع أولاً. لا يعتبر الطلب مدفوعاً حتى يتم التحويل الفعلي وتسجيل رقم العملية.</div>
+        <div class="notice">يُراجع الطلب أولاً. لا يعتبر الطلب مدفوعاً حتى يتم التحويل الفعلي وتسجيل رقم العملية.</div>
         <label>المبلغ بالجنيه المصري</label>
         <input id="withdrawAmount" type="number" min="1" step="0.01" placeholder="المبلغ">
         <label>طريقة الاستلام</label>
@@ -153,17 +145,53 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
           <option value="Binance">Binance</option>
         </select>
         <label>رقم الهاتف أو بيانات محفظة Binance</label>
-        <textarea id="recipientDetails" placeholder="اكتب بيانات الاستلام بدقة"></textarea>
+        <textarea id="recipientDetails" placeholder="بيانات الاستلام"></textarea>
         <button onclick="sendWithdrawal()">إرسال طلب السحب</button>
-        <h3 style="margin-top:20px">طلباتي السابقة</h3>
+        <h3 style="margin-top:18px">طلباتي السابقة</h3>
         <div id="withdrawHistory">جارٍ التحميل...</div>
       </div>
     </section>
 
     <section id="tab-history" class="tab hidden">
+      <div class="card"><h2>سجل معاملات المحفظة</h2><div id="allTransactions">جارٍ التحميل...</div></div>
+    </section>
+
+    <!-- ADMIN PANEL -->
+    <section id="tab-admin" class="tab hidden">
+      <div class="admin-head">
+        <h2 style="margin:0">لوحة إدارة RIZQ</h2>
+        <p class="small">إدارة طلبات الدفع وبيانات الاستلام</p>
+      </div>
+
+      <div class="row">
+        <div class="stat"><span class="muted">طلبات الإيداع المعلقة</span><strong id="adminDepositCount">—</strong></div>
+        <div class="stat"><span class="muted">طلبات السحب المعلقة</span><strong id="adminWithdrawCount">—</strong></div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <div class="row" style="align-items:center">
+          <h2 style="flex:2">طلبات الإيداع</h2>
+          <button class="secondary" onclick="loadAdmin()">تحديث</button>
+        </div>
+        <div id="adminDeposits">جارٍ التحميل...</div>
+      </div>
+
       <div class="card">
-        <h2>سجل معاملات المحفظة</h2>
-        <div id="allTransactions">جارٍ التحميل...</div>
+        <h2>طلبات السحب</h2>
+        <div id="adminWithdrawals">جارٍ التحميل...</div>
+      </div>
+
+      <div class="card">
+        <h2>إضافة وسيلة استقبال أموال</h2>
+        <label>اسم الوسيلة</label>
+        <select id="newMethodName">
+          <option value="Vodafone Cash">فودافون كاش</option>
+          <option value="Binance">Binance</option>
+        </select>
+        <label>رقم الهاتف أو بيانات الاستلام</label>
+        <textarea id="newMethodDetails" placeholder="أدخل رقم فودافون كاش أو بيانات استقبال Binance"></textarea>
+        <button onclick="addPaymentMethod()">حفظ وسيلة الاستقبال</button>
+        <div id="adminMethods" style="margin-top:12px">جارٍ التحميل...</div>
       </div>
     </section>
   </section>
@@ -172,202 +200,326 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <footer>RIZQ © 2026 — جميع الحقوق محفوظة</footer>
 
 <script>
-const SUPABASE_URL = "https://rxikasycoyihqbrvqluu.supabase.co";
-const SUPABASE_KEY = "sb_publishable_EcwbSaSOp_Qb8yX0gmpKQw_-Ad3vwCx";
-const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL="https://rxikasycoyihqbrvqluu.supabase.co";
+const SUPABASE_KEY="sb_publishable_EcwbSaSOp_Qb8yX0gmpKQw_-Ad3vwCx";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-let currentUser = null;
-let profile = null;
-let signupMode = false;
-let methodsCache = [];
+let currentUser=null,profile=null,isAdmin=false,signupMode=false;
 
-function message(text, error=false){
-  const el=document.getElementById('message');
-  el.textContent=text;
-  el.className='notice'+(error?' error':'');
-  el.classList.remove('hidden');
-  window.scrollTo({top:0,behavior:'smooth'});
+function msg(t,err=false){
+ const e=document.getElementById('message');
+ e.textContent=t;e.className='notice'+(err?' error':'');
+ e.classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});
 }
-function money(v){return Number(v||0).toLocaleString('ar-EG',{minimumFractionDigits:2,maximumFractionDigits:2})+' ج.م'}
+function money(v){return Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' ج.م'}
 function safe(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function statusTag(s){return `<span class="tag ${s==='pending'?'pending':''}">${safe(s)}</span>`}
 
 function toggleAuth(){
-  signupMode=!signupMode;
-  document.getElementById('authTitle').textContent=signupMode?'إنشاء حساب جديد':'تسجيل الدخول';
-  document.getElementById('authBtn').textContent=signupMode?'إنشاء الحساب':'دخول';
-  document.getElementById('toggleBtn').textContent=signupMode?'لديك حساب؟ تسجيل الدخول':'إنشاء حساب جديد';
-  document.getElementById('nameWrap').classList.toggle('hidden',!signupMode);
-  document.getElementById('refWrap').classList.toggle('hidden',!signupMode);
+ signupMode=!signupMode;
+ document.getElementById('authTitle').textContent=signupMode?'إنشاء حساب جديد':'تسجيل الدخول';
+ document.getElementById('authBtn').textContent=signupMode?'إنشاء الحساب':'دخول';
+ document.getElementById('toggleBtn').textContent=signupMode?'لديك حساب؟ تسجيل الدخول':'إنشاء حساب جديد';
+ document.getElementById('nameWrap').classList.toggle('hidden',!signupMode);
+ document.getElementById('refWrap').classList.toggle('hidden',!signupMode);
 }
+
 async function authenticate(){
-  const email=document.getElementById('email').value.trim();
-  const password=document.getElementById('password').value;
-  if(!email||!password)return message('اكتب البريد الإلكتروني وكلمة المرور',true);
-  const btn=document.getElementById('authBtn');btn.disabled=true;
-  try{
-    if(signupMode){
-      const full_name=document.getElementById('fullName').value.trim();
-      const referral_code=document.getElementById('refCode').value.trim();
-      if(!full_name)throw Error('اكتب اسمك الكامل');
-      const {data,error}=await db.auth.signUp({
-        email,password,
-        options:{data:{full_name,referral_code}}
-      });
-      if(error)throw error;
-      if(data.session){currentUser=data.user;await loadApp();}
-      else message('تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيد التسجيل إذا طُلب منك ذلك.');
-    }else{
-      const {data,error}=await db.auth.signInWithPassword({email,password});
-      if(error)throw error;
-      currentUser=data.user;await loadApp();
-    }
-  }catch(e){message(e.message||'حدث خطأ',true)}
-  finally{btn.disabled=false}
+ const email=document.getElementById('email').value.trim();
+ const password=document.getElementById('password').value;
+ if(!email||!password)return msg('اكتب البريد وكلمة المرور',true);
+ const b=document.getElementById('authBtn');b.disabled=true;
+ try{
+  if(signupMode){
+   const full_name=document.getElementById('fullName').value.trim();
+   const referral_code=document.getElementById('refCode').value.trim();
+   if(!full_name)throw Error('اكتب اسمك');
+   const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name,referral_code}}});
+   if(error)throw error;
+   if(data.session){currentUser=data.user;await loadApp()}
+   else msg('تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيد التسجيل إذا طُلب منك.');
+  }else{
+   const {data,error}=await db.auth.signInWithPassword({email,password});
+   if(error)throw error;
+   currentUser=data.user;await loadApp();
+  }
+ }catch(e){msg(e.message,true)}
+ finally{b.disabled=false}
 }
+
 async function logout(){
-  await db.auth.signOut();currentUser=null;profile=null;
-  document.getElementById('app').classList.add('hidden');
-  document.getElementById('auth').classList.remove('hidden');
+ await db.auth.signOut();currentUser=null;profile=null;isAdmin=false;
+ document.getElementById('app').classList.add('hidden');
+ document.getElementById('auth').classList.remove('hidden');
 }
+
 async function loadApp(){
-  document.getElementById('auth').classList.add('hidden');
-  document.getElementById('app').classList.remove('hidden');
-  document.getElementById('userEmail').textContent=currentUser.email||'';
-  await loadProfile();
-  await Promise.all([loadWallet(),loadReferral(),loadTasks(),loadSubmissions(),loadMethods(),loadDepositHistory(),loadWithdrawalHistory(),loadTransactions()]);
+ isAdmin=currentUser?.app_metadata?.role==='admin';
+ document.getElementById('auth').classList.add('hidden');
+ document.getElementById('app').classList.remove('hidden');
+ document.getElementById('userEmail').textContent=currentUser.email||'';
+ document.getElementById('adminNav').classList.toggle('hidden',!isAdmin);
+ document.getElementById('roleLabel').classList.toggle('hidden',!isAdmin);
+ await loadProfile();
+ await Promise.all([
+  loadWallet(),loadReferral(),loadTasks(),loadSubmissions(),
+  loadMethods(),loadDepositHistory(),loadWithdrawalHistory(),loadTransactions()
+ ]);
+ if(isAdmin)await loadAdmin();
 }
+
 async function loadProfile(){
-  const {data,error}=await db.from('profiles').select('*').eq('id',currentUser.id).maybeSingle();
-  if(error)throw error;
-  profile=data;
-  document.getElementById('userName').textContent=profile?.full_name||currentUser.email;
-  document.getElementById('myReferral').value=profile?.referral_code||'';
+ const {data,error}=await db.from('profiles').select('*').eq('id',currentUser.id).maybeSingle();
+ if(error)throw error;
+ profile=data;
+ document.getElementById('userName').textContent=profile?.full_name||currentUser.email;
+ document.getElementById('myReferral').value=profile?.referral_code||'';
 }
 async function loadWallet(){
-  const {data,error}=await db.from('wallets').select('balance,currency').eq('user_id',currentUser.id).maybeSingle();
-  if(error)throw error;
-  document.getElementById('balance').textContent=money(data?.balance||0);
+ const {data,error}=await db.from('wallets').select('balance').eq('user_id',currentUser.id).maybeSingle();
+ if(error)throw error;
+ document.getElementById('balance').textContent=money(data?.balance||0);
 }
 async function loadReferral(){
-  const {count,error}=await db.from('referrals').select('*',{count:'exact',head:true}).eq('referrer_id',currentUser.id);
-  if(error)throw error;
-  document.getElementById('refCount').textContent=count||0;
+ const {count,error}=await db.from('referrals').select('*',{count:'exact',head:true}).eq('referrer_id',currentUser.id);
+ if(error)throw error;
+ document.getElementById('refCount').textContent=count||0;
 }
 async function loadTasks(){
-  const box=document.getElementById('tasksList');
-  const {data,error}=await db.from('tasks').select('*').eq('active',true).order('created_at',{ascending:false});
-  if(error){box.textContent='تعذر تحميل المهام: '+error.message;return}
-  if(!data?.length){box.textContent='لا توجد مهام متاحة حالياً';return}
-  box.innerHTML=data.map(t=>`
-    <div class="item">
-      <h3>${safe(t.title)}</h3>
-      <p>${safe(t.description||'')}</p>
-      <p><span class="tag">المكافأة: ${money(t.reward)}</span></p>
-      <button onclick="submitTask('${t.id}')">إرسال المهمة للمراجعة</button>
-    </div>`).join('');
+ const box=document.getElementById('tasksList');
+ const {data,error}=await db.from('tasks').select('*').eq('active',true).order('created_at',{ascending:false});
+ if(error){box.textContent=error.message;return}
+ box.innerHTML=data?.length?data.map(t=>`
+ <div class="item"><h3>${safe(t.title)}</h3><p>${safe(t.description)}</p>
+ <p><span class="tag">المكافأة: ${money(t.reward)}</span></p>
+ <button onclick="submitTask('${t.id}')">إرسال للمراجعة</button></div>`).join(''):'لا توجد مهام متاحة حالياً';
 }
-async function submitTask(taskId){
-  try{
-    const {error}=await db.from('task_submissions').insert({task_id:taskId,user_id:currentUser.id,status:'pending'});
-    if(error)throw error;
-    message('تم إرسال المهمة للمراجعة');
-    await loadSubmissions();
-  }catch(e){message(e.message,true)}
+async function submitTask(id){
+ try{
+  const {error}=await db.from('task_submissions').insert({task_id:id,user_id:currentUser.id,status:'pending'});
+  if(error)throw error;
+  msg('تم إرسال المهمة للمراجعة');await loadSubmissions();
+ }catch(e){msg(e.message,true)}
 }
 async function loadSubmissions(){
-  const box=document.getElementById('mySubmissions');
-  const {data,error}=await db.from('task_submissions').select('id,status,submitted_at,review_note').eq('user_id',currentUser.id).order('submitted_at',{ascending:false});
-  if(error){box.textContent=error.message;return}
-  box.innerHTML=data?.length?data.map(x=>`<div class="item">الحالة: <span class="tag">${safe(x.status)}</span><div class="muted">${safe(x.review_note||'')}</div></div>`).join(''):'لا توجد مهام مرسلة';
+ const box=document.getElementById('mySubmissions');
+ const {data,error}=await db.from('task_submissions').select('*').eq('user_id',currentUser.id).order('submitted_at',{ascending:false});
+ if(error){box.textContent=error.message;return}
+ box.innerHTML=data?.length?data.map(x=>`<div class="item">الحالة: ${statusTag(x.status)}<div class="muted">${safe(x.review_note||'')}</div></div>`).join(''):'لا توجد مهام مرسلة';
 }
 async function loadMethods(){
-  const box=document.getElementById('paymentMethods');
-  const sel=document.getElementById('depositMethod');
-  const {data,error}=await db.from('payment_methods').select('*').eq('active',true).order('created_at');
-  if(error){box.textContent='تعذر تحميل وسائل الدفع: '+error.message;return}
-  methodsCache=data||[];
-  if(!methodsCache.length){
-    box.innerHTML='<p class="muted">لم يضف المدير وسائل دفع بعد.</p>';
-    sel.innerHTML='<option value="">لا توجد وسيلة متاحة</option>';return;
-  }
-  box.innerHTML=methodsCache.map(m=>`<div class="item"><h3>${safe(m.name)}</h3><p>${safe(m.details)}</p></div>`).join('');
-  sel.innerHTML=methodsCache.map(m=>`<option value="${m.id}">${safe(m.name)}</option>`).join('');
+ const box=document.getElementById('paymentMethods'),sel=document.getElementById('depositMethod');
+ let q=db.from('payment_methods').select('*').eq('active',true).order('created_at');
+ const {data,error}=await q;
+ if(error){box.textContent=error.message;return}
+ box.innerHTML=data?.length?data.map(m=>`<div class="item"><h3>${safe(m.name)}</h3><p>${safe(m.details)}</p></div>`).join(''):'لم تتم إضافة وسائل دفع بعد';
+ sel.innerHTML=data?.length?data.map(m=>`<option value="${m.id}">${safe(m.name)}</option>`).join(''):'<option value="">لا توجد وسيلة</option>';
 }
 async function sendDeposit(){
-  const amount=Number(document.getElementById('depositAmount').value);
-  const method_id=document.getElementById('depositMethod').value;
-  const transaction_reference=document.getElementById('depositReference').value.trim();
-  const proof_note=document.getElementById('depositNote').value.trim();
-  if(!Number.isFinite(amount)||amount<=0)return message('اكتب مبلغاً صحيحاً',true);
-  if(!method_id)return message('لا توجد وسيلة دفع متاحة',true);
-  try{
-    const {error}=await db.from('deposit_requests').insert({
-      user_id:currentUser.id,amount,method_id,transaction_reference,proof_note
-    });
-    if(error)throw error;
-    message('تم إرسال طلب الإيداع بنجاح، وهو الآن قيد المراجعة');
-    document.getElementById('depositAmount').value='';
-    document.getElementById('depositReference').value='';
-    document.getElementById('depositNote').value='';
-    await loadDepositHistory();
-  }catch(e){message(e.message,true)}
+ const amount=Number(document.getElementById('depositAmount').value);
+ const method_id=document.getElementById('depositMethod').value;
+ const transaction_reference=document.getElementById('depositReference').value.trim();
+ const proof_note=document.getElementById('depositNote').value.trim();
+ if(!Number.isFinite(amount)||amount<=0)return msg('اكتب مبلغاً صحيحاً',true);
+ if(!method_id)return msg('لا توجد وسيلة دفع متاحة',true);
+ try{
+  const {error}=await db.from('deposit_requests').insert({user_id:currentUser.id,amount,method_id,transaction_reference,proof_note});
+  if(error)throw error;
+  msg('تم إرسال طلب الإيداع للمراجعة');
+  document.getElementById('depositAmount').value='';
+  document.getElementById('depositReference').value='';
+  document.getElementById('depositNote').value='';
+  await loadDepositHistory();
+ }catch(e){msg(e.message,true)}
 }
 async function loadDepositHistory(){
-  const box=document.getElementById('depositHistory');
-  const {data,error}=await db.from('deposit_requests').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
-  if(error){box.textContent=error.message;return}
-  box.innerHTML=data?.length?data.map(x=>`<div class="item">${money(x.amount)} — <span class="tag">${safe(x.status)}</span><div class="muted">${safe(x.transaction_reference||'بدون رقم مرجعي')}</div></div>`).join(''):'لا توجد طلبات إيداع';
+ const box=document.getElementById('depositHistory');
+ const {data,error}=await db.from('deposit_requests').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+ if(error){box.textContent=error.message;return}
+ box.innerHTML=data?.length?data.map(x=>`<div class="item">${money(x.amount)} — ${statusTag(x.status)}<div class="muted">${safe(x.transaction_reference||'')}</div></div>`).join(''):'لا توجد طلبات إيداع';
 }
 async function sendWithdrawal(){
-  const amount=Number(document.getElementById('withdrawAmount').value);
-  const method=document.getElementById('withdrawMethod').value;
-  const recipient_details=document.getElementById('recipientDetails').value.trim();
-  if(!Number.isFinite(amount)||amount<=0)return message('اكتب مبلغاً صحيحاً',true);
-  if(!recipient_details)return message('اكتب بيانات الاستلام',true);
-  try{
-    const {error}=await db.from('withdrawal_requests').insert({
-      user_id:currentUser.id,amount,method,recipient_details
-    });
-    if(error)throw error;
-    message('تم إرسال طلب السحب للمراجعة. لم يتم خصم أو تحويل المبلغ بمجرد إرسال الطلب.');
-    document.getElementById('withdrawAmount').value='';
-    document.getElementById('recipientDetails').value='';
-    await loadWithdrawalHistory();
-  }catch(e){message(e.message,true)}
+ const amount=Number(document.getElementById('withdrawAmount').value);
+ const method=document.getElementById('withdrawMethod').value;
+ const recipient_details=document.getElementById('recipientDetails').value.trim();
+ if(!Number.isFinite(amount)||amount<=0)return msg('اكتب مبلغاً صحيحاً',true);
+ if(!recipient_details)return msg('اكتب بيانات الاستلام',true);
+ try{
+  const {error}=await db.from('withdrawal_requests').insert({user_id:currentUser.id,amount,method,recipient_details});
+  if(error)throw error;
+  msg('تم إرسال طلب السحب للمراجعة. لم يتم التحويل بعد.');
+  document.getElementById('withdrawAmount').value='';
+  document.getElementById('recipientDetails').value='';
+  await loadWithdrawalHistory();
+ }catch(e){msg(e.message,true)}
 }
 async function loadWithdrawalHistory(){
-  const box=document.getElementById('withdrawHistory');
-  const {data,error}=await db.from('withdrawal_requests').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
-  if(error){box.textContent=error.message;return}
-  box.innerHTML=data?.length?data.map(x=>`<div class="item">${money(x.amount)} — <span class="tag">${safe(x.status)}</span><div class="muted">${safe(x.method)} · ${safe(x.transaction_reference||'')}</div></div>`).join(''):'لا توجد طلبات سحب';
+ const box=document.getElementById('withdrawHistory');
+ const {data,error}=await db.from('withdrawal_requests').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+ if(error){box.textContent=error.message;return}
+ box.innerHTML=data?.length?data.map(x=>`<div class="item">${money(x.amount)} — ${statusTag(x.status)}<div class="muted">${safe(x.method)} · ${safe(x.transaction_reference||'')}</div></div>`).join(''):'لا توجد طلبات سحب';
 }
 async function loadTransactions(){
-  const box=document.getElementById('allTransactions');
-  const {data,error}=await db.from('wallet_transactions').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(50);
-  if(error){box.textContent=error.message;document.getElementById('recentTransactions').textContent=error.message;return}
-  const html=data?.length?data.map(x=>`<div class="item"><b>${safe(x.transaction_type)}</b> — ${money(x.amount)}<div class="muted">${safe(x.description||'')} · ${new Date(x.created_at).toLocaleString('ar-EG')}</div></div>`).join(''):'لا توجد معاملات مسجلة';
-  box.innerHTML=html;
-  document.getElementById('recentTransactions').innerHTML=html;
+ const box=document.getElementById('allTransactions');
+ const {data,error}=await db.from('wallet_transactions').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(50);
+ if(error){box.textContent=error.message;document.getElementById('recentTransactions').textContent=error.message;return}
+ const html=data?.length?data.map(x=>`<div class="item"><b>${safe(x.transaction_type)}</b> — ${money(x.amount)}<div class="muted">${safe(x.description||'')} · ${new Date(x.created_at).toLocaleString('ar-EG')}</div></div>`).join(''):'لا توجد معاملات مسجلة';
+ box.innerHTML=html;document.getElementById('recentTransactions').innerHTML=html;
 }
+
 function copyReferral(){
-  const value=document.getElementById('myReferral').value;
-  if(!value)return message('لا يوجد كود إحالة حتى الآن',true);
-  navigator.clipboard.writeText(value).then(()=>message('تم نسخ كود الإحالة')).catch(()=>message('تعذر النسخ، انسخ الكود يدوياً',true));
+ const v=document.getElementById('myReferral').value;
+ if(!v)return msg('لا يوجد كود إحالة',true);
+ navigator.clipboard.writeText(v).then(()=>msg('تم نسخ الكود')).catch(()=>msg('انسخ الكود يدوياً',true));
 }
 function showTab(name){
-  document.querySelectorAll('.tab').forEach(x=>x.classList.add('hidden'));
-  document.getElementById('tab-'+name).classList.remove('hidden');
-  window.scrollTo({top:0,behavior:'smooth'});
+ document.querySelectorAll('.tab').forEach(x=>x.classList.add('hidden'));
+ document.getElementById('tab-'+name).classList.remove('hidden');
+ if(name==='admin'&&isAdmin)loadAdmin();
+ window.scrollTo({top:0,behavior:'smooth'});
 }
+
+/* ADMIN FUNCTIONS */
+async function loadAdmin(){
+ if(!isAdmin)return msg('غير مصرح لك بفتح لوحة المدير',true);
+ const dep=document.getElementById('adminDeposits');
+ const wit=document.getElementById('adminWithdrawals');
+ dep.textContent='جارٍ تحميل طلبات الإيداع...';
+ wit.textContent='جارٍ تحميل طلبات السحب...';
+
+ const [d,w]=await Promise.all([
+  db.from('deposit_requests').select('*').order('created_at',{ascending:false}).limit(100),
+  db.from('withdrawal_requests').select('*').order('created_at',{ascending:false}).limit(100)
+ ]);
+ if(d.error){dep.textContent='خطأ: '+d.error.message}
+ else{
+  const pending=d.data.filter(x=>x.status==='pending').length;
+  document.getElementById('adminDepositCount').textContent=pending;
+  dep.innerHTML=d.data.length?d.data.map(x=>`
+   <div class="item">
+    <b>طلب إيداع</b> — ${money(x.amount)} ${statusTag(x.status)}
+    <div class="muted">المستخدم: ${safe(x.user_id)}</div>
+    <div class="muted">وسيلة الدفع: ${safe(x.method_id)}</div>
+    <div class="muted">رقم العملية: ${safe(x.transaction_reference||'غير مذكور')}</div>
+    <div class="muted">ملاحظات: ${safe(x.proof_note||'لا توجد')}</div>
+    ${x.status==='pending'?`
+     <label>ملاحظة المراجعة (اختياري)</label>
+     <input id="dn-${x.id}" placeholder="ملاحظة">
+     <button onclick="reviewDeposit('${x.id}',true)">تأكيد وصول المبلغ واعتماد الإيداع</button>
+     <button class="danger" onclick="reviewDeposit('${x.id}',false)">رفض الطلب</button>`:''}
+   </div>`).join(''):'لا توجد طلبات إيداع';
+ }
+ if(w.error){wit.textContent='خطأ: '+w.error.message}
+ else{
+  const pending=w.data.filter(x=>x.status==='pending').length;
+  document.getElementById('adminWithdrawCount').textContent=pending;
+  wit.innerHTML=w.data.length?w.data.map(x=>`
+   <div class="item">
+    <b>طلب سحب</b> — ${money(x.amount)} ${statusTag(x.status)}
+    <div class="muted">المستخدم: ${safe(x.user_id)}</div>
+    <div class="muted">الوسيلة: ${safe(x.method)}</div>
+    <div class="muted">بيانات الاستلام: ${safe(x.recipient_details)}</div>
+    ${x.status==='pending'?`
+     <label>رقم عملية التحويل بعد الدفع الفعلي</label>
+     <input id="wr-${x.id}" placeholder="رقم العملية">
+     <button onclick="reviewWithdrawal('${x.id}',true)">تأكيد التحويل وخصم الرصيد</button>
+     <button class="danger" onclick="reviewWithdrawal('${x.id}',false)">رفض الطلب</button>`:''}
+   </div>`).join(''):'لا توجد طلبات سحب';
+ }
+ await loadAdminMethods();
+}
+
+async function reviewDeposit(id,approve){
+ if(!isAdmin)return msg('غير مصرح',true);
+ const note=document.getElementById('dn-'+id)?.value||null;
+ if(approve&&!confirm('هل تحققت بنفسك من وصول المبلغ فعلياً؟'))return;
+ if(!approve&&!confirm('هل تريد رفض طلب الإيداع؟'))return;
+ try{
+  const {data,error}=await db.rpc('admin_review_deposit',{
+   p_request_id:id,p_approve:approve,p_note:note
+  });
+  if(error)throw error;
+  msg(data||'تمت مراجعة الطلب');
+  await loadAdmin();await loadWallet();await loadTransactions();
+ }catch(e){msg(e.message,true)}
+}
+
+async function reviewWithdrawal(id,pay){
+ if(!isAdmin)return msg('غير مصرح',true);
+ let reference=document.getElementById('wr-'+id)?.value.trim()||'';
+ if(pay&&!reference)return msg('اكتب رقم عملية التحويل بعد تنفيذ الدفع',true);
+ if(pay&&!confirm('هل نفذت التحويل فعلياً للمستلم؟ سيتم خصم المبلغ من المحفظة.'))return;
+ if(!pay&&!confirm('هل تريد رفض طلب السحب؟'))return;
+ try{
+  const {data,error}=await db.rpc('admin_review_withdrawal',{
+   p_request_id:id,p_pay:pay,p_reference:reference||null
+  });
+  if(error)throw error;
+  msg(data||'تمت مراجعة الطلب');
+  await loadAdmin();await loadWallet();await loadTransactions();
+ }catch(e){msg(e.message,true)}
+}
+
+async function addPaymentMethod(){
+ if(!isAdmin)return msg('غير مصرح',true);
+ const name=document.getElementById('newMethodName').value;
+ const details=document.getElementById('newMethodDetails').value.trim();
+ if(!details)return msg('اكتب بيانات الاستلام',true);
+ try{
+  const {error}=await db.from('payment_methods').insert({name,details,active:true});
+  if(error)throw error;
+  document.getElementById('newMethodDetails').value='';
+  msg('تمت إضافة وسيلة الاستقبال');
+  await loadAdminMethods();await loadMethods();
+ }catch(e){msg(e.message,true)}
+}
+async function loadAdminMethods(){
+ const box=document.getElementById('adminMethods');
+ const {data,error}=await db.from('payment_methods').select('*').order('created_at',{ascending:false});
+ if(error){box.textContent='تعذر تحميل الوسائل: '+error.message;return}
+ box.innerHTML=data?.length?data.map(m=>`
+  <div class="item">
+   <b>${safe(m.name)}</b> — ${m.active?'نشطة':'متوقفة'}
+   <div>${safe(m.details)}</div>
+   <button class="secondary" onclick="toggleMethod('${m.id}',${!m.active})">${m.active?'إيقاف الوسيلة':'تفعيل الوسيلة'}</button>
+   <button class="secondary" onclick="editMethod('${m.id}')">تعديل البيانات</button>
+  </div>`).join(''):'لم تتم إضافة وسائل استقبال';
+}
+async function toggleMethod(id,active){
+ if(!isAdmin)return;
+ try{
+  const {error}=await db.from('payment_methods').update({active}).eq('id',id);
+  if(error)throw error;
+  msg('تم تحديث حالة الوسيلة');await loadAdminMethods();await loadMethods();
+ }catch(e){msg(e.message,true)}
+}
+async function editMethod(id){
+ if(!isAdmin)return;
+ const {data,error}=await db.from('payment_methods').select('*').eq('id',id).single();
+ if(error)return msg(error.message,true);
+ const details=prompt('اكتب بيانات الاستلام الجديدة:',data.details);
+ if(details===null)return;
+ if(!details.trim())return msg('البيانات لا يمكن أن تكون فارغة',true);
+ try{
+  const {error}=await db.from('payment_methods').update({details:details.trim()}).eq('id',id);
+  if(error)throw error;
+  msg('تم تعديل بيانات الاستلام');await loadAdminMethods();await loadMethods();
+ }catch(e){msg(e.message,true)}
+}
+
 async function start(){
-  const {data:{session}}=await db.auth.getSession();
-  if(session){currentUser=session.user;try{await loadApp()}catch(e){message(e.message,true)}}
+ const {data:{session}}=await db.auth.getSession();
+ if(session){
+  currentUser=session.user;
+  try{await loadApp()}catch(e){msg(e.message,true)}
+ }
 }
 db.auth.onAuthStateChange((event,session)=>{
-  if(event==='SIGNED_OUT'){
-    document.getElementById('app').classList.add('hidden');
-    document.getElementById('auth').classList.remove('hidden');
-  }
+ if(event==='SIGNED_OUT'){
+  currentUser=null;isAdmin=false;
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('auth').classList.remove('hidden');
+ }
 });
 start();
 </script>
