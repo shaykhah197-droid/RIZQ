@@ -1023,6 +1023,28 @@ start();
 })();
 </script>
 
+<script>
+(function(){
+  function removeOldLine(){
+    document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p){
+      if(p.textContent.includes('المكافآت مرتبطة بالمهام الفعلية')){
+        p.remove();
+      }
+    });
+  }
+
+  removeOldLine();
+
+  const list = document.getElementById('rizqPackageList');
+  if(list){
+    new MutationObserver(removeOldLine).observe(list,{
+      childList:true,
+      subtree:true
+    });
+  }
+})();
+</script>
+
 </body>
 </html>
 
