@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -44,155 +45,176 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 </head>
 <body>
 <header>
-  <h1>رزق <span style="font-size:15px">RIZQ</span></h1>
-  <p>منصة المهام والمكافآت والإحالات</p>
+<h1>رزق <span style="font-size:15px">RIZQ</span></h1>
+<p>منصة المهام والمكافآت والإحالات</p>
 </header>
 
 <main>
-  <div id="message" class="notice hidden"></div>
+<div id="message" class="notice hidden"></div>
 
-  <section id="auth" class="card">
-    <h2 id="authTitle">تسجيل الدخول</h2>
-    <div id="nameWrap" class="hidden">
-      <label>الاسم الكامل</label>
-      <input id="fullName" placeholder="اكتب اسمك">
-    </div>
-    <label>البريد الإلكتروني</label>
-    <input id="email" type="email" placeholder="name@example.com">
-    <label>كلمة المرور</label>
-    <input id="password" type="password" placeholder="كلمة المرور">
-    <div id="refWrap" class="hidden">
-      <label>كود الإحالة (اختياري)</label>
-      <input id="refCode" placeholder="كود دعوة صديقك">
-    </div>
-    <button id="authBtn" onclick="authenticate()">دخول</button>
-    <button class="secondary" onclick="toggleAuth()" id="toggleBtn">إنشاء حساب جديد</button>
-    <p class="muted">التسجيل والدخول بالبريد الإلكتروني.</p>
-  </section>
+<section id="auth" class="card">
+<h2 id="authTitle">تسجيل الدخول</h2>
+<div id="nameWrap" class="hidden">
+<label>الاسم الكامل</label>
+<input id="fullName" placeholder="اكتب اسمك">
+</div>
+<label>البريد الإلكتروني</label>
+<input id="email" type="email" placeholder="name@example.com">
+<label>كلمة المرور</label>
+<input id="password" type="password" placeholder="كلمة المرور">
+<div id="refWrap" class="hidden">
+<label>كود الإحالة (اختياري)</label>
+<input id="refCode" placeholder="كود دعوة صديقك">
+</div>
+<button id="authBtn" onclick="authenticate()">دخول</button>
+<button class="secondary" onclick="toggleAuth()" id="toggleBtn">إنشاء حساب جديد</button>
+<p class="muted">التسجيل والدخول بالبريد الإلكتروني.</p>
+</section>
 
-  <section id="app" class="hidden">
-    <div class="card">
-      <div class="row" style="align-items:center">
-        <div style="flex:2">
-          <h2 style="margin-bottom:5px">أهلاً <span id="userName">بك</span></h2>
-          <div class="muted" id="userEmail"></div>
-          <div id="roleLabel" class="hidden"><span class="tag">مدير المنصة</span></div>
-        </div>
-        <button class="secondary" onclick="logout()">تسجيل الخروج</button>
-      </div>
-    </div>
+<section id="app" class="hidden">
+<div class="card">
+<div class="row" style="align-items:center">
+<div style="flex:2">
+<h2 style="margin-bottom:5px">أهلاً <span id="userName">بك</span></h2>
+<div class="muted" id="userEmail"></div>
+<div id="roleLabel" class="hidden"><span class="tag">مدير المنصة</span></div>
+</div>
+<button class="secondary" onclick="logout()">تسجيل الخروج</button>
+</div>
+</div>
 
-    <nav>
-      <button onclick="showTab('home')">الرئيسية</button>
-      <button class="secondary" onclick="showTab('tasks')">المهام</button>
-      <button class="secondary" onclick="showTab('deposit')">إيداع</button>
-      <button class="secondary" onclick="showTab('withdraw')">سحب</button>
-      <button class="secondary" onclick="showTab('history')">السجل</button>
-      <button id="adminNav" class="hidden" onclick="showTab('admin')">لوحة المدير</button>
-    </nav>
+<nav>
+<button onclick="showTab('home')">الرئيسية</button>
+<button class="secondary" onclick="showTab('tasks')">المهام</button>
+<button class="secondary" onclick="showTab('deposit')">إيداع</button>
+<button class="secondary" onclick="showTab('withdraw')">سحب</button>
+<button class="secondary" onclick="showTab('history')">السجل</button>
+<button id="adminNav" class="hidden" onclick="showTab('admin')">لوحة المدير</button>
+</nav>
 
-    <section id="tab-home" class="tab">
-      <div class="row">
-        <div class="stat"><span class="muted">رصيد المحفظة</span><strong id="balance">0.00 ج.م</strong></div>
-        <div class="stat"><span class="muted">عدد الإحالات</span><strong id="refCount">0</strong></div>
-      </div>
-      <div class="card" style="margin-top:14px">
-        <h2>كود دعوتك</h2>
-        <div class="row">
-          <input id="myReferral" readonly>
-          <button onclick="copyReferral()">نسخ الكود</button>
-        </div>
-      </div>
-      <div class="card">
-        <h2>آخر الحركات</h2>
-        <div id="recentTransactions" class="muted">جارٍ التحميل...</div>
-      </div>
-    </section>
+<section id="tab-home" class="tab">
+<div class="row">
+<div class="stat"><span class="muted">رصيد المحفظة</span><strong id="balance">0.00 ج.م</strong></div>
+<div class="stat"><span class="muted">عدد الإحالات</span><strong id="refCount">0</strong></div>
+</div>
+<div class="card" style="margin-top:14px">
+<h2>كود دعوتك</h2>
+<div class="row">
+<input id="myReferral" readonly>
+<button onclick="copyReferral()">نسخ الكود</button>
+</div>
+</div>
+<div class="card">
+<h2>آخر الحركات</h2>
+<div id="recentTransactions" class="muted">جارٍ التحميل...</div>
+</div>
+</section>
 
-    <section id="tab-tasks" class="tab hidden">
-      <div class="card"><h2>المهام المتاحة</h2><div id="tasksList">جارٍ التحميل...</div></div>
-      <div class="card"><h2>مهامي المرسلة</h2><div id="mySubmissions">جارٍ التحميل...</div></div>
-    </section>
+<section id="tab-tasks" class="tab hidden">
+<div class="card"><h2>المهام المتاحة</h2><div id="tasksList">جارٍ التحميل...</div></div>
+<div class="card"><h2>مهامي المرسلة</h2><div id="mySubmissions">جارٍ التحميل...</div></div>
+</section>
 
-    <section id="tab-deposit" class="tab hidden">
-      <div class="card">
-        <h2>طلب إيداع</h2>
-        <div class="notice">حوّل المبلغ إلى بيانات الاستلام المعروضة، ثم أرسل رقم العملية وصورة الإيصال. لن يُضاف الرصيد إلا بعد التحقق من وصول التحويل واعتماد المدير.</div>
-        <div id="paymentMethods">جارٍ تحميل وسائل الدفع...</div>
-        <label>المبلغ بالجنيه المصري</label>
-        <input id="depositAmount" type="number" min="1" step="0.01" placeholder="المبلغ">
-        <label>وسيلة التحويل</label>
-        <select id="depositMethod"></select>
-        <label>رقم العملية / مرجع التحويل</label>
-        <input id="depositReference" placeholder="رقم العملية">
-        <label>ملاحظات الإثبات</label>
-        <textarea id="depositNote" placeholder="تفاصيل التحويل"></textarea>
-        <label>صورة إيصال التحويل (مطلوبة)</label>
-        <input id="depositProof" type="file" accept="image/jpeg,image/png,image/webp">
-        <p class="muted">الصور المسموحة JPG وPNG وWEBP، بحد أقصى 5 ميجابايت.</p>
-        <button id="depositSubmitBtn" onclick="sendDeposit()">إرسال طلب الإيداع</button>
-        <h3 style="margin-top:18px">طلباتي السابقة</h3>
-        <div id="depositHistory">جارٍ التحميل...</div>
-      </div>
-    </section>
+<section id="tab-deposit" class="tab hidden">
+<div class="card">
+<h2>طلب إيداع</h2>
+<div class="notice">حوّل المبلغ إلى بيانات الاستلام المعروضة، ثم أرسل رقم العملية وصورة الإيصال. لن يُضاف الرصيد إلا بعد التحقق من وصول التحويل واعتماد المدير.</div>
+<div id="paymentMethods">جارٍ تحميل وسائل الدفع...</div>
+<label>المبلغ بالجنيه المصري</label>
+<input id="depositAmount" type="number" min="1" step="0.01" placeholder="المبلغ">
+<label>وسيلة التحويل</label>
+<select id="depositMethod"></select>
+<label>رقم العملية / مرجع التحويل</label>
+<input id="depositReference" placeholder="رقم العملية">
+<label>ملاحظات الإثبات</label>
+<textarea id="depositNote" placeholder="تفاصيل التحويل"></textarea>
+<label>صورة إيصال التحويل (مطلوبة)</label>
+<input id="depositProof" type="file" accept="image/jpeg,image/png,image/webp">
+<p class="muted">الصور المسموحة JPG وPNG وWEBP، بحد أقصى 5 ميجابايت.</p>
+<button id="depositSubmitBtn" onclick="sendDeposit()">إرسال طلب الإيداع</button>
+<h3 style="margin-top:18px">طلباتي السابقة</h3>
+<div id="depositHistory">جارٍ التحميل...</div>
+</div>
+</section>
 
-    <section id="tab-withdraw" class="tab hidden">
-      <div class="card">
-        <h2>طلب سحب</h2>
-        <div class="notice">يُراجع الطلب أولاً. لا يعتبر الطلب مدفوعاً حتى يتم التحويل الفعلي وتسجيل رقم العملية.</div>
-        <label>المبلغ بالجنيه المصري</label>
-        <input id="withdrawAmount" type="number" min="1" step="0.01" placeholder="المبلغ">
-        <label>طريقة الاستلام</label>
-        <select id="withdrawMethod">
-          <option value="Vodafone Cash">فودافون كاش</option>
-          <option value="Binance">Binance</option>
-        </select>
-        <label>رقم الهاتف أو بيانات محفظة Binance</label>
-        <textarea id="recipientDetails" placeholder="بيانات الاستلام"></textarea>
-        <button onclick="sendWithdrawal()">إرسال طلب السحب</button>
-        <h3 style="margin-top:18px">طلباتي السابقة</h3>
-        <div id="withdrawHistory">جارٍ التحميل...</div>
-      </div>
-    </section>
+<section id="tab-withdraw" class="tab hidden">
+<div class="card">
+<h2>طلب سحب</h2>
+<div class="notice">يُراجع الطلب أولاً. لا يعتبر الطلب مدفوعاً حتى يتم التحويل الفعلي وتسجيل رقم العملية.</div>
+<label>المبلغ بالجنيه المصري</label>
+<input id="withdrawAmount" type="number" min="1" step="0.01" placeholder="المبلغ">
+<label>طريقة الاستلام</label>
+<select id="withdrawMethod">
+<option value="Vodafone Cash">فودافون كاش</option>
+<option value="Binance">Binance</option>
+</select>
+<label>رقم الهاتف أو بيانات محفظة Binance</label>
+<textarea id="recipientDetails" placeholder="بيانات الاستلام"></textarea>
+<button onclick="sendWithdrawal()">إرسال طلب السحب</button>
+<h3 style="margin-top:18px">طلباتي السابقة</h3>
+<div id="withdrawHistory">جارٍ التحميل...</div>
+</div>
+</section>
 
-    <section id="tab-history" class="tab hidden">
-      <div class="card"><h2>سجل معاملات المحفظة</h2><div id="allTransactions">جارٍ التحميل...</div></div>
-    </section>
+<section id="tab-history" class="tab hidden">
+<div class="card"><h2>سجل معاملات المحفظة</h2><div id="allTransactions">جارٍ التحميل...</div></div>
+</section>
 
-    <section id="tab-admin" class="tab hidden">
-      <div class="admin-head">
-        <h2 style="margin:0">لوحة إدارة RIZQ</h2>
-        <p class="small">إدارة طلبات الدفع وبيانات الاستلام</p>
-      </div>
-      <div class="row">
-        <div class="stat"><span class="muted">طلبات الإيداع المعلقة</span><strong id="adminDepositCount">—</strong></div>
-        <div class="stat"><span class="muted">طلبات السحب المعلقة</span><strong id="adminWithdrawCount">—</strong></div>
-      </div>
-      <div class="card" style="margin-top:14px">
-        <div class="row" style="align-items:center">
-          <h2 style="flex:2">طلبات الإيداع</h2>
-          <button class="secondary" onclick="loadAdmin()">تحديث</button>
-        </div>
-        <div id="adminDeposits">جارٍ التحميل...</div>
-      </div>
-      <div class="card">
-        <h2>طلبات السحب</h2>
-        <div id="adminWithdrawals">جارٍ التحميل...</div>
-      </div>
-      <div class="card">
-        <h2>إضافة وسيلة استقبال أموال</h2>
-        <label>اسم الوسيلة</label>
-        <select id="newMethodName">
-          <option value="Vodafone Cash">فودافون كاش</option>
-          <option value="Binance">Binance</option>
-        </select>
-        <label>رقم الهاتف أو بيانات الاستلام</label>
-        <textarea id="newMethodDetails" placeholder="أدخل رقم فودافون كاش أو بيانات استقبال Binance"></textarea>
-        <button onclick="addPaymentMethod()">حفظ وسيلة الاستقبال</button>
-        <div id="adminMethods" style="margin-top:12px">جارٍ التحميل...</div>
-      </div>
-    </section>
-  </section>
+<section id="tab-admin" class="tab hidden">
+<div class="admin-head">
+<h2 style="margin:0">لوحة إدارة RIZQ</h2>
+<p class="small">إدارة طلبات الدفع وبيانات الاستلام والإثباتات</p>
+</div>
+
+<div class="row">
+<div class="stat"><span class="muted">طلبات الإيداع المعلقة</span><strong id="adminDepositCount">—</strong></div>
+<div class="stat"><span class="muted">طلبات السحب المعلقة</span><strong id="adminWithdrawCount">—</strong></div>
+</div>
+
+<div class="card" style="margin-top:14px">
+<div class="row" style="align-items:center">
+<h2 style="flex:2">طلبات الإيداع</h2>
+<button class="secondary" onclick="loadAdmin()">تحديث</button>
+</div>
+<div id="adminDeposits">جارٍ التحميل...</div>
+</div>
+
+<div class="card">
+<h2>طلبات السحب</h2>
+<div id="adminWithdrawals">جارٍ التحميل...</div>
+</div>
+
+<div class="card">
+<h2>إضافة وسيلة استقبال أموال</h2>
+<label>اسم الوسيلة</label>
+<select id="newMethodName">
+<option value="Vodafone Cash">فودافون كاش</option>
+<option value="Binance">Binance</option>
+</select>
+<label>رقم الهاتف أو بيانات الاستلام</label>
+<textarea id="newMethodDetails" placeholder="أدخل رقم فودافون كاش أو بيانات استقبال Binance"></textarea>
+<button onclick="addPaymentMethod()">حفظ وسيلة الاستقبال</button>
+<div id="adminMethods" style="margin-top:12px">جارٍ التحميل...</div>
+</div>
+
+<div class="card">
+<h2>إرسال إثبات معاملة للعميل</h2>
+<div class="notice">تظهر هنا الإيداعات المعتمدة والسحوبات المدفوعة فقط. ارفع صورة إثبات التحويل الفعلي لإرسالها إلى بريد العميل.</div>
+<label>اختيار العملية المكتملة</label>
+<select id="evidenceTransaction">
+<option value="">جارٍ تحميل العمليات...</option>
+</select>
+<label>صورة إثبات التحويل الفعلي</label>
+<input id="evidenceFile" type="file" accept="image/jpeg,image/png,image/webp">
+<p class="muted">JPG أو PNG أو WEBP، بحد أقصى 5 ميجابايت.</p>
+<label>ملاحظة للعميل</label>
+<textarea id="evidenceNote" placeholder="ملاحظة اختيارية"></textarea>
+<button id="evidenceSendBtn" onclick="sendTransactionEvidence()">رفع الإثبات وإرسال البريد</button>
+<h3 style="margin-top:18px">سجل الإثباتات</h3>
+<div id="evidenceHistory">جارٍ التحميل...</div>
+</div>
+</section>
+</section>
 </main>
 
 <footer>RIZQ © 2026 — جميع الحقوق محفوظة</footer>
@@ -206,12 +228,20 @@ let currentUser=null,profile=null,isAdmin=false,signupMode=false;
 
 function msg(t,err=false){
  const e=document.getElementById('message');
- e.textContent=t;e.className='notice'+(err?' error':'');
- e.classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});
+ e.textContent=t;
+ e.className='notice'+(err?' error':'');
+ e.classList.remove('hidden');
+ window.scrollTo({top:0,behavior:'smooth'});
 }
-function money(v){return Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' ج.م'}
-function safe(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function statusTag(s){return `<span class="tag ${s==='pending'?'pending':''}">${safe(s)}</span>`}
+function money(v){
+ return Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' ج.م';
+}
+function safe(v){
+ return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function statusTag(s){
+ return `<span class="tag ${s==='pending'?'pending':''}">${safe(s)}</span>`;
+}
 
 function toggleAuth(){
  signupMode=!signupMode;
@@ -226,7 +256,8 @@ async function authenticate(){
  const email=document.getElementById('email').value.trim();
  const password=document.getElementById('password').value;
  if(!email||!password)return msg('اكتب البريد وكلمة المرور',true);
- const b=document.getElementById('authBtn');b.disabled=true;
+ const b=document.getElementById('authBtn');
+ b.disabled=true;
  try{
   if(signupMode){
    const full_name=document.getElementById('fullName').value.trim();
@@ -239,14 +270,16 @@ async function authenticate(){
   }else{
    const {data,error}=await db.auth.signInWithPassword({email,password});
    if(error)throw error;
-   currentUser=data.user;await loadApp();
+   currentUser=data.user;
+   await loadApp();
   }
  }catch(e){msg(e.message,true)}
  finally{b.disabled=false}
 }
 
 async function logout(){
- await db.auth.signOut();currentUser=null;profile=null;isAdmin=false;
+ await db.auth.signOut();
+ currentUser=null;profile=null;isAdmin=false;
  document.getElementById('app').classList.add('hidden');
  document.getElementById('auth').classList.remove('hidden');
 }
@@ -296,7 +329,8 @@ async function submitTask(id){
  try{
   const {error}=await db.from('task_submissions').insert({task_id:id,user_id:currentUser.id,status:'pending'});
   if(error)throw error;
-  msg('تم إرسال المهمة للمراجعة');await loadSubmissions();
+  msg('تم إرسال المهمة للمراجعة');
+  await loadSubmissions();
  }catch(e){msg(e.message,true)}
 }
 async function loadSubmissions(){
@@ -306,7 +340,8 @@ async function loadSubmissions(){
  box.innerHTML=data?.length?data.map(x=>`<div class="item">الحالة: ${statusTag(x.status)}<div class="muted">${safe(x.review_note||'')}</div></div>`).join(''):'لا توجد مهام مرسلة';
 }
 async function loadMethods(){
- const box=document.getElementById('paymentMethods'),sel=document.getElementById('depositMethod');
+ const box=document.getElementById('paymentMethods');
+ const sel=document.getElementById('depositMethod');
  const {data,error}=await db.from('payment_methods').select('*').eq('active',true).order('created_at');
  if(error){box.textContent=error.message;return}
  box.innerHTML=data?.length?data.map(m=>`<div class="item"><h3>${safe(m.name)}</h3><p>${safe(m.details)}</p></div>`).join(''):'لم تتم إضافة وسائل دفع بعد';
@@ -388,7 +423,8 @@ async function loadTransactions(){
  const {data,error}=await db.from('wallet_transactions').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(50);
  if(error){box.textContent=error.message;document.getElementById('recentTransactions').textContent=error.message;return}
  const html=data?.length?data.map(x=>`<div class="item"><b>${safe(x.transaction_type)}</b> — ${money(x.amount)}<div class="muted">${safe(x.description||'')} · ${new Date(x.created_at).toLocaleString('ar-EG')}</div></div>`).join(''):'لا توجد معاملات مسجلة';
- box.innerHTML=html;document.getElementById('recentTransactions').innerHTML=html;
+ box.innerHTML=html;
+ document.getElementById('recentTransactions').innerHTML=html;
 }
 
 function copyReferral(){
@@ -415,6 +451,7 @@ async function loadAdmin(){
   db.from('deposit_requests').select('*').order('created_at',{ascending:false}).limit(100),
   db.from('withdrawal_requests').select('*').order('created_at',{ascending:false}).limit(100)
  ]);
+
  if(d.error){dep.textContent='خطأ: '+d.error.message}
  else{
   const pending=d.data.filter(x=>x.status==='pending').length;
@@ -424,7 +461,7 @@ async function loadAdmin(){
    if(x.proof_image_path){
     const {data:signed,error:signedError}=await db.storage.from('deposit-proofs').createSignedUrl(x.proof_image_path,300);
     proofHtml=signedError
-     ? '<div class="muted">تعذر تحميل صورة الإيصال. تحقق من صلاحية قراءة ملفات المدير.</div>'
+     ? '<div class="muted">تعذر تحميل صورة الإيصال.</div>'
      : `<p><a class="proof-link" href="${safe(signed.signedUrl)}" target="_blank" rel="noopener noreferrer">عرض صورة إيصال التحويل</a></p>`;
    }
    return `
@@ -444,6 +481,7 @@ async function loadAdmin(){
   }));
   dep.innerHTML=depositCards.join('')||'لا توجد طلبات إيداع';
  }
+
  if(w.error){wit.textContent='خطأ: '+w.error.message}
  else{
   const pending=w.data.filter(x=>x.status==='pending').length;
@@ -462,6 +500,7 @@ async function loadAdmin(){
    </div>`).join(''):'لا توجد طلبات سحب';
  }
  await loadAdminMethods();
+ await loadTransactionEvidence();
 }
 
 async function reviewDeposit(id,approve){
@@ -542,6 +581,143 @@ async function editMethod(id){
  }catch(e){msg(e.message,true)}
 }
 
+/* TRANSACTION EVIDENCE AND EMAIL */
+async function loadTransactionEvidence(){
+ if(!isAdmin)return;
+
+ const sel=document.getElementById('evidenceTransaction');
+ const box=document.getElementById('evidenceHistory');
+ sel.innerHTML='<option value="">جارٍ تحميل العمليات...</option>';
+ box.textContent='جارٍ تحميل سجل الإثباتات...';
+
+ try{
+  const [d,w,e]=await Promise.all([
+   db.from('deposit_requests').select('id,user_id,amount,created_at').eq('status','approved').order('created_at',{ascending:false}).limit(100),
+   db.from('withdrawal_requests').select('id,user_id,amount,created_at').eq('status','paid').order('created_at',{ascending:false}).limit(100),
+   db.from('transaction_evidence').select('*').order('created_at',{ascending:false}).limit(50)
+  ]);
+
+  if(d.error)throw d.error;
+  if(w.error)throw w.error;
+  if(e.error)throw e.error;
+
+  const options=[
+   ...d.data.map(x=>({value:'deposit:'+x.id,label:'إيداع مكتمل - '+money(x.amount)+' - '+x.id.slice(0,8)})),
+   ...w.data.map(x=>({value:'withdrawal:'+x.id,label:'سحب مدفوع - '+money(x.amount)+' - '+x.id.slice(0,8)}))
+  ];
+
+  sel.innerHTML='<option value="">اختر عملية مكتملة</option>'+
+   options.map(x=>`<option value="${safe(x.value)}">${safe(x.label)}</option>`).join('');
+
+  box.innerHTML=e.data.length?e.data.map(x=>`
+   <div class="item">
+    <b>${x.transaction_type==='deposit'?'إيداع':'سحب'}</b>
+    <div class="muted">رقم العملية: ${safe(x.transaction_id)}</div>
+    <div class="muted">العميل: ${safe(x.user_id)}</div>
+    <div class="muted">حالة البريد: ${safe(x.email_status)}</div>
+    <div class="muted">تاريخ الإنشاء: ${safe(new Date(x.created_at).toLocaleString('ar-EG'))}</div>
+    ${x.email_sent_at?'<div class="muted">تاريخ الإرسال: '+safe(new Date(x.email_sent_at).toLocaleString('ar-EG'))+'</div>':''}
+    ${x.email_error?'<div class="muted error">'+safe(x.email_error)+'</div>':''}
+   </div>`).join(''):'لا توجد إثباتات محفوظة';
+
+ }catch(err){
+  box.textContent='تعذر تحميل الإثباتات: '+err.message;
+ }
+}
+
+async function sendTransactionEvidence(){
+ if(!isAdmin)return msg('غير مصرح',true);
+
+ const selected=document.getElementById('evidenceTransaction').value;
+ const file=document.getElementById('evidenceFile').files[0];
+ const note=document.getElementById('evidenceNote').value.trim();
+ const btn=document.getElementById('evidenceSendBtn');
+
+ if(!selected)return msg('اختر العملية أولاً',true);
+ if(!file)return msg('اختر صورة إثبات التحويل',true);
+ if(!['image/jpeg','image/png','image/webp'].includes(file.type))
+  return msg('استخدم صورة JPG أو PNG أو WEBP',true);
+ if(file.size>5*1024*1024)return msg('حجم الصورة أكبر من 5 ميجابايت',true);
+
+ const [type,id]=selected.split(':');
+ btn.disabled=true;
+
+ let uploadedPath=null;
+
+ try{
+  let transaction;
+
+  if(type==='deposit'){
+   const result=await db.from('deposit_requests')
+    .select('id,user_id,status')
+    .eq('id',id)
+    .eq('status','approved')
+    .single();
+   if(result.error)throw result.error;
+   transaction=result.data;
+  }else if(type==='withdrawal'){
+   const result=await db.from('withdrawal_requests')
+    .select('id,user_id,status')
+    .eq('id',id)
+    .eq('status','paid')
+    .single();
+   if(result.error)throw result.error;
+   transaction=result.data;
+  }else{
+   throw new Error('نوع العملية غير صحيح');
+  }
+
+  const ext=file.type==='image/jpeg'?'jpg':file.type==='image/png'?'png':'webp';
+  const path=`${transaction.user_id}/${crypto.randomUUID()}.${ext}`;
+  uploadedPath=path;
+
+  const {error:uploadError}=await db.storage.from('transaction-evidence').upload(path,file,{
+   contentType:file.type,
+   upsert:false
+  });
+  if(uploadError)throw uploadError;
+
+  const {data:record,error:insertError}=await db.from('transaction_evidence').insert({
+   transaction_type:type,
+   transaction_id:id,
+   user_id:transaction.user_id,
+   proof_image_path:path,
+   note:note,
+   created_by:currentUser.id
+  }).select('id').single();
+
+  if(insertError)throw insertError;
+
+  const {data:result,error:sendError}=await db.functions.invoke('send-transaction-evidence',{
+   body:{evidence_id:record.id,note:note}
+  });
+
+  if(sendError){
+   let detail=sendError.message;
+   try{
+    if(sendError.context){
+     const body=await sendError.context.json();
+     detail=body.error||body.details?.message||detail;
+    }
+   }catch(_){}
+   throw new Error(detail);
+  }
+
+  if(result?.error)throw new Error(result.error);
+
+  msg('استلم الخادم طلب إرسال البريد. تحقق من حالة الإرسال في سجل الإثباتات.');
+  document.getElementById('evidenceFile').value='';
+  document.getElementById('evidenceNote').value='';
+  await loadTransactionEvidence();
+
+ }catch(err){
+  msg('تعذر إتمام العملية: '+(err.message||'خطأ غير معروف'),true);
+  await loadTransactionEvidence();
+ }finally{
+  btn.disabled=false;
+ }
+}
+
 async function start(){
  const {data:{session}}=await db.auth.getSession();
  if(session){
@@ -549,6 +725,7 @@ async function start(){
   try{await loadApp()}catch(e){msg(e.message,true)}
  }
 }
+
 db.auth.onAuthStateChange((event,session)=>{
  if(event==='SIGNED_OUT'){
   currentUser=null;isAdmin=false;
