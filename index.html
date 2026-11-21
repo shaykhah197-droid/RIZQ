@@ -1053,6 +1053,14 @@ document.querySelectorAll('.rizq-reward-info p').forEach(function(p){
 });
 </script>
 
+<script>
+document.querySelectorAll('.rizq-reward-info p').forEach(function(p){
+  if(p.textContent.includes('المكافآت مشروطة')){
+    p.textContent='يتم احتساب المكافآت بعد إنجاز المهام المطلوبة واعتمادها وفق نظام RIZQ.';
+  }
+});
+</script>
+
 </body>
 </html>
 
