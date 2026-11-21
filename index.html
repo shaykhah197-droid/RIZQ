@@ -1091,6 +1091,161 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
 })();
 </script>
 
+<script>
+(function(){
+  const admin = document.getElementById('tab-admin');
+  if(!admin || document.getElementById('rizqTaskManager')) return;
+
+  admin.insertAdjacentHTML('beforeend', `
+    <div class="card" id="rizqTaskManager">
+      <h2>إدارة مهام الباقات</h2>
+      <p>أضف حتى 10 مهام نشطة لكل باقة.</p>
+
+      <label>اختر الباقة</label>
+      <select id="rizqTaskPackage"></select>
+
+      <label>عنوان المهمة</label>
+      <input id="rizqTaskTitle" placeholder="مثال: مراجعة محتوى تعليمي">
+
+      <label>وصف المهمة وطريقة تنفيذها</label>
+      <textarea id="rizqTaskDescription"
+        placeholder="اكتب المطلوب من العميل وطريقة تقديم الإثبات"></textarea>
+
+      <p id="rizqTaskRewardInfo" class="notice">
+        مكافأة المهمة تُحدد تلقائياً حسب الباقة.
+      </p>
+
+      <button id="rizqAddTaskButton"
+        onclick="window.rizqAddTask()">إضافة المهمة</button>
+
+      <h3>المهام المضافة</h3>
+      <div id="rizqTaskList">جارٍ تحميل المهام...</div>
+    </div>
+  `);
+
+  const packageSelect = document.getElementById('rizqTaskPackage');
+
+  const rewardText = {
+    '3000':'10 جنيه للمهمة',
+    '9000':'30 جنيه للمهمة',
+    '18000':'60 جنيه للمهمة',
+    '30000':'100 جنيه للمهمة'
+  };
+
+  packageSelect.addEventListener('change', function(){
+    const option = packageSelect.selectedOptions[0];
+    document.getElementById('rizqTaskRewardInfo').textContent =
+      'مكافأة المهمة: ' + (rewardText[option?.dataset.price] || 'حسب إعداد الباقة');
+  });
+
+  window.rizqLoadTaskManager = async function(){
+    if(!isAdmin || !currentUser) return;
+
+    const {data:packages,error:packageError} = await db
+      .from('packages')
+      .select('id,name,price')
+      .eq('active',true)
+      .order('price');
+
+    if(packageError){
+      packageSelect.innerHTML = '<option>تعذر تحميل الباقات</option>';
+      return;
+    }
+
+    packageSelect.innerHTML = (packages || []).map(p =>
+      `<option value="${p.id}" data-price="${p.price}">
+        ${safe(p.name)} — ${money(p.price)}
+      </option>`
+    ).join('');
+
+    packageSelect.dispatchEvent(new Event('change'));
+
+    const {data:tasks,error} = await db
+      .from('tasks')
+      .select('id,title,description,reward,active,package_id')
+      .order('created_at',{ascending:false});
+
+    const box = document.getElementById('rizqTaskList');
+
+    if(error){
+      box.textContent = error.message;
+      return;
+    }
+
+    box.innerHTML = tasks?.length ? tasks.map(t => {
+      const p = packages.find(x => x.id === t.package_id);
+      return `<div class="item">
+        <b>${safe(t.title)}</b>
+        <div>${safe(p?.name || 'باقة غير محددة')}</div>
+        <div>${safe(t.description)}</div>
+        <div>مكافأة المهمة: ${money(t.reward)}</div>
+        <div>الحالة: ${t.active ? 'نشطة' : 'متوقفة'}</div>
+      </div>`;
+    }).join('') : 'لم تتم إضافة مهام بعد';
+  };
+
+  window.rizqAddTask = async function(){
+    if(!isAdmin) return msg('غير مصرح لك بإضافة المهام',true);
+
+    const packageId = packageSelect.value;
+    const title = document.getElementById('rizqTaskTitle').value.trim();
+    const description = document.getElementById('rizqTaskDescription').value.trim();
+    const button = document.getElementById('rizqAddTaskButton');
+
+    if(!packageId) return msg('اختر الباقة',true);
+    if(!title || !description) return msg('اكتب عنوان ووصف المهمة',true);
+
+    button.disabled = true;
+
+    try{
+      const {count,error:countError} = await db
+        .from('tasks')
+        .select('id',{count:'exact',head:true})
+        .eq('package_id',packageId)
+        .eq('active',true);
+
+      if(countError) throw countError;
+      if(count >= 10) throw Error('هذه الباقة لديها 10 مهام نشطة بالفعل');
+
+      const {error} = await db.from('tasks').insert({
+        package_id:packageId,
+        title:title,
+        description:description,
+        active:true
+      });
+
+      if(error) throw error;
+
+      msg('تمت إضافة المهمة بنجاح');
+      document.getElementById('rizqTaskTitle').value = '';
+      document.getElementById('rizqTaskDescription').value = '';
+
+      await window.rizqLoadTaskManager();
+
+    }catch(e){
+      msg('تعذر إضافة المهمة: ' + e.message,true);
+    }finally{
+      button.disabled = false;
+    }
+  };
+
+  const observer = new MutationObserver(function(){
+    if(!admin.classList.contains('hidden')){
+      window.rizqLoadTaskManager();
+    }
+  });
+
+  observer.observe(admin,{
+    attributes:true,
+    attributeFilter:['class']
+  });
+
+  if(!admin.classList.contains('hidden')){
+    window.rizqLoadTaskManager();
+  }
+})();
+</script>
+
 </body>
 </html>
 
