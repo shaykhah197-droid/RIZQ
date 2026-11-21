@@ -967,6 +967,62 @@ start();
   }
 })();
 </script>
+ 
+<script>
+(function(){
+  const dailyRewards = [100, 300, 600, 1000];
+
+  function addRewards(){
+    const cards = document.querySelectorAll('#rizqPackageList .package-card');
+
+    cards.forEach(function(card, index){
+      const button = card.querySelector('.rizq-details-btn');
+      if(!button) return;
+
+      const details = button.nextElementSibling;
+      if(!details || details.querySelector('.rizq-reward-info')) return;
+
+      const amount = dailyRewards[index];
+      if(!amount) return;
+
+      const box = document.createElement('div');
+      box.className = 'rizq-reward-info';
+      box.style.cssText =
+        'margin-top:12px;padding:12px;border-top:1px solid #ccc;line-height:2';
+
+      box.innerHTML = '';
+
+      const daily = document.createElement('p');
+      daily.textContent = 'المكافأة اليومية المستهدفة: ' +
+        amount + ' جنيه عند إنجاز المهام اليومية وقبولها.';
+
+      const referral = document.createElement('p');
+      referral.textContent =
+        'مكافأة دعوة صديق: 5% من قيمة باقته بعد التحقق من الدفع الفعلي واعتماد المكافأة.';
+
+      const condition = document.createElement('p');
+      condition.textContent =
+        'المكافآت مشروطة بإنجاز المهام وقبولها وتوفر ميزانية ممولة للصرف، وليست مضمونة يومياً.';
+
+      box.appendChild(daily);
+      box.appendChild(referral);
+      box.appendChild(condition);
+      details.appendChild(box);
+    });
+  }
+
+  addRewards();
+
+  const list = document.getElementById('rizqPackageList');
+  if(list){
+    new MutationObserver(addRewards).observe(list,{
+      childList:true,
+      subtree:true
+    });
+  }
+})();
+</script>
+
 </body>
 </html>
 
