@@ -1246,6 +1246,255 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
 })();
 </script>
 
+<script>
+(function(){
+  const admin = document.getElementById('tab-admin');
+  const taskTab = document.getElementById('tab-tasks');
+  if(!admin || !taskTab || document.getElementById('rizqTaskReviews')) return;
+
+  taskTab.insertAdjacentHTML('afterbegin', `
+    <div class="card">
+      <h2>مهام باقاتك اليومية</h2>
+      <p class="muted">تظهر 10 مهام يوميًا لكل باقة نشطة.</p>
+      <button onclick="window.rizqReloadCustomerTasks()">تحديث المهام</button>
+      <div id="rizqDailyTasks">جارٍ تحميل مهامك...</div>
+    </div>
+  `);
+
+  admin.insertAdjacentHTML('beforeend', `
+    <div class="card" id="rizqTaskReviews">
+      <h2>مراجعة إثباتات المهام</h2>
+      <div id="rizqPendingTaskReviews">جارٍ تحميل الطلبات...</div>
+    </div>
+  `);
+
+  window.rizqReloadCustomerTasks = async function(){
+    const box = document.getElementById('rizqDailyTasks');
+    if(!currentUser){box.textContent='سجل الدخول أولاً';return;}
+
+    box.textContent='جارٍ تجهيز مهام الباقات...';
+
+    try{
+      const {error:generateError} =
+        await db.rpc('generate_rizq_daily_tasks');
+      if(generateError) throw generateError;
+
+      const {data:assignments,error} = await db
+        .from('daily_task_assignments')
+        .select('id,task_id,reward_amount,task_date')
+        .eq('user_id',currentUser.id)
+        .eq('task_date',new Date().toLocaleDateString('en-CA',{
+          timeZone:'Africa/Cairo'
+        }))
+        .order('created_at');
+
+      if(error) throw error;
+
+      if(!assignments?.length){
+        box.textContent='لا توجد مهام متاحة. تأكد من تفعيل باقتك وإضافة مهام لها.';
+        return;
+      }
+
+      const ids=assignments.map(x=>x.id);
+      const taskIds=[...new Set(assignments.map(x=>x.task_id))];
+
+      const [tasksResult,submissionsResult] = await Promise.all([
+        db.from('tasks').select('id,title,description')
+          .in('id',taskIds),
+        db.from('task_submissions')
+          .select('id,assignment_id,status,review_note')
+          .eq('user_id',currentUser.id)
+          .in('assignment_id',ids)
+      ]);
+
+      if(tasksResult.error) throw tasksResult.error;
+      if(submissionsResult.error) throw submissionsResult.error;
+
+      const tasks=tasksResult.data||[];
+      const submissions=submissionsResult.data||[];
+
+      box.innerHTML=assignments.map(a=>{
+        const t=tasks.find(x=>x.id===a.task_id);
+        const s=submissions.find(x=>x.assignment_id===a.id);
+
+        let action='';
+        if(s){
+          action=`<p>الحالة: ${statusTag(s.status)}</p>
+          <p class="muted">${safe(s.review_note||'')}</p>`;
+        }else{
+          action=`
+            <label>إثبات تنفيذ المهمة</label>
+            <input type="file" id="rizqProof-${a.id}"
+              accept="image/jpeg,image/png,image/webp">
+            <button onclick="window.rizqSubmitTaskProof('${a.id}')">
+              إرسال الإثبات للمراجعة
+            </button>`;
+        }
+
+        return `<div class="item">
+          <h3>${safe(t?.title||'مهمة')}</h3>
+          <p>${safe(t?.description||'')}</p>
+          <span class="tag">المكافأة: ${money(a.reward_amount)}</span>
+          ${action}
+        </div>`;
+      }).join('');
+
+    }catch(e){
+      box.textContent='تعذر تحميل المهام: '+e.message;
+    }
+  };
+
+  window.rizqSubmitTaskProof = async function(assignmentId){
+    const input=document.getElementById('rizqProof-'+assignmentId);
+    const file=input?.files?.[0];
+
+    if(!file)return msg('اختر صورة إثبات المهمة أولاً',true);
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type))
+      return msg('استخدم صورة JPG أو PNG أو WEBP',true);
+    if(file.size>5*1024*1024)
+      return msg('حجم الصورة أكبر من 5 ميجابايت',true);
+
+    try{
+      const ext=file.type==='image/jpeg'?'jpg':
+        file.type==='image/png'?'png':'webp';
+      const path=currentUser.id+'/'+crypto.randomUUID()+'.'+ext;
+
+      const {error:uploadError}=await db.storage
+        .from('task-proofs')
+        .upload(path,file,{contentType:file.type,upsert:false});
+
+      if(uploadError)throw uploadError;
+
+      const {error}=await db.rpc('submit_rizq_task_proof',{
+        p_assignment_id:assignmentId,
+        p_proof_path:path
+      });
+
+      if(error){
+        await db.storage.from('task-proofs').remove([path]);
+        throw error;
+      }
+
+      msg('تم إرسال إثبات المهمة للمراجعة');
+      await window.rizqReloadCustomerTasks();
+      await loadSubmissions();
+
+    }catch(e){
+      msg('تعذر إرسال الإثبات: '+e.message,true);
+    }
+  };
+
+  window.rizqLoadTaskReviews = async function(){
+    const box=document.getElementById('rizqPendingTaskReviews');
+    if(!isAdmin)return;
+
+    box.textContent='جارٍ تحميل الإثباتات...';
+
+    const {data,error}=await db.from('task_submissions')
+      .select('*')
+      .eq('status','pending')
+      .order('submitted_at',{ascending:false});
+
+    if(error){box.textContent=error.message;return;}
+
+    if(!data?.length){
+      box.textContent='لا توجد إثباتات مهام معلقة حالياً';
+      return;
+    }
+
+    const taskIds=[...new Set(data.map(x=>x.task_id))];
+    const {data:tasks,error:taskError}=await db.from('tasks')
+      .select('id,title')
+      .in('id',taskIds);
+
+    if(taskError){box.textContent=taskError.message;return;}
+
+    const cards=await Promise.all(data.map(async s=>{
+      const t=tasks.find(x=>x.id===s.task_id);
+      let proof='تعذر تحميل صورة الإثبات';
+
+      if(s.proof_image_path){
+        const {data:signed,error:signedError}=await db.storage
+          .from('task-proofs')
+          .createSignedUrl(s.proof_image_path,300);
+
+        if(!signedError){
+          proof=`<a class="proof-link" target="_blank"
+            rel="noopener noreferrer"
+            href="${safe(signed.signedUrl)}">عرض صورة الإثبات</a>`;
+        }
+      }
+
+      return `<div class="item">
+        <b>${safe(t?.title||'مهمة')}</b>
+        <p class="muted">العميل: ${safe(s.user_id)}</p>
+        <p>${proof}</p>
+        <label>ملاحظة المراجعة</label>
+        <input id="rizqReviewNote-${s.id}" placeholder="ملاحظة اختيارية">
+        <button onclick="window.rizqReviewTask('${s.id}',true)">
+          قبول المهمة واعتماد المكافأة
+        </button>
+        <button class="danger" onclick="window.rizqReviewTask('${s.id}',false)">
+          رفض المهمة
+        </button>
+      </div>`;
+    }));
+
+    box.innerHTML=cards.join('');
+  };
+
+  window.rizqReviewTask = async function(id,approve){
+    if(!isAdmin)return msg('غير مصرح',true);
+
+    const note=document.getElementById('rizqReviewNote-'+id)?.value||null;
+    const question=approve
+      ?'هل راجعت الإثبات وتأكدت من تنفيذ المهمة؟'
+      :'هل تريد رفض إثبات المهمة؟';
+
+    if(!confirm(question))return;
+
+    try{
+      const {error}=await db.rpc('admin_review_rizq_task',{
+        p_submission_id:id,
+        p_approve:approve,
+        p_note:note
+      });
+
+      if(error)throw error;
+
+      msg(approve?'تم اعتماد المهمة وإضافة مكافأتها':'تم رفض المهمة');
+      await window.rizqLoadTaskReviews();
+      await loadWallet();
+      await loadTransactions();
+      await window.rizqReloadCustomerTasks();
+
+    }catch(e){
+      msg('تعذرت المراجعة: '+e.message,true);
+    }
+  };
+
+  const originalLoadAdmin=window.loadAdmin;
+  window.loadAdmin=async function(){
+    await originalLoadAdmin();
+    await window.rizqLoadTaskReviews();
+  };
+
+  const observer=new MutationObserver(()=>{
+    if(!taskTab.classList.contains('hidden') && currentUser){
+      window.rizqReloadCustomerTasks();
+    }
+    if(!admin.classList.contains('hidden') && isAdmin){
+      window.rizqLoadTaskReviews();
+    }
+  });
+
+  observer.observe(taskTab,{attributes:true,attributeFilter:['class']});
+  observer.observe(admin,{attributes:true,attributeFilter:['class']});
+
+  if(isAdmin)window.rizqLoadTaskReviews();
+})();
+</script>
+
 </body>
 </html>
 
