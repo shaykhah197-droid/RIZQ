@@ -1590,6 +1590,110 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
 })();
 </script>
 
+<style>
+#rizqAdminNavigation{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin:16px 0;
+}
+#rizqAdminNavigation button{
+  padding:14px 8px;
+  border:1px solid var(--border,#ddd);
+  border-radius:12px;
+  background:var(--card,#fff);
+  color:inherit;
+  font-weight:700;
+  cursor:pointer;
+}
+#rizqAdminNavigation button.active{
+  background:#176b55;
+  color:white;
+}
+.rizq-admin-hidden{display:none!important}
+</style>
+
+<script>
+(function(){
+  const admin=document.getElementById('tab-admin');
+  if(!admin || document.getElementById('rizqAdminNavigation')) return;
+
+  const nav=document.createElement('div');
+  nav.id='rizqAdminNavigation';
+
+  const sections=[
+    {name:'إدارة المهام',icon:'📋',id:'rizqTaskManager'},
+    {name:'مراجعة إثباتات المهام',icon:'📝',id:'rizqTaskReviews'},
+    {name:'الباقات',icon:'📦',id:null,match:'package'},
+    {name:'الإيداعات',icon:'💰',match:'deposit'},
+    {name:'السحوبات',icon:'💸',match:'withdraw'},
+    {name:'وسائل الدفع',icon:'🏦',match:'method'}
+  ];
+
+  nav.innerHTML=sections.map((s,i)=>
+    `<button type="button" data-index="${i}">
+      ${s.icon} ${s.name}
+    </button>`
+  ).join('');
+
+  const head=admin.querySelector('.admin-head');
+  if(head) head.after(nav);
+  else admin.prepend(nav);
+
+  function findSection(s){
+    if(s.id) return document.getElementById(s.id);
+
+    const cards=[...admin.querySelectorAll('.card')];
+    return cards.find(card=>{
+      const text=(card.innerText||'').toLowerCase();
+      const heading=card.querySelector('h2,h3');
+      const title=(heading?.innerText||'').toLowerCase();
+      if(s.match==='package')
+        return title.includes('باقة')||title.includes('اشتراك');
+      if(s.match==='deposit')
+        return title.includes('إيداع');
+      if(s.match==='withdraw')
+        return title.includes('سحب');
+      if(s.match==='method')
+        return title.includes('وسيلة')||title.includes('استقبال');
+      return false;
+    });
+  }
+
+  let active=null;
+
+  function showSection(index){
+    const selected=sections[index];
+    const target=findSection(selected);
+
+    if(!target){
+      msg('القسم لم يتم العثور عليه بعد: '+selected.name,true);
+      return;
+    }
+
+    if(active && active!==target)
+      active.classList.add('rizq-admin-hidden');
+
+    target.classList.remove('rizq-admin-hidden');
+    active=target;
+
+    nav.querySelectorAll('button').forEach((b,i)=>
+      b.classList.toggle('active',i===index)
+    );
+
+    target.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  nav.querySelectorAll('button').forEach(button=>{
+    button.addEventListener('click',()=>{
+      showSection(Number(button.dataset.index));
+    });
+  });
+
+  showSection(0);
+})();
+</script>
+
 </body>
 </html>
 
