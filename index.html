@@ -1694,6 +1694,148 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
 })();
 </script>
 
+<script>
+(function(){
+  const admin=document.getElementById('tab-admin');
+  if(!admin || !isAdmin) return;
+
+  document.getElementById('rizqAdminNavigation')?.remove();
+
+  const style=document.createElement('style');
+  style.textContent=`
+    #rizqAdminPages{margin-top:15px}
+    #rizqAdminPages .rizq-menu{
+      display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px
+    }
+    #rizqAdminPages .rizq-menu button{
+      min-height:76px;background:white;color:#153e31;
+      border:1px solid #dce8df;border-radius:13px;font-size:15px
+    }
+    #rizqAdminPages .rizq-menu button span{
+      display:block;font-size:23px;margin-bottom:5px
+    }
+    #rizqAdminPages .rizq-back{background:#153e31;color:white;margin-bottom:12px}
+    #rizqAdminPages .rizq-page-title{margin:10px 0 15px}
+  `;
+  document.head.appendChild(style);
+
+  const oldHead=admin.querySelector('.admin-head');
+  const oldStats=oldHead?.nextElementSibling;
+
+  const app=document.createElement('div');
+  app.id='rizqAdminPages';
+  app.innerHTML=`
+    <div id="rizqAdminHome">
+      <div class="card">
+        <h2>لوحة تحكم المدير</h2>
+        <p class="muted">اختر القسم الذي تريد إدارته</p>
+        <div class="rizq-menu">
+          <button data-page="tasks"><span>📋</span>إدارة المهام</button>
+          <button data-page="reviews"><span>📝</span>مراجعة إثباتات المهام</button>
+          <button data-page="packages"><span>📦</span>الباقات</button>
+          <button data-page="deposits"><span>💰</span>طلبات الإيداع</button>
+          <button data-page="withdrawals"><span>💸</span>طلبات السحب</button>
+          <button data-page="methods"><span>🏦</span>وسائل الدفع</button>
+          <button data-page="evidence"><span>📨</span>إثباتات المعاملات</button>
+        </div>
+      </div>
+    </div>
+    <div id="rizqAdminInner" class="hidden">
+      <button class="rizq-back" id="rizqAdminBack">← رجوع للوحة الرئيسية</button>
+      <h2 class="rizq-page-title" id="rizqAdminTitle"></h2>
+      <div id="rizqAdminPageContent"></div>
+    </div>
+  `;
+
+  admin.appendChild(app);
+
+  const home=document.getElementById('rizqAdminHome');
+  const inner=document.getElementById('rizqAdminInner');
+  const content=document.getElementById('rizqAdminPageContent');
+  const title=document.getElementById('rizqAdminTitle');
+
+  const sections={
+    tasks:{name:'إدارة المهام',id:'rizqTaskManager'},
+    reviews:{name:'مراجعة إثباتات المهام',id:'rizqTaskReviews'},
+    deposits:{name:'طلبات الإيداع',id:'adminDeposits'},
+    withdrawals:{name:'طلبات السحب',id:'adminWithdrawals'},
+    methods:{name:'وسائل الدفع',id:'adminMethods'},
+    evidence:{name:'إثباتات المعاملات',id:'evidenceTransaction'}
+  };
+
+  let currentCard=null;
+  let placeholder=null;
+
+  function openPage(key){
+    if(key==='packages'){
+      title.textContent='إدارة الباقات';
+      content.innerHTML='<div class="card">جارٍ تحميل الباقات...</div>';
+      home.classList.add('hidden');
+      inner.classList.remove('hidden');
+      db.from('packages').select('id,name,price,active').order('price')
+        .then(({data,error})=>{
+          if(error){
+            content.textContent='تعذر تحميل الباقات: '+error.message;
+            return;
+          }
+          content.innerHTML='<div class="card">'+
+            (data?.length?data.map(p=>`
+              <div class="item">
+                <b>${safe(p.name)}</b>
+                <p>${money(p.price)}</p>
+                <span class="tag">${p.active?'نشطة':'متوقفة'}</span>
+              </div>`).join(''):'لا توجد باقات')+
+            '</div>';
+        });
+      return;
+    }
+
+    const section=sections[key];
+    const element=section&&document.getElementById(section.id);
+    const card=element?.closest('.card');
+
+    if(!card){
+      msg('القسم غير متاح حاليًا: '+(section?.name||''),true);
+      return;
+    }
+
+    title.textContent=section.name;
+    placeholder=document.createComment('rizq-section-position');
+    card.parentNode.insertBefore(placeholder,card);
+    currentCard=card;
+    content.replaceChildren(card);
+
+    home.classList.add('hidden');
+    inner.classList.remove('hidden');
+
+    if(key==='tasks') window.rizqLoadTaskManager?.();
+    if(key==='reviews') window.rizqLoadTaskReviews?.();
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  function goBack(){
+    if(currentCard && placeholder?.parentNode){
+      placeholder.parentNode.insertBefore(currentCard,placeholder);
+      placeholder.remove();
+    }
+    currentCard=null;
+    placeholder=null;
+    inner.classList.add('hidden');
+    home.classList.remove('hidden');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  app.querySelectorAll('[data-page]').forEach(button=>{
+    button.addEventListener('click',()=>openPage(button.dataset.page));
+  });
+
+  document.getElementById('rizqAdminBack').addEventListener('click',goBack);
+
+  if(oldStats) oldStats.classList.add('hidden');
+  if(oldHead) oldHead.classList.add('hidden');
+})();
+</script>
+
 </body>
 </html>
 
