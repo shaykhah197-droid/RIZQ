@@ -1495,6 +1495,81 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
 })();
 </script>
 
+<script>
+(function(){
+  const list = document.getElementById('rizqPackageList');
+  if(!list) return;
+
+  const oldForm = document.getElementById('rizqPackageForm');
+  if(oldForm) oldForm.remove();
+
+  window.rizqWalletBuy = async function(packageId, button){
+    if(!currentUser) return msg('سجل الدخول أولاً',true);
+    if(button.disabled) return;
+
+    if(!confirm('تأكيد شراء الباقة والخصم من محفظتك؟')) return;
+
+    button.disabled = true;
+    const oldText = button.textContent;
+    button.textContent = 'جارٍ تنفيذ الاشتراك...';
+
+    try{
+      const purchaseKey = crypto.randomUUID();
+
+      const {data,error} = await db.rpc(
+        'buy_rizq_package_from_wallet',
+        {
+          p_package_id: packageId,
+          p_purchase_key: purchaseKey
+        }
+      );
+
+      if(error) throw error;
+      if(!data?.success) throw Error('لم يتم تأكيد عملية الشراء');
+
+      msg(data.already_processed
+        ? 'عملية الشراء مسجلة بالفعل'
+        : 'تم الاشتراك وتحديث رصيد محفظتك بنجاح');
+
+      await Promise.all([
+        loadWallet(),
+        loadTransactions(),
+        window.rizqLoadPackages()
+      ]);
+
+    }catch(e){
+      msg('تعذر الاشتراك: '+e.message,true);
+      button.disabled = false;
+      button.textContent = oldText;
+    }
+  };
+
+  function updateButtons(){
+    list.querySelectorAll('.package-card').forEach(card=>{
+      const button = card.querySelector('button:not(.rizq-details-btn)');
+      if(!button || button.dataset.walletReady) return;
+
+      const match = button.getAttribute('onclick')?.match(/rizqChoosePackage\('([^']+)'/);
+      if(!match) return;
+
+      const packageId = match[1];
+      button.removeAttribute('onclick');
+      button.dataset.walletReady = 'yes';
+      button.textContent = 'اشترك الآن من المحفظة';
+      button.addEventListener('click',()=>{
+        window.rizqWalletBuy(packageId,button);
+      });
+    });
+  }
+
+  updateButtons();
+  new MutationObserver(updateButtons).observe(list,{
+    childList:true,
+    subtree:true
+  });
+})();
+</script>
+
 </body>
 </html>
 
