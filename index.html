@@ -854,6 +854,65 @@ start();
   if(!app.classList.contains('hidden'))window.rizqLoadPackages();
 })();
 </script>
+ 
+<script>
+(function(){
+  const list = document.getElementById('rizqPackageList');
+  if (!list) return;
+
+  function addPackageDetails(){
+    list.querySelectorAll('.package-card').forEach(card => {
+      if (card.querySelector('.rizq-details-btn')) return;
+
+      const name = card.querySelector('h3')?.textContent || 'باقة RIZQ';
+      const price = card.querySelector('.package-price')?.textContent || '';
+
+      const btn = document.createElement('button');
+      btn.className = 'secondary rizq-details-btn';
+      btn.textContent = 'تفاصيل الباقة';
+
+      const details = document.createElement('div');
+      details.hidden = true;
+      details.style.cssText =
+        'margin-top:10px;padding:12px;border-radius:10px;background:#f1f7f3;line-height:1.9';
+
+      const title = document.createElement('b');
+      title.textContent = name;
+
+      const priceLine = document.createElement('p');
+      priceLine.textContent = 'قيمة الاشتراك: ' + price;
+
+      const duration = document.createElement('p');
+      duration.textContent = 'الصلاحية: بدون انتهاء.';
+
+      const activation = document.createElement('p');
+      activation.textContent =
+        'يتم تفعيل الباقة بعد مراجعة طلب الاشتراك والتحقق من وصول الدفع فعلياً.';
+
+      const rewards = document.createElement('p');
+      rewards.textContent =
+        'المكافآت مرتبطة بالمهام الفعلية وتوافر ميزانية المكافآت، ولا يوجد عائد يومي ثابت أو مضمون.';
+
+      details.append(title, priceLine, duration, activation, rewards);
+
+      btn.addEventListener('click', function(){
+        details.hidden = !details.hidden;
+        btn.textContent = details.hidden ? 'تفاصيل الباقة' : 'إخفاء التفاصيل';
+      });
+
+      card.append(btn, details);
+    });
+  }
+
+  addPackageDetails();
+
+  new MutationObserver(addPackageDetails).observe(list, {
+    childList:true,
+    subtree:true
+  });
+})();
+</script>
+
 </body>
 </html>
 
