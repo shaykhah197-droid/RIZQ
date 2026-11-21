@@ -1836,6 +1836,148 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
 })();
 </script>
 
+<style>
+#rizqAdminHome {
+  direction: rtl;
+  display: none;
+  padding: 15px;
+}
+#rizqAdminHome h2 {text-align:center;margin-bottom:20px}
+.rizq-admin-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+.rizq-admin-tile {
+  background:#fff;
+  border:1px solid #ddd;
+  border-radius:14px;
+  padding:20px 10px;
+  text-align:center;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+  color:#222;
+  min-height:85px;
+}
+.rizq-admin-tile:active {background:#eee}
+#rizqAdminScreen {
+  direction:rtl;
+  display:none;
+  padding:12px;
+}
+#rizqAdminScreen .rizq-back {
+  border:0;
+  border-radius:10px;
+  padding:12px 20px;
+  margin-bottom:15px;
+  background:#222;
+  color:white;
+  font-weight:bold;
+}
+#rizqAdminScreen .rizq-screen-title {
+  font-size:21px;
+  font-weight:bold;
+  margin:10px 0 18px;
+}
+.rizq-admin-hidden {display:none!important}
+</style>
+
+<script>
+(function(){
+  if(window.rizqAdminSectionsInstalled) return;
+  window.rizqAdminSectionsInstalled=true;
+
+  const definitions=[
+    {title:'إدارة الباقات',words:['الباقات','الباقة','الاشتراكات','الاشتراك'],ids:['rizqPackageManager','rizqPackages','rizqPackageList']},
+    {title:'إدارة المهام',words:['إدارة المهام'],ids:['rizqTaskManager']},
+    {title:'مراجعة إثباتات المهام',words:['مراجعة إثباتات المهام'],ids:['rizqTaskReviews']},
+    {title:'الإيداعات',words:['طلبات الإيداع','الإيداعات']},
+    {title:'السحوبات',words:['طلبات السحب','السحوبات']},
+    {title:'وسائل الدفع',words:['وسائل الدفع','وسائل الاستقبال']},
+    {title:'العملاء والمحافظ',words:['العملاء','المحافظ والأرصدة']},
+    {title:'الإحالات',words:['الإحالات','الإحالة']},
+    {title:'سجل المعاملات',words:['سجل المعاملات','المعاملات']},
+  ];
+
+  function start(){
+    const admin=document.getElementById('tab-admin');
+    if(!admin || document.getElementById('rizqAdminHome')) return;
+
+    const home=document.createElement('div');
+    home.id='rizqAdminHome';
+    home.innerHTML='<h2>لوحة المدير</h2><div class="rizq-admin-grid"></div>';
+
+    const screen=document.createElement('div');
+    screen.id='rizqAdminScreen';
+
+    const grid=home.querySelector('.rizq-admin-grid');
+
+    const sections=definitions.map((def,index)=>{
+      let target=null;
+
+      for(const id of def.ids||[]){
+        target=document.getElementById(id);
+        if(target) break;
+      }
+
+      if(!target){
+        const headings=admin.querySelectorAll('h2,h3,h4');
+        for(const heading of headings){
+          const value=(heading.textContent||'').trim();
+          if(def.words.some(word=>value.includes(word))){
+            target=heading.closest('.card') ||
+                   heading.closest('.section') ||
+                   heading.parentElement;
+            if(target && target!==admin) break;
+          }
+        }
+      }
+
+      const tile=document.createElement('button');
+      tile.type='button';
+      tile.className='rizq-admin-tile';
+      tile.textContent=def.title;
+      tile.addEventListener('click',()=>{
+        if(!target){
+          alert('القسم غير موجود حاليًا: '+def.title);
+          return;
+        }
+        home.style.display='none';
+        screen.style.display='block';
+        screen.innerHTML='';
+        const back=document.createElement('button');
+        back.className='rizq-back';
+        back.textContent='← رجوع للرئيسية';
+        back.onclick=()=>{
+          screen.style.display='none';
+          home.style.display='block';
+        };
+        const heading=document.createElement('div');
+        heading.className='rizq-screen-title';
+        heading.textContent=def.title;
+        screen.append(back,heading);
+
+        target.classList.remove('rizq-admin-hidden');
+        screen.appendChild(target);
+      });
+      grid.appendChild(tile);
+      return {target};
+    });
+
+    admin.insertBefore(home,admin.firstChild);
+    admin.insertBefore(screen,home.nextSibling);
+    home.style.display='block';
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',start);
+  }else{
+    start();
+  }
+})();
+</script>
+
 </body>
 </html>
 
