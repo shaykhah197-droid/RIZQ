@@ -1069,6 +1069,28 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
 });
 </script>
 
+<script>
+(function(){
+  function fixOldText(){
+    document.querySelectorAll('#rizqPackageList p, #rizqPackageList div').forEach(function(el){
+      if(el.children.length === 0 &&
+         /لا يوجد عائد يومي ثابت أو مضمون|ليست مضمونة|غير مضمونة/.test(el.textContent)){
+        el.textContent =
+          'تُحتسب المكافآت اليومية بعد إنجاز المهام المطلوبة واعتمادها وفق نظام RIZQ.';
+      }
+    });
+  }
+
+  fixOldText();
+
+  new MutationObserver(fixOldText).observe(document.body,{
+    childList:true,
+    subtree:true,
+    characterData:true
+  });
+})();
+</script>
+
 </body>
 </html>
 
