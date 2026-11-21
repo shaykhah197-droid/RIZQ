@@ -2366,6 +2366,395 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
 })();
 </script>
 
+<style>
+#rizqAdminAll{direction:rtl;margin:12px 0}
+#rizqAdminAll .rizq-grid{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px
+}
+#rizqAdminAll .rizq-tile{
+ background:white;color:#174b38;border:1px solid #dce8df;
+ border-radius:14px;padding:19px 8px;min-height:88px;
+ font-size:15px;font-weight:bold;width:100%;margin:0
+}
+#rizqAdminAll .rizq-page{
+ display:none;background:white;border:1px solid #dce8df;
+ border-radius:14px;padding:14px;margin-top:12px
+}
+#rizqAdminAll .rizq-back{background:#174b38;color:white}
+#rizqAdminAll .rizq-row{
+ border:1px solid #e1e9e3;border-radius:10px;
+ padding:12px;margin:9px 0;overflow-wrap:anywhere
+}
+#rizqAdminAll .rizq-row small{display:block;color:#718078;margin-top:6px}
+#rizqAdminAll input{width:100%;padding:11px;margin:7px 0}
+</style>
+
+<script>
+(function(){
+ function init(){
+  const admin=document.getElementById('tab-admin');
+  if(!admin || document.getElementById('rizqAdminAll'))return;
+
+  // إزالة قوائم التنقل القديمة فقط
+  document.getElementById('rizqAdminNavigation')?.remove();
+  document.getElementById('rizqAdminWorkspace')?.remove();
+
+  const workspace=document.createElement('div');
+  workspace.id='rizqAdminAll';
+
+  workspace.innerHTML=`
+   <div id="rizqAllHome">
+    <h2>لوحة إدارة RIZQ</h2>
+    <p class="muted">اختر القسم الذي تريد إدارته</p>
+    <div class="rizq-grid" id="rizqAllGrid"></div>
+   </div>
+   <div class="rizq-page" id="rizqAllScreen">
+    <button type="button" class="rizq-back" id="rizqAllBack">
+     ← رجوع للرئيسية
+    </button>
+    <h2 id="rizqAllTitle"></h2>
+    <div id="rizqAllContent"></div>
+   </div>
+  `;
+
+  admin.prepend(workspace);
+
+  const screen=document.getElementById('rizqAllScreen');
+  const home=document.getElementById('rizqAllHome');
+  const content=document.getElementById('rizqAllContent');
+  const title=document.getElementById('rizqAllTitle');
+  const grid=document.getElementById('rizqAllGrid');
+
+  function cardFor(id){
+   const el=document.getElementById(id);
+   return el ? (el.closest('.card')||el) : null;
+  }
+
+  // إنشاء إدارة الباقات إذا لم تكن موجودة
+  let packagePanel=document.getElementById('rizqPackageAdmin');
+  if(!packagePanel){
+   packagePanel=document.createElement('div');
+   packagePanel.id='rizqPackageAdmin';
+   packagePanel.className='card';
+   packagePanel.innerHTML=`
+    <h2>إدارة الباقات</h2>
+    <label>اسم الباقة</label>
+    <input id="rizqAllPackageName" placeholder="اسم الباقة">
+    <label>السعر بالجنيه</label>
+    <input id="rizqAllPackagePrice" type="number" min="1" placeholder="السعر">
+    <button type="button" id="rizqAllPackageAdd">إضافة باقة</button>
+    <h3>الباقات الحالية</h3>
+    <div id="rizqAllPackageList">جارٍ التحميل...</div>
+   `;
+   admin.appendChild(packagePanel);
+  }
+
+  // إنشاء الأقسام الإضافية
+  function makePanel(id,heading){
+   let el=document.getElementById(id);
+   if(el)return el;
+   el=document.createElement('div');
+   el.id=id;
+   el.className='card';
+   el.innerHTML='<h2>'+heading+'</h2><div id="'+id+'Content">جارٍ التحميل...</div>';
+   admin.appendChild(el);
+   return el;
+  }
+
+  const customers=makePanel('rizqAdminCustomers','العملاء والمحافظ');
+  const referrals=makePanel('rizqAdminReferrals','الإحالات');
+  const transactions=makePanel('rizqAdminTransactions','سجل المعاملات');
+
+  const definitions=[
+   {name:'إدارة الباقات',icon:'📦',target:packagePanel,load:loadPackages},
+   {name:'إدارة المهام',icon:'📋',target:cardFor('rizqTaskManager'),load:()=>window.rizqLoadTaskManager?.()},
+   {name:'مراجعة المهام',icon:'📝',target:cardFor('rizqTaskReviews'),load:()=>window.rizqLoadTaskReviews?.()},
+   {name:'طلبات الإيداع',icon:'💰',target:cardFor('adminDeposits'),load:()=>typeof loadAdmin==='function'&&loadAdmin()},
+   {name:'طلبات السحب',icon:'💸',target:cardFor('adminWithdrawals'),load:()=>typeof loadAdmin==='function'&&loadAdmin()},
+   {name:'وسائل الدفع',icon:'🏦',target:cardFor('adminMethods'),load:()=>typeof loadAdminMethods==='function'&&loadAdminMethods()},
+   {name:'إثباتات المعاملات',icon:'📨',target:cardFor('evidenceTransaction'),load:()=>typeof loadTransactionEvidence==='function'&&loadTransactionEvidence()},
+   {name:'العملاء والمحافظ',icon:'👥',target:customers,load:loadCustomers},
+   {name:'الإحالات',icon:'🔗',target:referrals,load:loadReferrals},
+   {name:'سجل المعاملات',icon:'📚',target:transactions,load:loadTransactions}
+  ];
+
+  let previous=null;
+
+  function show(def){
+   if(!def.target){
+    alert('القسم غير موجود في النسخة الحالية: '+def.name);
+    return;
+   }
+
+   if(!previous){
+    previous=[...admin.children].filter(x=>x!==workspace)
+      .map(el=>({el,display:el.style.display}));
+   }
+
+   previous.forEach(x=>x.el.style.display='none');
+
+   // نقل القسم المختار إلى شاشة مستقلة
+   const target=def.target;
+   const parent=target.parentNode;
+   const next=target.nextSibling;
+   const oldDisplay=target.style.display;
+
+   target.classList.remove('hidden','rizq-admin-hidden');
+   target.style.display='block';
+
+   title.textContent=def.name;
+   content.innerHTML='';
+   content.appendChild(target);
+
+   screen.style.display='block';
+   home.style.display='none';
+
+   screen.dataset.active='yes';
+   screen._restore=()=>{
+    if(parent){
+     parent.insertBefore(target,next&&next.parentNode===parent?next:null);
+    }
+    target.style.display=oldDisplay;
+    screen.style.display='none';
+    home.style.display='block';
+    previous?.forEach(x=>x.el.style.display=x.display);
+    previous=null;
+   };
+
+   if(typeof def.load==='function'){
+    try{
+     const result=def.load();
+     if(result?.catch)result.catch(e=>console.error(e));
+    }catch(e){console.error(e)}
+   }
+   window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  document.getElementById('rizqAllBack').onclick=()=>{
+   if(screen._restore)screen._restore();
+  };
+
+  definitions.forEach(def=>{
+   const button=document.createElement('button');
+   button.type='button';
+   button.className='rizq-tile';
+   button.textContent=def.icon+' '+def.name;
+   button.onclick=()=>show(def);
+   grid.appendChild(button);
+  });
+
+  // صلاحيات الإدارة
+  function allowed(){
+   return typeof isAdmin!=='undefined' && isAdmin &&
+          typeof currentUser!=='undefined' && currentUser;
+  }
+
+  function notice(box,message){
+   box.textContent=message;
+  }
+
+  async function loadPackages(){
+   const box=document.getElementById('rizqAllPackageList');
+   if(!allowed()){notice(box,'غير مصرح لك');return}
+   box.textContent='جارٍ تحميل الباقات...';
+
+   const {data,error}=await db.from('packages')
+    .select('id,name,price,active').order('price');
+
+   if(error){notice(box,'خطأ: '+error.message);return}
+   box.innerHTML='';
+
+   (data||[]).forEach(p=>{
+    const row=document.createElement('div');
+    row.className='rizq-row';
+
+    const name=document.createElement('b');
+    name.textContent=p.name;
+
+    const price=document.createElement('p');
+    price.textContent=Number(p.price).toLocaleString('ar-EG')+' جنيه';
+
+    const status=document.createElement('small');
+    status.textContent=p.active?'نشطة':'متوقفة';
+
+    const edit=document.createElement('button');
+    edit.className='secondary';
+    edit.textContent='تعديل';
+    edit.onclick=async()=>{
+     const n=prompt('اسم الباقة:',p.name);
+     if(n===null)return;
+     if(!n.trim())return alert('اكتب الاسم');
+
+     const v=prompt('السعر:',p.price);
+     if(v===null)return;
+     if(!Number.isFinite(Number(v))||Number(v)<=0)
+      return alert('السعر غير صحيح');
+
+     const {error}=await db.from('packages')
+      .update({name:n.trim(),price:Number(v)}).eq('id',p.id);
+     if(error)alert(error.message);
+     else loadPackages();
+    };
+
+    const toggle=document.createElement('button');
+    toggle.className=p.active?'danger':'secondary';
+    toggle.textContent=p.active?'إيقاف':'تفعيل';
+    toggle.onclick=async()=>{
+     if(!confirm('تأكيد تغيير حالة الباقة؟'))return;
+     const {error}=await db.from('packages')
+      .update({active:!p.active}).eq('id',p.id);
+     if(error)alert(error.message);
+     else loadPackages();
+    };
+
+    row.append(name,price,status,edit,toggle);
+    box.appendChild(row);
+   });
+
+   if(!data?.length)notice(box,'لا توجد باقات');
+  }
+
+  document.getElementById('rizqAllPackageAdd').onclick=async()=>{
+   if(!allowed())return alert('غير مصرح لك');
+   const name=document.getElementById('rizqAllPackageName').value.trim();
+   const price=Number(document.getElementById('rizqAllPackagePrice').value);
+   if(!name||!Number.isFinite(price)||price<=0)
+    return alert('أدخل اسم وسعر صحيحين');
+
+   const {error}=await db.from('packages').insert({
+    name,price,active:true
+   });
+   if(error)alert('تعذرت الإضافة: '+error.message);
+   else{
+    document.getElementById('rizqAllPackageName').value='';
+    document.getElementById('rizqAllPackagePrice').value='';
+    alert('تمت إضافة الباقة');
+    loadPackages();
+   }
+  };
+
+  async function loadCustomers(){
+   const box=document.getElementById('rizqAdminCustomersContent');
+   if(!allowed())return notice(box,'غير مصرح لك');
+   box.textContent='جارٍ تحميل العملاء...';
+
+   const [p,w]=await Promise.all([
+    db.from('profiles').select('id,full_name,referral_code,created_at')
+      .order('created_at',{ascending:false}).limit(200),
+    db.from('wallets').select('user_id,balance')
+   ]);
+
+   if(p.error||w.error)return notice(box,'تعذر التحميل: '+(p.error||w.error).message);
+
+   box.innerHTML='';
+   (p.data||[]).forEach(user=>{
+    const wallet=(w.data||[]).find(x=>x.user_id===user.id);
+    const row=document.createElement('div');
+    row.className='rizq-row';
+
+    const name=document.createElement('b');
+    name.textContent=user.full_name||'عميل بدون اسم';
+
+    const id=document.createElement('small');
+    id.textContent='معرف العميل: '+user.id;
+
+    const balance=document.createElement('p');
+    balance.textContent='رصيد المحفظة: '+Number(wallet?.balance||0).toLocaleString('ar-EG')+' جنيه';
+
+    const code=document.createElement('small');
+    code.textContent='كود الإحالة: '+(user.referral_code||'غير موجود');
+
+    row.append(name,id,balance,code);
+    box.appendChild(row);
+   });
+   if(!p.data?.length)notice(box,'لا يوجد عملاء');
+  }
+
+  async function loadReferrals(){
+   const box=document.getElementById('rizqAdminReferralsContent');
+   if(!allowed())return notice(box,'غير مصرح لك');
+   box.textContent='جارٍ تحميل الإحالات...';
+
+   const {data,error}=await db.from('referrals').select('*')
+    .order('created_at',{ascending:false}).limit(200);
+
+   if(error)return notice(box,'تعذر تحميل الإحالات: '+error.message);
+   box.innerHTML='';
+
+   (data||[]).forEach(r=>{
+    const row=document.createElement('div');
+    row.className='rizq-row';
+    row.textContent='المُحيل: '+r.referrer_id+
+     ' | العميل الجديد: '+r.referred_user_id+
+     ' | الحالة: '+r.status;
+    box.appendChild(row);
+   });
+   if(!data?.length)notice(box,'لا توجد إحالات');
+  }
+
+  async function loadTransactions(){
+   const box=document.getElementById('rizqAdminTransactionsContent');
+   if(!allowed())return notice(box,'غير مصرح لك');
+   box.textContent='جارٍ تحميل المعاملات...';
+
+   const {data,error}=await db.from('wallet_transactions').select('*')
+    .order('created_at',{ascending:false}).limit(200);
+
+   if(error)return notice(box,'تعذر تحميل السجل: '+error.message);
+   box.innerHTML='';
+
+   (data||[]).forEach(t=>{
+    const row=document.createElement('div');
+    row.className='rizq-row';
+
+    const amount=document.createElement('b');
+    amount.textContent=Number(t.amount).toLocaleString('ar-EG')+' جنيه';
+
+    const type=document.createElement('p');
+    type.textContent='النوع: '+t.transaction_type;
+
+    const user=document.createElement('small');
+    user.textContent='العميل: '+t.user_id;
+
+    const desc=document.createElement('small');
+    desc.textContent='التفاصيل: '+(t.description||'');
+
+    const date=document.createElement('small');
+    date.textContent=t.created_at?new Date(t.created_at).toLocaleString('ar-EG'):'';
+
+    row.append(amount,type,user,desc,date);
+    box.appendChild(row);
+   });
+   if(!data?.length)notice(box,'لا توجد معاملات');
+  }
+
+  // أزرار تحديث للأقسام الإضافية
+  [
+   ['rizqAdminCustomers','تحديث العملاء',loadCustomers],
+   ['rizqAdminReferrals','تحديث الإحالات',loadReferrals],
+   ['rizqAdminTransactions','تحديث السجل',loadTransactions]
+  ].forEach(([id,label,fn])=>{
+   const panel=document.getElementById(id);
+   const button=document.createElement('button');
+   button.className='secondary';
+   button.textContent=label;
+   button.onclick=fn;
+   panel.prepend(button);
+  });
+
+  // فتح لوحة الأقسام كصفحة البداية
+  home.style.display='block';
+  screen.style.display='none';
+ }
+
+ if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',init);
+ }else{
+  init();
+ }
+})();
+</script>
+
 </body>
 </html>
 
