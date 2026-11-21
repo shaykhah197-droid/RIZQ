@@ -1978,6 +1978,146 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
 })();
 </script>
 
+<style>
+#rizqAdminWorkspace{direction:rtl;margin:15px 0}
+#rizqAdminWorkspace .rizq-menu-grid{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px
+}
+#rizqAdminWorkspace .rizq-menu-button{
+ background:white;color:#173c2d;border:1px solid #dce8df;
+ border-radius:14px;padding:20px 8px;min-height:90px;
+ font-size:16px;font-weight:bold;width:100%;margin:0
+}
+#rizqAdminWorkspace .rizq-menu-button:active{background:#e6f4ed}
+#rizqAdminWorkspace .rizq-screen{
+ display:none;background:white;border:1px solid #dce8df;
+ border-radius:14px;padding:14px;min-height:180px
+}
+#rizqAdminWorkspace .rizq-back{
+ background:#173c2d;color:white;margin-bottom:16px
+}
+#rizqAdminWorkspace .rizq-screen-title{
+ font-size:20px;font-weight:bold;margin:10px 0 18px
+}
+</style>
+
+<script>
+(function(){
+ function initRizqAdminWorkspace(){
+  const admin=document.getElementById('tab-admin');
+  if(!admin || document.getElementById('rizqAdminWorkspace')) return;
+
+  // إزالة القائمة القديمة فقط
+  const oldNav=document.getElementById('rizqAdminNavigation');
+  if(oldNav) oldNav.remove();
+
+  const workspace=document.createElement('div');
+  workspace.id='rizqAdminWorkspace';
+
+  const menu=document.createElement('div');
+  menu.innerHTML=`
+   <h2 style="margin-bottom:15px">أقسام إدارة المنصة</h2>
+   <div class="rizq-menu-grid"></div>
+  `;
+
+  const screen=document.createElement('div');
+  screen.className='rizq-screen';
+
+  workspace.append(menu,screen);
+  const head=admin.querySelector('.admin-head');
+  if(head) head.after(workspace);
+  else admin.prepend(workspace);
+
+  const definitions=[
+   {name:'إدارة المهام',icon:'📋',id:'rizqTaskManager'},
+   {name:'مراجعة إثباتات المهام',icon:'📝',id:'rizqTaskReviews'},
+   {name:'الباقات',icon:'📦',id:'rizqPackages'},
+   {name:'طلبات الإيداع',icon:'💰',id:'adminDeposits'},
+   {name:'طلبات السحب',icon:'💸',id:'adminWithdrawals'},
+   {name:'وسائل الدفع',icon:'🏦',id:'adminMethods'},
+   {name:'إثباتات المعاملات',icon:'📨',id:'evidenceTransaction'}
+  ];
+
+  const targets=[];
+
+  function getTarget(def){
+   const element=document.getElementById(def.id);
+   if(!element) return null;
+   return element.closest('.card') || element;
+  }
+
+  definitions.forEach(def=>{
+   const target=getTarget(def);
+   const button=document.createElement('button');
+   button.type='button';
+   button.className='rizq-menu-button';
+   button.textContent=def.icon+'  '+def.name;
+
+   if(!target){
+    button.style.opacity='.55';
+    button.title='القسم غير موجود في النسخة الحالية';
+   }else{
+    const record={
+     target:target,
+     parent:target.parentNode,
+     next:target.nextSibling,
+     display:target.style.display
+    };
+    targets.push(record);
+    target.style.display='none';
+
+    button.addEventListener('click',()=>{
+     menu.style.display='none';
+     screen.style.display='block';
+     screen.innerHTML='';
+
+     const back=document.createElement('button');
+     back.type='button';
+     back.className='rizq-back';
+     back.textContent='← رجوع للرئيسية';
+     back.onclick=()=>{
+      record.parent.insertBefore(
+       record.target,
+       record.next && record.next.parentNode===record.parent
+        ? record.next : null
+      );
+      record.target.style.display='none';
+      screen.style.display='none';
+      menu.style.display='block';
+      window.scrollTo({top:0,behavior:'smooth'});
+     };
+
+     const title=document.createElement('div');
+     title.className='rizq-screen-title';
+     title.textContent=def.name;
+
+     screen.append(back,title);
+     record.target.style.display=record.display;
+     screen.appendChild(record.target);
+
+     window.scrollTo({top:0,behavior:'smooth'});
+    });
+   }
+
+   menu.querySelector('.rizq-menu-grid').appendChild(button);
+  });
+
+  // توضيح الأقسام التي لم تُنشأ إدارتها بعد
+  const note=document.createElement('p');
+  note.className='muted';
+  note.style.marginTop='14px';
+  note.textContent='الأقسام التي لا توجد لها وظيفة إدارية في النسخة الحالية ستحتاج إلى إنشائها.';
+  menu.appendChild(note);
+ }
+
+ if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',initRizqAdminWorkspace);
+ }else{
+  initRizqAdminWorkspace();
+ }
+})();
+</script>
+
 </body>
 </html>
 
