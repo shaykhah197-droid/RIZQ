@@ -10,68 +10,82 @@ header{background:#073b2c;color:#fff;padding:22px 16px}header h1{margin:0;font-s
 main{max-width:650px;margin:auto;padding:15px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:17px;margin-bottom:13px;box-shadow:0 3px 14px #102b1b08}
 h2{font-size:19px;margin:0 0 12px}.muted{color:var(--muted);font-size:13px;line-height:1.7}.notice{background:#fff7e6;border:1px solid #f3d28a;padding:12px;border-radius:12px;font-size:13px;line-height:1.7;margin-bottom:14px}
 label{font-size:13px;font-weight:650;display:block;margin-top:8px}input{width:100%;padding:12px;border:1px solid #ccd4da;border-radius:10px;font:inherit;margin:5px 0 8px;background:#fff}button{cursor:pointer;font:inherit;border-radius:10px;padding:12px 14px}button.primary{background:var(--green);color:#fff;border:0;width:100%;font-weight:700;margin-top:8px}button.secondary{background:#eef3f1;border:1px solid #d6e4dd;color:var(--ink)}button:disabled{opacity:.55;cursor:not-allowed}
-.row{display:flex;justify-content:space-between;gap:10px;align-items:center}.balance{font-size:32px;font-weight:750;color:var(--green);margin:5px 0}.pill{font-size:11px;background:#eaf5ef;color:#087f5b;padding:4px 8px;border-radius:20px}.hidden{display:none}.small{font-size:12px;color:var(--muted);overflow-wrap:anywhere}.status{font-size:13px;line-height:1.7;margin-top:10px}.status.error{color:var(--red)}.status.ok{color:var(--green)}.tabs{display:flex;gap:8px;margin-bottom:12px}.tabs button{flex:1}.copyline{display:flex;gap:8px;align-items:center}.copyline input{margin:0}.footer{text-align:center;color:var(--muted);font-size:11px;padding:12px}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:center}.balance{font-size:32px;font-weight:750;color:var(--green);margin:5px 0}.pill{font-size:11px;background:#eaf5ef;color:#087f5b;padding:4px 8px;border-radius:20px}.hidden{display:none!important}.small{font-size:12px;color:var(--muted);overflow-wrap:anywhere}.status{font-size:13px;line-height:1.7;margin-top:10px}.status.error{color:var(--red)}.status.ok{color:var(--green)}.tabs{display:flex;gap:8px;margin-bottom:12px}.tabs button{flex:1}.copyline{display:flex;gap:8px;align-items:center}.copyline input{margin:0}.footer{text-align:center;color:var(--muted);font-size:11px;padding:12px}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <header><h1>رزق RIZQ</h1><p>حسابك الشخصي وإحالاتك — نسخة تجريبية متصلة بقاعدة البيانات</p></header>
 <main>
 <div class="notice"><b>تنبيه:</b> هذه نسخة اختبار للحسابات وعرض بيانات الملف الشخصي والمحفظة فقط. الرصيد المعروض ليس أموالًا قابلة للسحب، ولا توجد مدفوعات أو تحويلات مالية مفعّلة.</div>
 <section id="authView">
- <div class="tabs"><button class="secondary" id="showLogin">تسجيل الدخول</button><button class="secondary" id="showSignup">إنشاء حساب</button></div>
- <div class="card" id="loginCard"><h2>تسجيل الدخول</h2>
-  <label>البريد الإلكتروني</label><input id="loginEmail" type="email" autocomplete="email" placeholder="name@example.com">
-  <label>كلمة المرور</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="كلمة المرور">
-  <button class="primary" id="loginBtn">دخول</button>
- </div>
- <div class="card hidden" id="signupCard"><h2>إنشاء حساب جديد</h2>
-  <label>الاسم الكامل</label><input id="fullName" autocomplete="name" placeholder="اكتب اسمك">
-  <label>البريد الإلكتروني</label><input id="signupEmail" type="email" autocomplete="email" placeholder="name@example.com">
-  <label>كلمة المرور (6 أحرف على الأقل)</label><input id="signupPassword" type="password" autocomplete="new-password" placeholder="أنشئ كلمة مرور">
-  <label>كود دعوة (اختياري)</label><input id="referralCode" placeholder="اكتب كود الدعوة إن وجد">
-  <button class="primary" id="signupBtn">إنشاء الحساب</button>
-  <p class="muted">قد يطلب منك تأكيد البريد الإلكتروني قبل تسجيل الدخول، حسب إعدادات المشروع.</p>
- </div>
+ <div class="tabs"><button type="button" class="secondary" id="showLogin">تسجيل الدخول</button><button type="button" class="secondary" id="showSignup">إنشاء حساب</button></div>
+ <div class="card" id="loginCard"><h2>تسجيل الدخول</h2><label>البريد الإلكتروني</label><input id="loginEmail" type="email" autocomplete="email" placeholder="name@example.com"><label>كلمة المرور</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="كلمة المرور"><button type="button" class="primary" id="loginBtn">دخول</button></div>
+ <div class="card hidden" id="signupCard"><h2>إنشاء حساب جديد</h2><label>الاسم الكامل</label><input id="fullName" autocomplete="name" placeholder="اكتب اسمك"><label>البريد الإلكتروني</label><input id="signupEmail" type="email" autocomplete="email" placeholder="name@example.com"><label>كلمة المرور (6 أحرف على الأقل)</label><input id="signupPassword" type="password" autocomplete="new-password" placeholder="أنشئ كلمة مرور"><label>كود دعوة (اختياري)</label><input id="referralCode" placeholder="اكتب كود الدعوة إن وجد"><button type="button" class="primary" id="signupBtn">إنشاء الحساب</button><p class="muted">قد يطلب منك تأكيد البريد الإلكتروني قبل تسجيل الدخول، حسب إعدادات المشروع.</p></div>
  <div id="authMessage" class="status" aria-live="polite"></div>
 </section>
 <section id="accountView" class="hidden">
  <div class="card"><div class="row"><h2>حسابي</h2><span class="pill">متصل</span></div><div id="userName" style="font-weight:700"></div><div id="userEmail" class="small"></div></div>
  <div class="card"><div class="muted">الرصيد التجريبي في المحفظة</div><div class="balance" id="walletBalance">—</div><div class="small" id="walletCurrency"></div></div>
- <div class="card"><h2>كود الدعوة الخاص بك</h2><div class="copyline"><input id="myReferralCode" readonly value="—"><button class="secondary" id="copyCodeBtn">نسخ</button></div><p class="muted">شارك الكود مع صديقك. تسجيل الإحالة وحده لا ينشئ عمولة أو رصيدًا.</p></div>
+ <div class="card"><h2>كود الدعوة الخاص بك</h2><div class="copyline"><input id="myReferralCode" readonly value="—"><button type="button" class="secondary" id="copyCodeBtn">نسخ</button></div><p class="muted">شارك الكود مع صديقك. تسجيل الإحالة وحده لا ينشئ عمولة أو رصيدًا.</p></div>
  <div class="card"><h2>الإحالات</h2><div id="referralSummary" class="muted">جارٍ التحميل…</div></div>
- <button class="secondary" id="refreshBtn">تحديث البيانات</button> <button class="secondary" id="logoutBtn">تسجيل الخروج</button>
+ <button type="button" class="secondary" id="refreshBtn">تحديث البيانات</button> <button type="button" class="secondary" id="logoutBtn">تسجيل الخروج</button>
 </section>
 <div class="footer">RIZQ — نسخة اختبار. لا تودع أموالًا ولا تشارك بيانات الدخول مع أحد.</div>
 </main>
 <script>
-const SUPABASE_URL = 'https://rxikasycoyihqbrvqluu.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_EcwbSaSOp_Qb8yX0gmpKQw_-Ad3vwCx';
-let supabase = null;
-try {
-  if (window.supabase && typeof window.supabase.createClient === 'function') {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-  }
-} catch (e) { console.error('Supabase initialization failed:', e); }
-const $ = id => document.getElementById(id);
-function message(text, kind=''){const el=$('authMessage');el.textContent=text;el.className='status '+kind;}
+'use strict';
+const SUPABASE_URL='https://rxikasycoyihqbrvqluu.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_EcwbSaSOp_Qb8yX0gmpKQw_-Ad3vwCx';
+const $=id=>document.getElementById(id);
+let supabaseClient=null;
+function message(text,kind=''){const el=$('authMessage');el.textContent=text;el.className='status '+kind;}
 function showMode(mode){$('loginCard').classList.toggle('hidden',mode!=='login');$('signupCard').classList.toggle('hidden',mode!=='signup');message('');}
-$('showLogin').onclick=()=>showMode('login');$('showSignup').onclick=()=>showMode('signup');
-$('loginBtn').onclick=async()=>{if(!supabase)return message('تعذر تحميل خدمة الحسابات. تأكد من اتصال الإنترنت ثم حدّث الصفحة.','error');const email=$('loginEmail').value.trim(),password=$('loginPassword').value;if(!email||!password)return message('اكتب البريد الإلكتروني وكلمة المرور.','error');$('loginBtn').disabled=true;message('جارٍ تسجيل الدخول…');const {error}=await supabase.auth.signInWithPassword({email,password});$('loginBtn').disabled=false;if(error)return message(error.message,'error');await loadAccount();};
-$('signupBtn').onclick=async()=>{if(!supabase)return message('تعذر تحميل خدمة الحسابات. تأكد من اتصال الإنترنت ثم حدّث الصفحة.','error');const full_name=$('fullName').value.trim(),email=$('signupEmail').value.trim(),password=$('signupPassword').value,referral_code=$('referralCode').value.trim();if(!full_name||!email||password.length<6)return message('اكتب الاسم والبريد وكلمة مرور من 6 أحرف على الأقل.','error');$('signupBtn').disabled=true;message('جارٍ إنشاء الحساب…');const {data,error}=await supabase.auth.signUp({email,password,options:{data:{full_name,referral_code}}});$('signupBtn').disabled=false;if(error)return message(error.message,'error');if(data.session){await loadAccount();}else{message('تم إرسال طلب التسجيل. افتح بريدك الإلكتروني وأكّد الحساب، ثم ارجع وسجّل الدخول.','ok');}};
-async function loadAccount(){if(!supabase){$('authView').classList.remove('hidden');$('accountView').classList.add('hidden');message('تعذر تحميل خدمة الحسابات. حدّث الصفحة وتأكد من الإنترنت.','error');return;}const {data:{user},error:authError}=await supabase.auth.getUser();if(authError||!user){$('authView').classList.remove('hidden');$('accountView').classList.add('hidden');return;}$('authView').classList.add('hidden');$('accountView').classList.remove('hidden');$('userEmail').textContent=user.email||'';$('userName').textContent=user.user_metadata?.full_name||'مستخدم رزق';$('walletBalance').textContent='—';$('walletCurrency').textContent='';$('myReferralCode').value='—';$('referralSummary').textContent='جارٍ التحميل…';
-const [profileResult,walletResult,refResult]=await Promise.all([
-supabase.from('profiles').select('full_name,referral_code').eq('id',user.id).maybeSingle(),
-supabase.from('wallets').select('balance,currency').eq('user_id',user.id).maybeSingle(),
-supabase.from('referrals').select('id,status').eq('referrer_id',user.id)
-]);
-if(profileResult.error){$('referralSummary').textContent='تعذر قراءة الملف الشخصي: '+profileResult.error.message;}else if(profileResult.data){$('userName').textContent=profileResult.data.full_name||$('userName').textContent;$('myReferralCode').value=profileResult.data.referral_code||'لم يتم إنشاء كود بعد';}
-if(walletResult.error){$('walletBalance').textContent='غير متاح';$('walletCurrency').textContent='تعذر قراءة المحفظة. راجع سياسات RLS.';}else if(walletResult.data){$('walletBalance').textContent=Number(walletResult.data.balance||0).toFixed(2);$('walletCurrency').textContent=walletResult.data.currency||'EGP';}else{$('walletBalance').textContent='0.00';$('walletCurrency').textContent='EGP';}
-if(refResult.error){$('referralSummary').textContent='تعذر قراءة الإحالات: '+refResult.error.message;}else{$('referralSummary').textContent='عدد الأشخاص المسجلين بكودك: '+(refResult.data?.length||0);}
+// Wire the interface before attempting to load or initialize Supabase.
+$('showLogin').addEventListener('click',()=>showMode('login'));
+$('showSignup').addEventListener('click',()=>showMode('signup'));
+function initSupabase(){
+ try{
+  if(!window.supabase || typeof window.supabase.createClient!=='function') throw new Error('تعذر تحميل مكتبة الاتصال. تأكد من الإنترنت ثم حدّث الصفحة.');
+  supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+  return true;
+ }catch(err){message(err.message||'تعذر الاتصال بالخدمة.','error');return false;}
 }
-$('copyCodeBtn').onclick=async()=>{const v=$('myReferralCode').value;if(!v||v==='—'||v==='لم يتم إنشاء كود بعد')return;try{await navigator.clipboard.writeText(v);$('copyCodeBtn').textContent='تم النسخ';setTimeout(()=>$('copyCodeBtn').textContent='نسخ',1500);}catch(e){$('myReferralCode').select();document.execCommand('copy');$('copyCodeBtn').textContent='تم النسخ';}};
-$('refreshBtn').onclick=loadAccount;$('logoutBtn').onclick=async()=>{if(!supabase)return message('خدمة الحسابات غير متاحة حاليًا.','error');await supabase.auth.signOut();$('accountView').classList.add('hidden');$('authView').classList.remove('hidden');showMode('login');};
-if(supabase){supabase.auth.onAuthStateChange((_event,session)=>{if(session)setTimeout(loadAccount,0);});
-(async()=>{const {data:{session}}=await supabase.auth.getSession();if(session)await loadAccount();})();}
+async function loadAccount(){
+ if(!supabaseClient)return;
+ const {data:{user},error:authError}=await supabaseClient.auth.getUser();
+ if(authError||!user){$('authView').classList.remove('hidden');$('accountView').classList.add('hidden');return;}
+ $('authView').classList.add('hidden');$('accountView').classList.remove('hidden');$('userEmail').textContent=user.email||'';$('userName').textContent=user.user_metadata?.full_name||'مستخدم رزق';$('walletBalance').textContent='—';$('walletCurrency').textContent='';$('myReferralCode').value='—';$('referralSummary').textContent='جارٍ التحميل…';
+ const [profileResult,walletResult,refResult]=await Promise.all([
+  supabaseClient.from('profiles').select('full_name,referral_code').eq('id',user.id).maybeSingle(),
+  supabaseClient.from('wallets').select('balance,currency').eq('user_id',user.id).maybeSingle(),
+  supabaseClient.from('referrals').select('id,status').eq('referrer_id',user.id)
+ ]);
+ if(profileResult.error){$('referralSummary').textContent='تعذر قراءة الملف الشخصي: '+profileResult.error.message;}else if(profileResult.data){$('userName').textContent=profileResult.data.full_name||$('userName').textContent;$('myReferralCode').value=profileResult.data.referral_code||'لم يتم إنشاء كود بعد';}
+ if(walletResult.error){$('walletBalance').textContent='غير متاح';$('walletCurrency').textContent='تعذر قراءة المحفظة. راجع سياسات RLS.';}else if(walletResult.data){$('walletBalance').textContent=Number(walletResult.data.balance||0).toFixed(2);$('walletCurrency').textContent=walletResult.data.currency||'EGP';}else{$('walletBalance').textContent='0.00';$('walletCurrency').textContent='EGP';}
+ if(refResult.error){$('referralSummary').textContent='تعذر قراءة الإحالات: '+refResult.error.message;}else{$('referralSummary').textContent='عدد الأشخاص المسجلين بكودك: '+(refResult.data?.length||0);}
+}
+$('loginBtn').addEventListener('click',async()=>{
+ const email=$('loginEmail').value.trim(),password=$('loginPassword').value;
+ if(!email||!password)return message('اكتب البريد الإلكتروني وكلمة المرور.','error');
+ if(!supabaseClient&&!initSupabase())return;
+ $('loginBtn').disabled=true;message('جارٍ تسجيل الدخول…');
+ try{const {error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)message(error.message,'error');else await loadAccount();}
+ catch(err){message(err.message||'حدث خطأ أثناء تسجيل الدخول.','error');}
+ finally{$('loginBtn').disabled=false;}
+});
+$('signupBtn').addEventListener('click',async()=>{
+ const full_name=$('fullName').value.trim(),email=$('signupEmail').value.trim(),password=$('signupPassword').value,referral_code=$('referralCode').value.trim();
+ if(!full_name||!email||password.length<6)return message('اكتب الاسم والبريد وكلمة مرور من 6 أحرف على الأقل.','error');
+ if(!supabaseClient&&!initSupabase())return;
+ $('signupBtn').disabled=true;message('جارٍ إنشاء الحساب…');
+ try{const {data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{full_name,referral_code}}});if(error)message(error.message,'error');else if(data.session)await loadAccount();else message('تم إرسال طلب التسجيل. افتح بريدك الإلكتروني وأكّد الحساب، ثم ارجع وسجّل الدخول.','ok');}
+ catch(err){message(err.message||'حدث خطأ أثناء إنشاء الحساب.','error');}
+ finally{$('signupBtn').disabled=false;}
+});
+$('copyCodeBtn').addEventListener('click',async()=>{const v=$('myReferralCode').value;if(!v||v==='—'||v==='لم يتم إنشاء كود بعد')return;try{await navigator.clipboard.writeText(v);$('copyCodeBtn').textContent='تم النسخ';}catch(e){$('myReferralCode').select();document.execCommand('copy');$('copyCodeBtn').textContent='تم النسخ';}});
+$('refreshBtn').addEventListener('click',loadAccount);
+$('logoutBtn').addEventListener('click',async()=>{if(!supabaseClient)return;await supabaseClient.auth.signOut();$('accountView').classList.add('hidden');$('authView').classList.remove('hidden');showMode('login');});
+window.addEventListener('load',async()=>{if(!initSupabase())return;try{supabaseClient.auth.onAuthStateChange((_event,session)=>{if(session)setTimeout(loadAccount,0);});const {data:{session}}=await supabaseClient.auth.getSession();if(session)await loadAccount();}catch(err){message(err.message||'تعذر بدء الاتصال.','error');}});
 </script>
 </body></html>
