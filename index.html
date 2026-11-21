@@ -1570,6 +1570,26 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
 })();
 </script>
 
+<script>
+(function(){
+  function hideOldTasks(){
+    const oldList = document.getElementById('tasksList');
+    if(oldList){
+      const oldCard = oldList.closest('.card');
+      if(oldCard) oldCard.style.display = 'none';
+      else oldList.style.display = 'none';
+    }
+  }
+
+  hideOldTasks();
+
+  new MutationObserver(hideOldTasks).observe(document.body,{
+    childList:true,
+    subtree:true
+  });
+})();
+</script>
+
 </body>
 </html>
 
