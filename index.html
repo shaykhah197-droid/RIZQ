@@ -2118,6 +2118,254 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
 })();
 </script>
 
+<style>
+#rizqPackageAdmin {
+  direction:rtl;
+  background:white;
+  border-radius:15px;
+  padding:16px;
+  margin:12px 0;
+}
+#rizqPackageAdmin .package-admin-item {
+  border:1px solid #dce8df;
+  border-radius:12px;
+  padding:13px;
+  margin:10px 0;
+}
+#rizqPackageAdmin .package-admin-item strong {
+  display:block;
+  font-size:17px;
+  margin-bottom:8px;
+}
+</style>
+
+<script>
+(function(){
+  function initPackageAdmin(){
+    const admin=document.getElementById('tab-admin');
+    if(!admin || document.getElementById('rizqPackageAdmin')) return;
+
+    const panel=document.createElement('div');
+    panel.id='rizqPackageAdmin';
+    panel.style.display='none';
+
+    panel.innerHTML=`
+      <button type="button" id="rizqPackageBack" class="secondary">
+        ← رجوع للوحة المدير
+      </button>
+      <h2>📦 إدارة الباقات</h2>
+      <div class="notice">
+        أضف الباقات أو عدّل أسعارها أو أوقفها مؤقتاً.
+      </div>
+
+      <h3>إضافة باقة جديدة</h3>
+      <label>اسم الباقة</label>
+      <input id="rizqNewPackageName" placeholder="مثال: الباقة الذهبية">
+
+      <label>السعر بالجنيه المصري</label>
+      <input id="rizqNewPackagePrice" type="number" min="1" placeholder="السعر">
+
+      <button type="button" id="rizqCreatePackage">
+        إضافة الباقة
+      </button>
+
+      <hr>
+      <h3>الباقات الحالية</h3>
+      <button type="button" class="secondary" id="rizqRefreshPackages">
+        تحديث القائمة
+      </button>
+      <div id="rizqPackageAdminList">جارٍ تحميل الباقات...</div>
+    `;
+
+    admin.appendChild(panel);
+
+    const grid=document.querySelector(
+      '#rizqAdminWorkspace .rizq-menu-grid'
+    );
+    const oldNav=document.getElementById('rizqAdminNavigation');
+
+    const tile=document.createElement('button');
+    tile.type='button';
+    tile.textContent='📦 إدارة الباقات';
+    tile.style.cssText=
+      'width:100%;padding:17px;border-radius:12px;font-weight:bold;margin:5px 0';
+
+    if(grid){
+      tile.className='rizq-menu-button';
+      grid.appendChild(tile);
+    }else if(oldNav){
+      oldNav.appendChild(tile);
+    }else{
+      admin.insertBefore(tile,panel);
+    }
+
+    let previousDisplays=[];
+
+    function openPanel(){
+      previousDisplays=[...admin.children]
+        .filter(el=>el!==panel && !el.classList.contains('admin-head'))
+        .map(el=>({el,display:el.style.display}));
+
+      previousDisplays.forEach(x=>x.el.style.display='none');
+      panel.style.display='block';
+      window.scrollTo({top:0,behavior:'smooth'});
+      window.rizqAdminLoadPackages();
+    }
+
+    function closePanel(){
+      panel.style.display='none';
+      previousDisplays.forEach(x=>x.el.style.display=x.display);
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    tile.addEventListener('click',openPanel);
+    document.getElementById('rizqPackageBack')
+      .addEventListener('click',closePanel);
+
+    function notify(text,error){
+      if(typeof msg==='function') msg(text,!!error);
+      else alert(text);
+    }
+
+    window.rizqAdminLoadPackages=async function(){
+      const box=document.getElementById('rizqPackageAdminList');
+      if(!isAdmin){
+        box.textContent='غير مصرح لك بإدارة الباقات';
+        return;
+      }
+
+      box.textContent='جارٍ تحميل الباقات...';
+
+      try{
+        const {data,error}=await db.from('packages')
+          .select('id,name,price,active')
+          .order('price');
+
+        if(error) throw error;
+
+        if(!data?.length){
+          box.textContent='لا توجد باقات مسجلة';
+          return;
+        }
+
+        box.innerHTML='';
+
+        data.forEach(p=>{
+          const card=document.createElement('div');
+          card.className='package-admin-item';
+
+          const name=document.createElement('strong');
+          name.textContent=p.name;
+
+          const price=document.createElement('p');
+          price.textContent=Number(p.price).toLocaleString('ar-EG')+' جنيه';
+
+          const status=document.createElement('p');
+          status.textContent=p.active?'الحالة: نشطة':'الحالة: متوقفة';
+
+          const edit=document.createElement('button');
+          edit.className='secondary';
+          edit.textContent='تعديل الاسم والسعر';
+
+          edit.onclick=async()=>{
+            const newName=prompt('اسم الباقة:',p.name);
+            if(newName===null)return;
+            if(!newName.trim())return notify('اكتب اسم الباقة',true);
+
+            const newPrice=prompt('السعر بالجنيه:',p.price);
+            if(newPrice===null)return;
+            const priceValue=Number(newPrice);
+
+            if(!Number.isFinite(priceValue)||priceValue<=0)
+              return notify('السعر غير صحيح',true);
+
+            try{
+              const {error}=await db.from('packages')
+                .update({
+                  name:newName.trim(),
+                  price:priceValue
+                })
+                .eq('id',p.id);
+
+              if(error)throw error;
+              notify('تم تعديل الباقة');
+              await window.rizqAdminLoadPackages();
+            }catch(e){notify('تعذر التعديل: '+e.message,true)}
+          };
+
+          const toggle=document.createElement('button');
+          toggle.className=p.active?'danger':'secondary';
+          toggle.textContent=p.active?'إيقاف الباقة':'تفعيل الباقة';
+
+          toggle.onclick=async()=>{
+            if(!confirm(p.active?'إيقاف هذه الباقة؟':'تفعيل هذه الباقة؟'))return;
+            try{
+              const {error}=await db.from('packages')
+                .update({active:!p.active})
+                .eq('id',p.id);
+
+              if(error)throw error;
+              notify('تم تحديث حالة الباقة');
+              await window.rizqAdminLoadPackages();
+            }catch(e){notify('تعذر تحديث الحالة: '+e.message,true)}
+          };
+
+          card.append(name,price,status,edit,toggle);
+          box.appendChild(card);
+        });
+
+      }catch(e){
+        box.textContent='تعذر تحميل الباقات: '+e.message;
+      }
+    };
+
+    document.getElementById('rizqCreatePackage')
+      .addEventListener('click',async()=>{
+        if(!isAdmin)return notify('غير مصرح لك',true);
+
+        const name=document.getElementById('rizqNewPackageName').value.trim();
+        const price=Number(document.getElementById('rizqNewPackagePrice').value);
+        const button=document.getElementById('rizqCreatePackage');
+
+        if(!name)return notify('اكتب اسم الباقة',true);
+        if(!Number.isFinite(price)||price<=0)
+          return notify('اكتب سعراً صحيحاً',true);
+
+        button.disabled=true;
+
+        try{
+          const {error}=await db.from('packages').insert({
+            name,
+            price,
+            active:true
+          });
+
+          if(error)throw error;
+
+          document.getElementById('rizqNewPackageName').value='';
+          document.getElementById('rizqNewPackagePrice').value='';
+          notify('تمت إضافة الباقة بنجاح');
+          await window.rizqAdminLoadPackages();
+
+        }catch(e){
+          notify('تعذرت إضافة الباقة: '+e.message,true);
+        }finally{
+          button.disabled=false;
+        }
+      });
+
+    document.getElementById('rizqRefreshPackages')
+      .addEventListener('click',window.rizqAdminLoadPackages);
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',initPackageAdmin);
+  }else{
+    initPackageAdmin();
+  }
+})();
+</script>
+
 </body>
 </html>
 
