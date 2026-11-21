@@ -735,6 +735,125 @@ db.auth.onAuthStateChange((event,session)=>{
 });
 start();
 </script>
+ <script>
+(function(){
+  const style=document.createElement('style');
+  style.textContent=`
+    #rizqPackages .package-card{border:1px solid #dce8df;border-radius:12px;padding:13px;margin:10px 0;background:#fff}
+    #rizqPackages .package-price{font-size:22px;font-weight:bold;color:#087b50}
+  `;
+  document.head.appendChild(style);
+
+  const home=document.getElementById('tab-home');
+  if(!home)return;
+
+  home.insertAdjacentHTML('beforeend',`
+    <div class="card" id="rizqPackages">
+      <h2>باقات RIZQ</h2>
+      <p class="muted">اختر الباقة وأرسل طلب الاشتراك للمراجعة. لا يتم التفعيل إلا بعد التحقق من الدفع الفعلي.</p>
+      <div id="rizqPackageList">جارٍ تحميل الباقات...</div>
+      <div id="rizqPackageForm" class="hidden">
+        <h3>إرسال طلب الاشتراك</h3>
+        <div id="rizqSelectedPackage" class="notice"></div>
+        <label>وسيلة التحويل</label>
+        <select id="rizqPayMethod"></select>
+        <label>رقم عملية التحويل</label>
+        <input id="rizqPayReference" placeholder="أدخل رقم العملية بعد التحويل">
+        <label>ملاحظات</label>
+        <textarea id="rizqPayNote" placeholder="أي تفاصيل إضافية"></textarea>
+        <button id="rizqSendRequest" onclick="window.rizqSendPackageRequest()">إرسال طلب الاشتراك</button>
+        <button class="secondary" onclick="document.getElementById('rizqPackageForm').classList.add('hidden')">إلغاء</button>
+      </div>
+      <h3>طلباتي</h3>
+      <div id="rizqMyRequests">جارٍ التحميل...</div>
+    </div>
+  `);
+
+  let selectedPackage=null;
+
+  window.rizqChoosePackage=function(id,name,price){
+    selectedPackage={id,name,price};
+    document.getElementById('rizqSelectedPackage').textContent=name+' — '+Number(price).toLocaleString('ar-EG')+' جنيه';
+    document.getElementById('rizqPackageForm').classList.remove('hidden');
+    document.getElementById('rizqPackageForm').scrollIntoView({behavior:'smooth'});
+  };
+
+  window.rizqLoadPackages=async function(){
+    if(!currentUser)return;
+    const list=document.getElementById('rizqPackageList');
+    const methods=document.getElementById('rizqPayMethod');
+    const requests=document.getElementById('rizqMyRequests');
+
+    const [p,m,r]=await Promise.all([
+      db.from('packages').select('id,name,price').eq('active',true).order('price'),
+      db.from('payment_methods').select('id,name,details').eq('active',true).order('created_at'),
+      db.from('package_purchase_requests').select('id,package_id,status,transaction_reference,created_at').eq('user_id',currentUser.id).order('created_at',{ascending:false})
+    ]);
+
+    if(p.error){list.textContent='تعذر تحميل الباقات: '+p.error.message;return;}
+
+    list.innerHTML=p.data.length?p.data.map(x=>`
+      <div class="package-card">
+        <h3>${safe(x.name)}</h3>
+        <div class="package-price">${money(x.price)}</div>
+        <button onclick="window.rizqChoosePackage('${x.id}','${safe(x.name).replace(/'/g,'&#39;')}',${Number(x.price)})">اشترك الآن</button>
+      </div>
+    `).join(''):'لا توجد باقات متاحة حالياً';
+
+    if(m.error){methods.innerHTML='<option value="">تعذر تحميل وسائل التحويل</option>';}
+    else{
+      methods.innerHTML=m.data.map(x=>`<option value="${x.id}">${safe(x.name)} — ${safe(x.details)}</option>`).join('')||'<option value="">لا توجد وسيلة نشطة</option>';
+    }
+
+    if(r.error){requests.textContent='تعذر تحميل الطلبات: '+r.error.message;return;}
+    requests.innerHTML=r.data.length?r.data.map(x=>`
+      <div class="item">
+        <b>طلب اشتراك</b> — ${safe(x.status)}
+        <div class="muted">رقم العملية: ${safe(x.transaction_reference||'لم يضاف')}</div>
+        <div class="muted">${new Date(x.created_at).toLocaleString('ar-EG')}</div>
+      </div>
+    `).join(''):'لم ترسل طلبات اشتراك حتى الآن';
+  };
+
+  window.rizqSendPackageRequest=async function(){
+    if(!currentUser||!selectedPackage)return;
+    const method=document.getElementById('rizqPayMethod').value;
+    const reference=document.getElementById('rizqPayReference').value.trim();
+    const note=document.getElementById('rizqPayNote').value.trim();
+    const button=document.getElementById('rizqSendRequest');
+
+    if(!method)return msg('لا توجد وسيلة تحويل نشطة',true);
+    if(!reference)return msg('اكتب رقم عملية التحويل أولاً',true);
+    if(!confirm('هل نفذت التحويل فعلياً؟ أرسل الطلب بعد التحويل فقط.'))return;
+
+    button.disabled=true;
+    try{
+      const {error}=await db.from('package_purchase_requests').insert({
+        user_id:currentUser.id,
+        package_id:selectedPackage.id,
+        method_id:method,
+        transaction_reference:reference,
+        proof_note:note,
+        status:'pending'
+      });
+      if(error)throw error;
+      msg('تم إرسال طلب الاشتراك للمراجعة. لم يتم تفعيل الباقة بعد.');
+      document.getElementById('rizqPayReference').value='';
+      document.getElementById('rizqPayNote').value='';
+      document.getElementById('rizqPackageForm').classList.add('hidden');
+      await window.rizqLoadPackages();
+    }catch(e){msg('تعذر إرسال الطلب: '+e.message,true);}
+    finally{button.disabled=false;}
+  };
+
+  const app=document.getElementById('app');
+  const observer=new MutationObserver(()=>{
+    if(!app.classList.contains('hidden'))window.rizqLoadPackages();
+  });
+  observer.observe(app,{attributes:true,attributeFilter:['class']});
+  if(!app.classList.contains('hidden'))window.rizqLoadPackages();
+})();
+</script>
 </body>
 </html>
 
