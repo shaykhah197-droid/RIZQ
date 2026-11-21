@@ -1061,6 +1061,14 @@ document.querySelectorAll('.rizq-reward-info p').forEach(function(p){
 });
 </script>
 
+<script>
+document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p){
+  if(/مضمون|مضمونة/.test(p.textContent)){
+    p.textContent='تُحتسب المكافآت اليومية بعد إنجاز المهام المطلوبة واعتمادها وفق نظام RIZQ.';
+  }
+});
+</script>
+
 </body>
 </html>
 
