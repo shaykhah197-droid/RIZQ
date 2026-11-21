@@ -913,6 +913,60 @@ start();
 })();
 </script>
 
+<script>
+(function(){
+  const rewards = {
+    3000: 100,
+    9000: 300,
+    18000: 600,
+    30000: 1000
+  };
+
+  function updatePackageDetails(){
+    document.querySelectorAll('#rizqPackageList .package-card').forEach(card => {
+      const details = card.querySelector('.rizq-details-btn + div');
+      const priceText = card.querySelector('.package-price')?.textContent || '';
+      const price = Math.round(
+        Number(priceText.replace(/[^\d.]/g, ''))
+      );
+
+      if (!details || !rewards[price]) return;
+      if (details.querySelector('.rizq-reward-info')) return;
+
+      const info = document.createElement('div');
+      info.className = 'rizq-reward-info';
+      info.style.cssText =
+        'margin-top:12px;padding-top:10px;border-top:1px solid #cbdccf;line-height:2';
+
+      const daily = document.createElement('p');
+      daily.textContent =
+        'المكافأة اليومية المستهدفة: ' +
+        rewards[price].toLocaleString('ar-EG') + ' جنيه، عند إنجاز المهام اليومية وقبولها.';
+
+      const referral = document.createElement('p');
+      referral.textContent =
+        'مكافأة الإحالة: 5% من قيمة باقة الصديق بعد التحقق من الدفع الفعلي واعتماد المكافأة.';
+
+      const condition = document.createElement('p');
+      condition.textContent =
+        'صرف المكافآت مشروط بإنجاز المهام وقبولها وتوفر ميزانية ممولة للمكافآت.';
+
+      info.append(daily, referral, condition);
+      details.appendChild(info);
+    });
+  }
+
+  updatePackageDetails();
+
+  const list = document.getElementById('rizqPackageList');
+  if(list){
+    new MutationObserver(updatePackageDetails).observe(list,{
+      childList:true,
+      subtree:true
+    });
+  }
+})();
+</script>
 </body>
 </html>
 
