@@ -41,6 +41,12 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 .admin-head{background:#153e31;color:white;border-radius:12px;padding:14px;margin-bottom:12px}
 .small{font-size:12px}
 .proof-link{display:inline-block;margin:8px 0;padding:9px 12px;background:var(--light);border-radius:8px;color:var(--green);text-decoration:none;font-weight:bold}
+
+#supportCustomerBox .support-message{padding:10px 12px;border-radius:12px;margin:8px 0;background:#f1f6f3;overflow-wrap:anywhere}
+#supportCustomerBox .support-message.mine{background:#e2f4e9;margin-right:12%}
+#supportCustomerBox .support-message.theirs{background:#fff;margin-left:12%;border:1px solid var(--border)}
+#supportCustomerBox .support-message img,#supportAdminMessages img{max-width:100%;max-height:220px;border-radius:9px;display:block;margin-top:8px}
+#supportAdminList .item{cursor:pointer}
 </style>
 </head>
 <body>
@@ -104,6 +110,11 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <button onclick="copyReferral()">نسخ الكود</button>
 </div>
 </div>
+<div class="card" id="supportCustomerBox">
+<h2>خدمة العملاء</h2>
+<p class="muted">لو عندك استفسار أو مشكلة، ابعت رسالة لفريق الدعم وتابع الرد هنا.</p>
+<button type="button" onclick="showTab('support')">فتح محادثة خدمة العملاء</button>
+</div>
 <div class="card">
 <h2>آخر الحركات</h2>
 <div id="recentTransactions" class="muted">جارٍ التحميل...</div>
@@ -162,6 +173,20 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 
 <section id="tab-history" class="tab hidden">
 <div class="card"><h2>سجل معاملات المحفظة</h2><div id="allTransactions">جارٍ التحميل...</div></div>
+</section>
+
+<section id="tab-support" class="tab hidden">
+<div class="card" id="supportCustomerConversation">
+<div class="row" style="align-items:center"><h2 style="flex:2">محادثة خدمة العملاء</h2><button class="secondary" type="button" onclick="loadSupportConversation()">تحديث</button></div>
+<div class="notice">أهلاً بك. اكتب رسالتك وسيقوم فريق الدعم بالرد عليك هنا.</div>
+<div id="supportCustomerMessages" aria-live="polite">جارٍ تحميل المحادثة...</div>
+<label>رسالتك</label>
+<textarea id="supportCustomerText" placeholder="اكتب رسالتك هنا"></textarea>
+<label>إرفاق صور (يمكن اختيار أكثر من صورة)</label>
+<input id="supportCustomerFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+<p class="muted">JPG أو PNG أو WEBP، بحد أقصى 5 ميجابايت للصورة.</p>
+<button id="supportCustomerSend" type="button" onclick="sendSupportCustomerMessage()">إرسال الرسالة</button>
+</div>
 </section>
 
 <section id="tab-admin" class="tab hidden">
@@ -2503,6 +2528,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   const customers=makePanel('rizqAdminCustomers','العملاء والمحافظ');
   const referrals=makePanel('rizqAdminReferrals','الإحالات');
   const transactions=makePanel('rizqAdminTransactions','سجل المعاملات');
+  const supportPanel=makePanel('rizqAdminSupport','خدمة العملاء');
 
   const definitions=[
    {name:'إدارة الباقات',icon:'📦',target:packagePanel,load:loadPackages},
@@ -2514,7 +2540,8 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
    {name:'إثباتات المعاملات',icon:'📨',target:cardFor('evidenceTransaction'),load:()=>typeof loadTransactionEvidence==='function'&&loadTransactionEvidence()},
    {name:'العملاء والمحافظ',icon:'👥',target:customers,load:loadCustomers},
    {name:'الإحالات',icon:'🔗',target:referrals,load:loadReferrals},
-   {name:'سجل المعاملات',icon:'📚',target:transactions,load:loadTransactions}
+   {name:'سجل المعاملات',icon:'📚',target:transactions,load:loadTransactions},
+   {name:'خدمة العملاء',icon:'💬',target:supportPanel,load:loadSupportAdmin}
   ];
 
   let previous=null;
@@ -2794,6 +2821,153 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
 })();
 </script>
 
+
+<script>
+let rizqSupportConversationId=null;
+function rizqSupportIsAdmin(){return !!(isAdmin && currentUser)}
+async function rizqSupportImageUrls(paths){
+ const out=[];
+ for(const path of (paths||[])){
+  const {data,error}=await db.storage.from('support-attachments').createSignedUrl(path,900);
+  if(!error&&data?.signedUrl)out.push(data.signedUrl);
+ }
+ return out;
+}
+async function loadSupportConversation(){
+ const box=document.getElementById('supportCustomerMessages');
+ if(!box||!currentUser)return;
+ box.textContent='جارٍ تحميل المحادثة...';
+ try{
+  const {data:conversations,error}=await db.from('support_conversations').select('*').eq('user_id',currentUser.id).order('updated_at',{ascending:false}).limit(1);
+  if(error)throw error;
+  let conversation=conversations?.[0];
+  if(!conversation){
+   const {data,error:createError}=await db.from('support_conversations').insert({user_id:currentUser.id,status:'open'}).select('*').single();
+   if(createError)throw createError;
+   conversation=data;
+  }
+  rizqSupportConversationId=conversation.id;
+  const {data:messages,error:messagesError}=await db.from('support_messages').select('*').eq('conversation_id',conversation.id).order('created_at',{ascending:true});
+  if(messagesError)throw messagesError;
+  box.innerHTML='';
+  (messages||[]).forEach(async m=>{
+   const row=document.createElement('div');
+   row.className='support-message '+(m.sender_id===currentUser.id?'mine':'theirs');
+   const who=document.createElement('b');
+   who.textContent=m.sender_role==='admin'?'خدمة العملاء':'أنت';
+   const body=document.createElement('div');
+   body.textContent=m.body||'';
+   row.append(who,body);
+   box.appendChild(row);
+   const urls=await rizqSupportImageUrls(m.attachment_paths);
+   urls.forEach(url=>{const img=document.createElement('img');img.src=url;img.alt='صورة مرفقة';row.appendChild(img)});
+  });
+  if(!messages?.length)box.insertAdjacentHTML('beforeend','<p class="muted">لا توجد رسائل بعد. اكتب رسالتك وسنرد عليك هنا.</p>');
+ }catch(e){box.textContent='تعذر تحميل المحادثة: '+(e.message||e)}
+}
+async function sendSupportCustomerMessage(){
+ const text=document.getElementById('supportCustomerText').value.trim();
+ const input=document.getElementById('supportCustomerFiles');
+ const files=[...(input.files||[])];
+ const button=document.getElementById('supportCustomerSend');
+ if(!text&&!files.length)return msg('اكتب رسالة أو اختر صورة',true);
+ if(files.some(f=>!['image/jpeg','image/png','image/webp'].includes(f.type)||f.size>5*1024*1024))return msg('كل صورة يجب أن تكون JPG أو PNG أو WEBP وبحجم لا يتجاوز 5 ميجابايت',true);
+ button.disabled=true;
+ const uploaded=[];
+ try{
+  if(!rizqSupportConversationId)await loadSupportConversation();
+  if(!rizqSupportConversationId)throw Error('تعذر فتح المحادثة');
+  for(const file of files){
+   const ext=file.type==='image/jpeg'?'jpg':file.type==='image/png'?'png':'webp';
+   const path=currentUser.id+'/'+crypto.randomUUID()+'.'+ext;
+   const {error}=await db.storage.from('support-attachments').upload(path,file,{contentType:file.type,upsert:false});
+   if(error)throw error;
+   uploaded.push(path);
+  }
+  const {error}=await db.from('support_messages').insert({conversation_id:rizqSupportConversationId,sender_id:currentUser.id,sender_role:'customer',body:text,attachment_paths:uploaded});
+  if(error)throw error;
+  document.getElementById('supportCustomerText').value='';
+  input.value='';
+  msg('تم إرسال رسالتك لفريق الدعم');
+  await loadSupportConversation();
+ }catch(e){
+  if(uploaded.length)await db.storage.from('support-attachments').remove(uploaded);
+  msg('تعذر إرسال الرسالة: '+(e.message||e),true);
+ }finally{button.disabled=false}
+}
+async function loadSupportAdmin(){
+ const box=document.getElementById('rizqAdminSupportContent');
+ if(!rizqSupportIsAdmin()){box.textContent='غير مصرح لك';return}
+ box.textContent='جارٍ تحميل محادثات الدعم...';
+ try{
+  const {data,error}=await db.from('support_conversations').select('*').order('updated_at',{ascending:false}).limit(100);
+  if(error)throw error;
+  box.innerHTML='<div id="supportAdminList"></div><div id="supportAdminThread" style="margin-top:14px"><p class="muted">اختر محادثة لعرض الرسائل والرد.</p></div>';
+  const list=document.getElementById('supportAdminList');
+  (data||[]).forEach(c=>{
+   const item=document.createElement('div');item.className='item';
+   const heading=document.createElement('b');heading.textContent='محادثة '+c.id.slice(0,8);
+   const meta=document.createElement('div');meta.className='muted';meta.textContent='العميل: '+c.user_id+' — الحالة: '+({open:'مفتوحة',replied:'تم الرد',closed:'مغلقة'}[c.status]||c.status);
+   const open=document.createElement('button');open.className='secondary';open.textContent='فتح المحادثة';open.onclick=()=>openSupportAdminThread(c.id,c.status);
+   item.append(heading,meta,open);list.appendChild(item);
+  });
+  if(!data?.length)list.textContent='لا توجد محادثات حتى الآن';
+ }catch(e){box.textContent='تعذر تحميل المحادثات: '+(e.message||e)}
+}
+async function openSupportAdminThread(id,status){
+ const thread=document.getElementById('supportAdminThread');
+ thread.textContent='جارٍ تحميل الرسائل...';
+ try{
+  const {data:messages,error}=await db.from('support_messages').select('*').eq('conversation_id',id).order('created_at',{ascending:true});
+  if(error)throw error;
+  thread.innerHTML='<h3>الرسائل</h3><div id="supportAdminMessages"></div><label>الرد على العميل</label><textarea id="supportAdminReply" placeholder="اكتب ردك"></textarea><label>إرفاق صور (اختياري)</label><input id="supportAdminFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple><div class="row"><button type="button" id="supportAdminSend">إرسال الرد</button><button type="button" class="secondary" id="supportAdminClose">'+(status==='closed'?'إعادة فتح المحادثة':'إغلاق المحادثة')+'</button></div>';
+  const messageBox=document.getElementById('supportAdminMessages');
+  (messages||[]).forEach(async m=>{
+   const row=document.createElement('div');row.className='support-message '+(m.sender_role==='admin'?'mine':'theirs');
+   const who=document.createElement('b');who.textContent=m.sender_role==='admin'?'الإدارة':'العميل';
+   const body=document.createElement('div');body.textContent=m.body||'';
+   row.append(who,body);messageBox.appendChild(row);
+   const urls=await rizqSupportImageUrls(m.attachment_paths);
+   urls.forEach(url=>{const img=document.createElement('img');img.src=url;img.alt='صورة مرفقة';row.appendChild(img)});
+  });
+  document.getElementById('supportAdminSend').onclick=()=>sendSupportAdminReply(id);
+  document.getElementById('supportAdminClose').onclick=async()=>{
+   const next=status==='closed'?'open':'closed';
+   const {error}=await db.from('support_conversations').update({status:next}).eq('id',id);
+   if(error)msg('تعذر تحديث الحالة: '+error.message,true);
+   else{msg(next==='closed'?'تم إغلاق المحادثة':'تمت إعادة فتح المحادثة');await loadSupportAdmin()}
+  };
+ }catch(e){thread.textContent='تعذر عرض المحادثة: '+(e.message||e)}
+}
+async function sendSupportAdminReply(id){
+ const body=document.getElementById('supportAdminReply').value.trim();
+ const input=document.getElementById('supportAdminFiles');
+ const files=[...(input.files||[])];
+ if(!body&&!files.length)return msg('اكتب الرد أو اختر صورة',true);
+ if(files.some(f=>!['image/jpeg','image/png','image/webp'].includes(f.type)||f.size>5*1024*1024))return msg('صيغة أو حجم إحدى الصور غير مسموح',true);
+ const uploaded=[];
+ try{
+  for(const file of files){
+   const ext=file.type==='image/jpeg'?'jpg':file.type==='image/png'?'png':'webp';
+   const path=currentUser.id+'/'+crypto.randomUUID()+'.'+ext;
+   const {error}=await db.storage.from('support-attachments').upload(path,file,{contentType:file.type,upsert:false});
+   if(error)throw error;uploaded.push(path);
+  }
+  const {error}=await db.from('support_messages').insert({conversation_id:id,sender_id:currentUser.id,sender_role:'admin',body,attachment_paths:uploaded});
+  if(error)throw error;
+  msg('تم إرسال الرد للعميل');
+  await openSupportAdminThread(id,'replied');
+ }catch(e){
+  if(uploaded.length)await db.storage.from('support-attachments').remove(uploaded);
+  msg('تعذر إرسال الرد: '+(e.message||e),true);
+ }
+}
+const rizqOriginalShowTab=window.showTab;
+window.showTab=function(name){
+ rizqOriginalShowTab(name);
+ if(name==='support')loadSupportConversation();
+};
+</script>
 </body>
 </html>
 
