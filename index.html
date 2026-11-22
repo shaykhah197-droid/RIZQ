@@ -262,6 +262,14 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <div class="stat"><span class="muted">طلبات الإيداع المعلقة</span><strong id="adminDepositCount">—</strong></div>
 <div class="stat"><span class="muted">طلبات السحب المعلقة</span><strong id="adminWithdrawCount">—</strong></div>
 </div>
+<div class="card" style="margin-top:14px">
+<h2>إجمالي الإيداعات المعتمدة</h2>
+<div class="row">
+ <div class="stat"><span class="muted">إجمالي كل الإيداعات</span><strong id="adminTotalDeposits">جارٍ الحساب...</strong></div>
+ <div class="stat"><span class="muted">إيداعات اليوم</span><strong id="adminTodayDeposits">جارٍ الحساب...</strong></div>
+</div>
+<p class="muted small">يُحسب أي إيداع تم اعتماده، حتى لو لم يشترِ العميل أي باقة. لا تُحسب الطلبات المعلقة أو المرفوضة.</p>
+</div>
 
 <div class="card" style="margin-top:14px">
 <div class="row" style="align-items:center">
@@ -561,6 +569,41 @@ function showTab(name){
 }
 
 /* ADMIN FUNCTIONS */
+async function loadAdminDepositTotals(){
+ const totalEl=document.getElementById('adminTotalDeposits');
+ const todayEl=document.getElementById('adminTodayDeposits');
+ if(!totalEl||!todayEl)return;
+ totalEl.textContent='جارٍ الحساب...';
+ todayEl.textContent='جارٍ الحساب...';
+ try{
+  let total=0,today=0,from=0,rows=[];
+  const todayKey=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  while(true){
+   const {data,error}=await db.from('deposit_requests')
+    .select('amount,created_at')
+    .eq('status','approved')
+    .order('created_at',{ascending:true})
+    .range(from,from+999);
+   if(error)throw error;
+   rows=data||[];
+   for(const item of rows){
+    const amount=Number(item.amount)||0;
+    total+=amount;
+    const dayKey=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(item.created_at));
+    if(dayKey===todayKey)today+=amount;
+   }
+   if(rows.length<1000)break;
+   from+=1000;
+  }
+  totalEl.textContent=money(total);
+  todayEl.textContent=money(today);
+ }catch(e){
+  totalEl.textContent='تعذر الحساب';
+  todayEl.textContent='تعذر الحساب';
+  console.error('RIZQ deposit totals:',e);
+ }
+}
+
 async function loadAdmin(){
  if(!isAdmin)return msg('غير مصرح لك بفتح لوحة المدير',true);
  const dep=document.getElementById('adminDeposits');
@@ -622,6 +665,7 @@ async function loadAdmin(){
  }
  await loadAdminMethods();
  await loadTransactionEvidence();
+ await loadAdminDepositTotals();
 }
 
 async function reviewDeposit(id,approve){
