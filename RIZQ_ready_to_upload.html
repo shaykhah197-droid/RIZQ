@@ -1,0 +1,2792 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>رزق RIZQ</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#f3f6f4;--card:#fff;--ink:#17251e;--muted:#718078;--green:#087b50;--light:#e6f4ed;--border:#e2e9e4;--red:#c0392b;--gold:#fff5d9}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Tahoma,sans-serif}
+header{background:#075b3e;color:white;padding:20px 16px}
+header h1{margin:0;font-size:26px}
+header p{margin:7px 0 0;color:#d6eee3;font-size:13px}
+main{max-width:900px;margin:18px auto;padding:0 12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:15px;padding:17px;margin-bottom:14px;box-shadow:0 3px 12px #102a1b08}
+h2{font-size:18px;margin:0 0 14px}
+h3{font-size:16px;margin:0 0 8px}
+input,textarea,select{width:100%;padding:12px;margin:6px 0 12px;border:1px solid var(--border);border-radius:9px;font-size:15px;background:white;color:var(--ink)}
+textarea{min-height:75px;resize:vertical}
+button{border:0;border-radius:9px;padding:12px 15px;background:var(--green);color:white;font-size:14px;font-weight:bold;cursor:pointer;margin:3px}
+button.secondary{background:var(--light);color:var(--green)}
+button.danger{background:#fff0ef;color:var(--red)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:9px;flex-wrap:wrap}
+.row>*{flex:1;min-width:0}
+.muted{color:var(--muted);font-size:13px}
+.notice{padding:11px;border-radius:9px;background:var(--light);color:#075b3e;font-size:13px;margin:10px 0}
+.error{background:#fff0ef;color:var(--red)}
+.stat{background:var(--light);padding:14px;border-radius:12px;flex:1;min-width:130px}
+.stat strong{display:block;font-size:23px;margin-top:7px}
+.item{padding:13px 0;border-bottom:1px solid var(--border)}
+.item:last-child{border:0}
+.tag{display:inline-block;padding:4px 9px;border-radius:20px;background:var(--light);color:var(--green);font-size:12px}
+.pending{background:var(--gold);color:#805b00}
+.hidden{display:none!important}
+nav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
+nav button{font-size:13px;padding:10px}
+footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
+.admin-head{background:#153e31;color:white;border-radius:12px;padding:14px;margin-bottom:12px}
+.small{font-size:12px}
+.proof-link{display:inline-block;margin:8px 0;padding:9px 12px;background:var(--light);border-radius:8px;color:var(--green);text-decoration:none;font-weight:bold}
+</style>
+</head>
+<body>
+<header>
+<h1>رزق <span style="font-size:15px">RIZQ</span></h1>
+<p>منصة المهام والمكافآت والإحالات</p>
+</header>
+
+<main>
+<div id="message" class="notice hidden"></div>
+
+<section id="auth" class="card">
+<h2 id="authTitle">تسجيل الدخول</h2>
+<div id="nameWrap" class="hidden">
+<label>الاسم الكامل</label>
+<input id="fullName" placeholder="اكتب اسمك">
+</div>
+<label>البريد الإلكتروني</label>
+<input id="email" type="email" placeholder="name@example.com">
+<label>كلمة المرور</label>
+<input id="password" type="password" placeholder="كلمة المرور">
+<div id="refWrap" class="hidden">
+<label>كود الإحالة (اختياري)</label>
+<input id="refCode" placeholder="كود دعوة صديقك">
+</div>
+<button id="authBtn" onclick="authenticate()">دخول</button>
+<button class="secondary" onclick="toggleAuth()" id="toggleBtn">إنشاء حساب جديد</button>
+<p class="muted">التسجيل والدخول بالبريد الإلكتروني.</p>
+</section>
+
+<section id="app" class="hidden">
+<div class="card">
+<div class="row" style="align-items:center">
+<div style="flex:2">
+<h2 style="margin-bottom:5px">أهلاً <span id="userName">بك</span></h2>
+<div class="muted" id="userEmail"></div>
+<div id="roleLabel" class="hidden"><span class="tag">مدير المنصة</span></div>
+</div>
+<button class="secondary" onclick="logout()">تسجيل الخروج</button>
+</div>
+</div>
+
+<nav>
+<button onclick="showTab('home')">الرئيسية</button>
+<button class="secondary" onclick="showTab('tasks')">المهام</button>
+<button class="secondary" onclick="showTab('deposit')">إيداع</button>
+<button class="secondary" onclick="showTab('withdraw')">سحب</button>
+<button class="secondary" onclick="showTab('history')">السجل</button>
+<button id="adminNav" class="hidden" onclick="showTab('admin')">لوحة المدير</button>
+</nav>
+
+<section id="tab-home" class="tab">
+<div class="row">
+<div class="stat"><span class="muted">رصيد المحفظة</span><strong id="balance">0.00 ج.م</strong></div>
+<div class="stat"><span class="muted">عدد الإحالات</span><strong id="refCount">0</strong></div>
+</div>
+<div class="card" style="margin-top:14px">
+<h2>كود دعوتك</h2>
+<div class="row">
+<input id="myReferral" readonly>
+<button onclick="copyReferral()">نسخ الكود</button>
+</div>
+</div>
+<div class="card">
+<h2>آخر الحركات</h2>
+<div id="recentTransactions" class="muted">جارٍ التحميل...</div>
+</div>
+</section>
+
+<section id="tab-tasks" class="tab hidden">
+<div class="card">
+<h2>مهامك اليومية</h2>
+<p class="muted">تظهر حتى 10 مهام يوميًا لكل باقة نشطة. كل باقة لها تكليف ومكافأة مستقلة.</p>
+<button class="secondary" onclick="window.rizqReloadCustomerTasks()">تحديث المهام</button>
+<div id="rizqDailyTasks">افتح صفحة المهام لعرض تكليفاتك.</div>
+</div>
+</section>
+
+<section id="tab-deposit" class="tab hidden">
+<div class="card">
+<h2>طلب إيداع</h2>
+<div class="notice">حوّل المبلغ إلى بيانات الاستلام المعروضة، ثم أرسل رقم العملية وصورة الإيصال. لن يُضاف الرصيد إلا بعد التحقق من وصول التحويل واعتماد المدير.</div>
+<div id="paymentMethods">جارٍ تحميل وسائل الدفع...</div>
+<label>المبلغ بالجنيه المصري</label>
+<input id="depositAmount" type="number" min="1" step="0.01" placeholder="المبلغ">
+<label>وسيلة التحويل</label>
+<select id="depositMethod"></select>
+<label>رقم العملية / مرجع التحويل</label>
+<input id="depositReference" placeholder="رقم العملية">
+<label>ملاحظات الإثبات</label>
+<textarea id="depositNote" placeholder="تفاصيل التحويل"></textarea>
+<label>صورة إيصال التحويل (مطلوبة)</label>
+<input id="depositProof" type="file" accept="image/jpeg,image/png,image/webp">
+<p class="muted">الصور المسموحة JPG وPNG وWEBP، بحد أقصى 5 ميجابايت.</p>
+<button id="depositSubmitBtn" onclick="sendDeposit()">إرسال طلب الإيداع</button>
+<h3 style="margin-top:18px">طلباتي السابقة</h3>
+<div id="depositHistory">جارٍ التحميل...</div>
+</div>
+</section>
+
+<section id="tab-withdraw" class="tab hidden">
+<div class="card">
+<h2>طلب سحب</h2>
+<div class="notice">يُراجع الطلب أولاً. لا يعتبر الطلب مدفوعاً حتى يتم التحويل الفعلي وتسجيل رقم العملية.</div>
+<label>المبلغ بالجنيه المصري</label>
+<input id="withdrawAmount" type="number" min="1" step="0.01" placeholder="المبلغ">
+<label>طريقة الاستلام</label>
+<select id="withdrawMethod">
+<option value="Vodafone Cash">فودافون كاش</option>
+<option value="Binance">Binance</option>
+</select>
+<label>رقم الهاتف أو بيانات محفظة Binance</label>
+<textarea id="recipientDetails" placeholder="بيانات الاستلام"></textarea>
+<button onclick="sendWithdrawal()">إرسال طلب السحب</button>
+<h3 style="margin-top:18px">طلباتي السابقة</h3>
+<div id="withdrawHistory">جارٍ التحميل...</div>
+</div>
+</section>
+
+<section id="tab-history" class="tab hidden">
+<div class="card"><h2>سجل معاملات المحفظة</h2><div id="allTransactions">جارٍ التحميل...</div></div>
+</section>
+
+<section id="tab-admin" class="tab hidden">
+<div class="admin-head">
+<h2 style="margin:0">لوحة إدارة RIZQ</h2>
+<p class="small">إدارة طلبات الدفع وبيانات الاستلام والإثباتات</p>
+</div>
+
+<div class="row">
+<div class="stat"><span class="muted">طلبات الإيداع المعلقة</span><strong id="adminDepositCount">—</strong></div>
+<div class="stat"><span class="muted">طلبات السحب المعلقة</span><strong id="adminWithdrawCount">—</strong></div>
+</div>
+
+<div class="card" style="margin-top:14px">
+<div class="row" style="align-items:center">
+<h2 style="flex:2">طلبات الإيداع</h2>
+<button class="secondary" onclick="loadAdmin()">تحديث</button>
+</div>
+<div id="adminDeposits">جارٍ التحميل...</div>
+</div>
+
+<div class="card">
+<h2>طلبات السحب</h2>
+<div id="adminWithdrawals">جارٍ التحميل...</div>
+</div>
+
+<div class="card">
+<h2>إضافة وسيلة استقبال أموال</h2>
+<label>اسم الوسيلة</label>
+<select id="newMethodName">
+<option value="Vodafone Cash">فودافون كاش</option>
+<option value="Binance">Binance</option>
+</select>
+<label>رقم الهاتف أو بيانات الاستلام</label>
+<textarea id="newMethodDetails" placeholder="أدخل رقم فودافون كاش أو بيانات استقبال Binance"></textarea>
+<button onclick="addPaymentMethod()">حفظ وسيلة الاستقبال</button>
+<div id="adminMethods" style="margin-top:12px">جارٍ التحميل...</div>
+</div>
+
+<div class="card">
+<h2>إرسال إثبات معاملة للعميل</h2>
+<div class="notice">تظهر هنا الإيداعات المعتمدة والسحوبات المدفوعة فقط. ارفع صورة إثبات التحويل الفعلي لإرسالها إلى بريد العميل.</div>
+<label>اختيار العملية المكتملة</label>
+<select id="evidenceTransaction">
+<option value="">جارٍ تحميل العمليات...</option>
+</select>
+<label>صورة إثبات التحويل الفعلي</label>
+<input id="evidenceFile" type="file" accept="image/jpeg,image/png,image/webp">
+<p class="muted">JPG أو PNG أو WEBP، بحد أقصى 5 ميجابايت.</p>
+<label>ملاحظة للعميل</label>
+<textarea id="evidenceNote" placeholder="ملاحظة اختيارية"></textarea>
+<button id="evidenceSendBtn" onclick="sendTransactionEvidence()">رفع الإثبات وإرسال البريد</button>
+<h3 style="margin-top:18px">سجل الإثباتات</h3>
+<div id="evidenceHistory">جارٍ التحميل...</div>
+</div>
+</section>
+</section>
+</main>
+
+<footer>RIZQ © 2026 — جميع الحقوق محفوظة</footer>
+
+<script>
+const SUPABASE_URL="https://rxikasycoyihqbrvqluu.supabase.co";
+const SUPABASE_KEY="sb_publishable_EcwbSaSOp_Qb8yX0gmpKQw_-Ad3vwCx";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let currentUser=null,profile=null,isAdmin=false,signupMode=false;
+
+function msg(t,err=false){
+ const e=document.getElementById('message');
+ e.textContent=t;
+ e.className='notice'+(err?' error':'');
+ e.classList.remove('hidden');
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+function money(v){
+ return Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' ج.م';
+}
+function safe(v){
+ return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function statusTag(s){
+ const labels={pending:'قيد المراجعة',submitted:'قيد المراجعة',approved:'منجزة',rejected:'مرفوضة',available:'متاحة'};
+ const cls=(s==='pending'||s==='submitted')?'pending':(s==='rejected'?'error':'');
+ return `<span class="tag ${cls}">${safe(labels[s]||s||'غير محددة')}</span>`;
+}
+
+function toggleAuth(){
+ signupMode=!signupMode;
+ document.getElementById('authTitle').textContent=signupMode?'إنشاء حساب جديد':'تسجيل الدخول';
+ document.getElementById('authBtn').textContent=signupMode?'إنشاء الحساب':'دخول';
+ document.getElementById('toggleBtn').textContent=signupMode?'لديك حساب؟ تسجيل الدخول':'إنشاء حساب جديد';
+ document.getElementById('nameWrap').classList.toggle('hidden',!signupMode);
+ document.getElementById('refWrap').classList.toggle('hidden',!signupMode);
+}
+
+async function authenticate(){
+ const email=document.getElementById('email').value.trim();
+ const password=document.getElementById('password').value;
+ if(!email||!password)return msg('اكتب البريد وكلمة المرور',true);
+ const b=document.getElementById('authBtn');
+ b.disabled=true;
+ try{
+  if(signupMode){
+   const full_name=document.getElementById('fullName').value.trim();
+   const referral_code=document.getElementById('refCode').value.trim();
+   if(!full_name)throw Error('اكتب اسمك');
+   const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name,referral_code}}});
+   if(error)throw error;
+   if(data.session){currentUser=data.user;await loadApp()}
+   else msg('تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيد التسجيل إذا طُلب منك.');
+  }else{
+   const {data,error}=await db.auth.signInWithPassword({email,password});
+   if(error)throw error;
+   currentUser=data.user;
+   await loadApp();
+  }
+ }catch(e){msg(e.message,true)}
+ finally{b.disabled=false}
+}
+
+async function logout(){
+ await db.auth.signOut();
+ currentUser=null;profile=null;isAdmin=false;
+ document.getElementById('app').classList.add('hidden');
+ document.getElementById('auth').classList.remove('hidden');
+}
+
+async function loadApp(){
+ isAdmin=currentUser?.app_metadata?.role==='admin';
+ document.getElementById('auth').classList.add('hidden');
+ document.getElementById('app').classList.remove('hidden');
+ document.getElementById('userEmail').textContent=currentUser.email||'';
+ document.getElementById('adminNav').classList.toggle('hidden',!isAdmin);
+ document.getElementById('roleLabel').classList.toggle('hidden',!isAdmin);
+ await loadProfile();
+ await Promise.all([
+  loadWallet(),loadReferral(),
+  loadMethods(),loadDepositHistory(),loadWithdrawalHistory(),loadTransactions()
+ ]);
+ if(isAdmin)await loadAdmin();
+}
+
+async function loadProfile(){
+ const {data,error}=await db.from('profiles').select('*').eq('id',currentUser.id).maybeSingle();
+ if(error)throw error;
+ profile=data;
+ document.getElementById('userName').textContent=profile?.full_name||currentUser.email;
+ document.getElementById('myReferral').value=profile?.referral_code||'';
+}
+async function loadWallet(){
+ const {data,error}=await db.from('wallets').select('balance').eq('user_id',currentUser.id).maybeSingle();
+ if(error)throw error;
+ document.getElementById('balance').textContent=money(data?.balance||0);
+}
+async function loadReferral(){
+ const {count,error}=await db.from('referrals').select('*',{count:'exact',head:true}).eq('referrer_id',currentUser.id);
+ if(error)throw error;
+ document.getElementById('refCount').textContent=count||0;
+}
+async function loadMethods(){
+ const box=document.getElementById('paymentMethods');
+ const sel=document.getElementById('depositMethod');
+ const {data,error}=await db.from('payment_methods').select('*').eq('active',true).order('created_at');
+ if(error){box.textContent=error.message;return}
+ box.innerHTML=data?.length?data.map(m=>`<div class="item"><h3>${safe(m.name)}</h3><p>${safe(m.details)}</p></div>`).join(''):'لم تتم إضافة وسائل دفع بعد';
+ sel.innerHTML=data?.length?data.map(m=>`<option value="${m.id}">${safe(m.name)}</option>`).join(''):'<option value="">لا توجد وسيلة</option>';
+}
+
+async function sendDeposit(){
+ const amount=Number(document.getElementById('depositAmount').value);
+ const method_id=document.getElementById('depositMethod').value;
+ const transaction_reference=document.getElementById('depositReference').value.trim();
+ const proof_note=document.getElementById('depositNote').value.trim();
+ const file=document.getElementById('depositProof').files[0];
+ const button=document.getElementById('depositSubmitBtn');
+
+ if(!Number.isFinite(amount)||amount<=0)return msg('اكتب مبلغاً صحيحاً',true);
+ if(!method_id)return msg('لا توجد وسيلة دفع متاحة',true);
+ if(!file)return msg('ارفع صورة إيصال التحويل أولاً',true);
+
+ const allowed=['image/jpeg','image/png','image/webp'];
+ if(!allowed.includes(file.type))return msg('نوع الصورة غير مسموح. استخدم JPG أو PNG أو WEBP',true);
+ if(file.size>5*1024*1024)return msg('حجم الصورة أكبر من 5 ميجابايت',true);
+
+ const ext=file.type==='image/jpeg'?'jpg':file.type==='image/png'?'png':'webp';
+ const path=`${currentUser.id}/${crypto.randomUUID()}.${ext}`;
+ button.disabled=true;
+ try{
+  const {error:uploadError}=await db.storage.from('deposit-proofs').upload(path,file,{
+   contentType:file.type,upsert:false
+  });
+  if(uploadError)throw uploadError;
+
+  const {error}=await db.from('deposit_requests').insert({
+   user_id:currentUser.id,amount,method_id,transaction_reference,proof_note,proof_image_path:path
+  });
+  if(error){
+   await db.storage.from('deposit-proofs').remove([path]);
+   throw error;
+  }
+
+  msg('تم إرسال طلب الإيداع وصورة الإثبات بنجاح. سيتم مراجعته قبل إضافة الرصيد.');
+  document.getElementById('depositAmount').value='';
+  document.getElementById('depositReference').value='';
+  document.getElementById('depositNote').value='';
+  document.getElementById('depositProof').value='';
+  await loadDepositHistory();
+ }catch(e){msg('تعذر إرسال الطلب: '+(e.message||'خطأ غير معروف'),true)}
+ finally{button.disabled=false}
+}
+
+async function loadDepositHistory(){
+ const box=document.getElementById('depositHistory');
+ const {data,error}=await db.from('deposit_requests').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+ if(error){box.textContent=error.message;return}
+ box.innerHTML=data?.length?data.map(x=>`<div class="item">${money(x.amount)} — ${statusTag(x.status)}<div class="muted">${safe(x.transaction_reference||'')}</div></div>`).join(''):'لا توجد طلبات إيداع';
+}
+async function sendWithdrawal(){
+ const amount=Number(document.getElementById('withdrawAmount').value);
+ const method=document.getElementById('withdrawMethod').value;
+ const recipient_details=document.getElementById('recipientDetails').value.trim();
+ if(!Number.isFinite(amount)||amount<=0)return msg('اكتب مبلغاً صحيحاً',true);
+ if(!recipient_details)return msg('اكتب بيانات الاستلام',true);
+ try{
+  const {error}=await db.from('withdrawal_requests').insert({user_id:currentUser.id,amount,method,recipient_details});
+  if(error)throw error;
+  msg('تم إرسال طلب السحب للمراجعة. لم يتم التحويل بعد.');
+  document.getElementById('withdrawAmount').value='';
+  document.getElementById('recipientDetails').value='';
+  await loadWithdrawalHistory();
+ }catch(e){msg(e.message,true)}
+}
+async function loadWithdrawalHistory(){
+ const box=document.getElementById('withdrawHistory');
+ const {data,error}=await db.from('withdrawal_requests').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+ if(error){box.textContent=error.message;return}
+ box.innerHTML=data?.length?data.map(x=>`<div class="item">${money(x.amount)} — ${statusTag(x.status)}<div class="muted">${safe(x.method)} · ${safe(x.transaction_reference||'')}</div></div>`).join(''):'لا توجد طلبات سحب';
+}
+async function loadTransactions(){
+ const box=document.getElementById('allTransactions');
+ const {data,error}=await db.from('wallet_transactions').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(50);
+ if(error){box.textContent=error.message;document.getElementById('recentTransactions').textContent=error.message;return}
+ const html=data?.length?data.map(x=>`<div class="item"><b>${safe(x.transaction_type)}</b> — ${money(x.amount)}<div class="muted">${safe(x.description||'')} · ${new Date(x.created_at).toLocaleString('ar-EG')}</div></div>`).join(''):'لا توجد معاملات مسجلة';
+ box.innerHTML=html;
+ document.getElementById('recentTransactions').innerHTML=html;
+}
+
+function copyReferral(){
+ const v=document.getElementById('myReferral').value;
+ if(!v)return msg('لا يوجد كود إحالة',true);
+ navigator.clipboard.writeText(v).then(()=>msg('تم نسخ الكود')).catch(()=>msg('انسخ الكود يدوياً',true));
+}
+function showTab(name){
+ document.querySelectorAll('.tab').forEach(x=>x.classList.add('hidden'));
+ document.getElementById('tab-'+name).classList.remove('hidden');
+ if(name==='admin'&&isAdmin)loadAdmin();
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ADMIN FUNCTIONS */
+async function loadAdmin(){
+ if(!isAdmin)return msg('غير مصرح لك بفتح لوحة المدير',true);
+ const dep=document.getElementById('adminDeposits');
+ const wit=document.getElementById('adminWithdrawals');
+ dep.textContent='جارٍ تحميل طلبات الإيداع...';
+ wit.textContent='جارٍ تحميل طلبات السحب...';
+
+ const [d,w]=await Promise.all([
+  db.from('deposit_requests').select('*').order('created_at',{ascending:false}).limit(100),
+  db.from('withdrawal_requests').select('*').order('created_at',{ascending:false}).limit(100)
+ ]);
+
+ if(d.error){dep.textContent='خطأ: '+d.error.message}
+ else{
+  const pending=d.data.filter(x=>x.status==='pending').length;
+  document.getElementById('adminDepositCount').textContent=pending;
+  const depositCards=await Promise.all(d.data.map(async x=>{
+   let proofHtml='<div class="muted">لا توجد صورة إيصال مرفقة</div>';
+   if(x.proof_image_path){
+    const {data:signed,error:signedError}=await db.storage.from('deposit-proofs').createSignedUrl(x.proof_image_path,300);
+    proofHtml=signedError
+     ? '<div class="muted">تعذر تحميل صورة الإيصال.</div>'
+     : `<p><a class="proof-link" href="${safe(signed.signedUrl)}" target="_blank" rel="noopener noreferrer">عرض صورة إيصال التحويل</a></p>`;
+   }
+   return `
+   <div class="item">
+    <b>طلب إيداع</b> — ${money(x.amount)} ${statusTag(x.status)}
+    <div class="muted">المستخدم: ${safe(x.user_id)}</div>
+    <div class="muted">وسيلة الدفع: ${safe(x.method_id)}</div>
+    <div class="muted">رقم العملية: ${safe(x.transaction_reference||'غير مذكور')}</div>
+    <div class="muted">ملاحظات: ${safe(x.proof_note||'لا توجد')}</div>
+    ${proofHtml}
+    ${x.status==='pending'?`
+     <label>ملاحظة المراجعة (اختياري)</label>
+     <input id="dn-${x.id}" placeholder="ملاحظة">
+     <button onclick="reviewDeposit('${x.id}',true)">تأكيد وصول المبلغ واعتماد الإيداع</button>
+     <button class="danger" onclick="reviewDeposit('${x.id}',false)">رفض الطلب</button>`:''}
+   </div>`;
+  }));
+  dep.innerHTML=depositCards.join('')||'لا توجد طلبات إيداع';
+ }
+
+ if(w.error){wit.textContent='خطأ: '+w.error.message}
+ else{
+  const pending=w.data.filter(x=>x.status==='pending').length;
+  document.getElementById('adminWithdrawCount').textContent=pending;
+  wit.innerHTML=w.data.length?w.data.map(x=>`
+   <div class="item">
+    <b>طلب سحب</b> — ${money(x.amount)} ${statusTag(x.status)}
+    <div class="muted">المستخدم: ${safe(x.user_id)}</div>
+    <div class="muted">الوسيلة: ${safe(x.method)}</div>
+    <div class="muted">بيانات الاستلام: ${safe(x.recipient_details)}</div>
+    ${x.status==='pending'?`
+     <label>رقم عملية التحويل بعد الدفع الفعلي</label>
+     <input id="wr-${x.id}" placeholder="رقم العملية">
+     <button onclick="reviewWithdrawal('${x.id}',true)">تأكيد التحويل وخصم الرصيد</button>
+     <button class="danger" onclick="reviewWithdrawal('${x.id}',false)">رفض الطلب</button>`:''}
+   </div>`).join(''):'لا توجد طلبات سحب';
+ }
+ await loadAdminMethods();
+ await loadTransactionEvidence();
+}
+
+async function reviewDeposit(id,approve){
+ if(!isAdmin)return msg('غير مصرح',true);
+ const note=document.getElementById('dn-'+id)?.value||null;
+ if(approve&&!confirm('هل تحققت بنفسك من وصول المبلغ فعلياً؟'))return;
+ if(!approve&&!confirm('هل تريد رفض طلب الإيداع؟'))return;
+ try{
+  const {data,error}=await db.rpc('admin_review_deposit',{
+   p_request_id:id,p_approve:approve,p_note:note
+  });
+  if(error)throw error;
+  msg(data||'تمت مراجعة الطلب');
+  await loadAdmin();await loadWallet();await loadTransactions();
+ }catch(e){msg(e.message,true)}
+}
+
+async function reviewWithdrawal(id,pay){
+ if(!isAdmin)return msg('غير مصرح',true);
+ let reference=document.getElementById('wr-'+id)?.value.trim()||'';
+ if(pay&&!reference)return msg('اكتب رقم عملية التحويل بعد تنفيذ الدفع',true);
+ if(pay&&!confirm('هل نفذت التحويل فعلياً للمستلم؟ سيتم خصم المبلغ من المحفظة.'))return;
+ if(!pay&&!confirm('هل تريد رفض طلب السحب؟'))return;
+ try{
+  const {data,error}=await db.rpc('admin_review_withdrawal',{
+   p_request_id:id,p_pay:pay,p_reference:reference||null
+  });
+  if(error)throw error;
+  msg(data||'تمت مراجعة الطلب');
+  await loadAdmin();await loadWallet();await loadTransactions();
+ }catch(e){msg(e.message,true)}
+}
+
+async function addPaymentMethod(){
+ if(!isAdmin)return msg('غير مصرح',true);
+ const name=document.getElementById('newMethodName').value;
+ const details=document.getElementById('newMethodDetails').value.trim();
+ if(!details)return msg('اكتب بيانات الاستلام',true);
+ try{
+  const {error}=await db.from('payment_methods').insert({name,details,active:true});
+  if(error)throw error;
+  document.getElementById('newMethodDetails').value='';
+  msg('تمت إضافة وسيلة الاستقبال');
+  await loadAdminMethods();await loadMethods();
+ }catch(e){msg(e.message,true)}
+}
+async function loadAdminMethods(){
+ const box=document.getElementById('adminMethods');
+ const {data,error}=await db.from('payment_methods').select('*').order('created_at',{ascending:false});
+ if(error){box.textContent='تعذر تحميل الوسائل: '+error.message;return}
+ box.innerHTML=data?.length?data.map(m=>`
+  <div class="item">
+   <b>${safe(m.name)}</b> — ${m.active?'نشطة':'متوقفة'}
+   <div>${safe(m.details)}</div>
+   <button class="secondary" onclick="toggleMethod('${m.id}',${!m.active})">${m.active?'إيقاف الوسيلة':'تفعيل الوسيلة'}</button>
+   <button class="secondary" onclick="editMethod('${m.id}')">تعديل البيانات</button>
+  </div>`).join(''):'لم تتم إضافة وسائل استقبال';
+}
+async function toggleMethod(id,active){
+ if(!isAdmin)return;
+ try{
+  const {error}=await db.from('payment_methods').update({active}).eq('id',id);
+  if(error)throw error;
+  msg('تم تحديث حالة الوسيلة');await loadAdminMethods();await loadMethods();
+ }catch(e){msg(e.message,true)}
+}
+async function editMethod(id){
+ if(!isAdmin)return;
+ const {data,error}=await db.from('payment_methods').select('*').eq('id',id).single();
+ if(error)return msg(error.message,true);
+ const details=prompt('اكتب بيانات الاستلام الجديدة:',data.details);
+ if(details===null)return;
+ if(!details.trim())return msg('البيانات لا يمكن أن تكون فارغة',true);
+ try{
+  const {error}=await db.from('payment_methods').update({details:details.trim()}).eq('id',id);
+  if(error)throw error;
+  msg('تم تعديل بيانات الاستلام');await loadAdminMethods();await loadMethods();
+ }catch(e){msg(e.message,true)}
+}
+
+/* TRANSACTION EVIDENCE AND EMAIL */
+async function loadTransactionEvidence(){
+ if(!isAdmin)return;
+
+ const sel=document.getElementById('evidenceTransaction');
+ const box=document.getElementById('evidenceHistory');
+ sel.innerHTML='<option value="">جارٍ تحميل العمليات...</option>';
+ box.textContent='جارٍ تحميل سجل الإثباتات...';
+
+ try{
+  const [d,w,e]=await Promise.all([
+   db.from('deposit_requests').select('id,user_id,amount,created_at').eq('status','approved').order('created_at',{ascending:false}).limit(100),
+   db.from('withdrawal_requests').select('id,user_id,amount,created_at').eq('status','paid').order('created_at',{ascending:false}).limit(100),
+   db.from('transaction_evidence').select('*').order('created_at',{ascending:false}).limit(50)
+  ]);
+
+  if(d.error)throw d.error;
+  if(w.error)throw w.error;
+  if(e.error)throw e.error;
+
+  const options=[
+   ...d.data.map(x=>({value:'deposit:'+x.id,label:'إيداع مكتمل - '+money(x.amount)+' - '+x.id.slice(0,8)})),
+   ...w.data.map(x=>({value:'withdrawal:'+x.id,label:'سحب مدفوع - '+money(x.amount)+' - '+x.id.slice(0,8)}))
+  ];
+
+  sel.innerHTML='<option value="">اختر عملية مكتملة</option>'+
+   options.map(x=>`<option value="${safe(x.value)}">${safe(x.label)}</option>`).join('');
+
+  box.innerHTML=e.data.length?e.data.map(x=>`
+   <div class="item">
+    <b>${x.transaction_type==='deposit'?'إيداع':'سحب'}</b>
+    <div class="muted">رقم العملية: ${safe(x.transaction_id)}</div>
+    <div class="muted">العميل: ${safe(x.user_id)}</div>
+    <div class="muted">حالة البريد: ${safe(x.email_status)}</div>
+    <div class="muted">تاريخ الإنشاء: ${safe(new Date(x.created_at).toLocaleString('ar-EG'))}</div>
+    ${x.email_sent_at?'<div class="muted">تاريخ الإرسال: '+safe(new Date(x.email_sent_at).toLocaleString('ar-EG'))+'</div>':''}
+    ${x.email_error?'<div class="muted error">'+safe(x.email_error)+'</div>':''}
+   </div>`).join(''):'لا توجد إثباتات محفوظة';
+
+ }catch(err){
+  box.textContent='تعذر تحميل الإثباتات: '+err.message;
+ }
+}
+
+async function sendTransactionEvidence(){
+ if(!isAdmin)return msg('غير مصرح',true);
+
+ const selected=document.getElementById('evidenceTransaction').value;
+ const file=document.getElementById('evidenceFile').files[0];
+ const note=document.getElementById('evidenceNote').value.trim();
+ const btn=document.getElementById('evidenceSendBtn');
+
+ if(!selected)return msg('اختر العملية أولاً',true);
+ if(!file)return msg('اختر صورة إثبات التحويل',true);
+ if(!['image/jpeg','image/png','image/webp'].includes(file.type))
+  return msg('استخدم صورة JPG أو PNG أو WEBP',true);
+ if(file.size>5*1024*1024)return msg('حجم الصورة أكبر من 5 ميجابايت',true);
+
+ const [type,id]=selected.split(':');
+ btn.disabled=true;
+
+ let uploadedPath=null;
+
+ try{
+  let transaction;
+
+  if(type==='deposit'){
+   const result=await db.from('deposit_requests')
+    .select('id,user_id,status')
+    .eq('id',id)
+    .eq('status','approved')
+    .single();
+   if(result.error)throw result.error;
+   transaction=result.data;
+  }else if(type==='withdrawal'){
+   const result=await db.from('withdrawal_requests')
+    .select('id,user_id,status')
+    .eq('id',id)
+    .eq('status','paid')
+    .single();
+   if(result.error)throw result.error;
+   transaction=result.data;
+  }else{
+   throw new Error('نوع العملية غير صحيح');
+  }
+
+  const ext=file.type==='image/jpeg'?'jpg':file.type==='image/png'?'png':'webp';
+  const path=`${transaction.user_id}/${crypto.randomUUID()}.${ext}`;
+  uploadedPath=path;
+
+  const {error:uploadError}=await db.storage.from('transaction-evidence').upload(path,file,{
+   contentType:file.type,
+   upsert:false
+  });
+  if(uploadError)throw uploadError;
+
+  const {data:record,error:insertError}=await db.from('transaction_evidence').insert({
+   transaction_type:type,
+   transaction_id:id,
+   user_id:transaction.user_id,
+   proof_image_path:path,
+   note:note,
+   created_by:currentUser.id
+  }).select('id').single();
+
+  if(insertError)throw insertError;
+
+  const {data:result,error:sendError}=await db.functions.invoke('send-transaction-evidence',{
+   body:{evidence_id:record.id,note:note}
+  });
+
+  if(sendError){
+   let detail=sendError.message;
+   try{
+    if(sendError.context){
+     const body=await sendError.context.json();
+     detail=body.error||body.details?.message||detail;
+    }
+   }catch(_){}
+   throw new Error(detail);
+  }
+
+  if(result?.error)throw new Error(result.error);
+
+  msg('استلم الخادم طلب إرسال البريد. تحقق من حالة الإرسال في سجل الإثباتات.');
+  document.getElementById('evidenceFile').value='';
+  document.getElementById('evidenceNote').value='';
+  await loadTransactionEvidence();
+
+ }catch(err){
+  msg('تعذر إتمام العملية: '+(err.message||'خطأ غير معروف'),true);
+  await loadTransactionEvidence();
+ }finally{
+  btn.disabled=false;
+ }
+}
+
+async function start(){
+ const {data:{session}}=await db.auth.getSession();
+ if(session){
+  currentUser=session.user;
+  try{await loadApp()}catch(e){msg(e.message,true)}
+ }
+}
+
+db.auth.onAuthStateChange((event,session)=>{
+ if(event==='SIGNED_OUT'){
+  currentUser=null;isAdmin=false;
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('auth').classList.remove('hidden');
+ }
+});
+start();
+</script>
+ <script>
+(function(){
+  const style=document.createElement('style');
+  style.textContent=`
+    #rizqPackages .package-card{border:1px solid #dce8df;border-radius:12px;padding:13px;margin:10px 0;background:#fff}
+    #rizqPackages .package-price{font-size:22px;font-weight:bold;color:#087b50}
+  `;
+  document.head.appendChild(style);
+
+  const home=document.getElementById('tab-home');
+  if(!home)return;
+
+  home.insertAdjacentHTML('beforeend',`
+    <div class="card" id="rizqPackages">
+      <h2>باقات RIZQ</h2>
+      <p class="muted">اختر الباقة وأرسل طلب الاشتراك للمراجعة. لا يتم التفعيل إلا بعد التحقق من الدفع الفعلي.</p>
+      <div id="rizqPackageList">جارٍ تحميل الباقات...</div>
+      <div id="rizqPackageForm" class="hidden">
+        <h3>إرسال طلب الاشتراك</h3>
+        <div id="rizqSelectedPackage" class="notice"></div>
+        <label>وسيلة التحويل</label>
+        <select id="rizqPayMethod"></select>
+        <label>رقم عملية التحويل</label>
+        <input id="rizqPayReference" placeholder="أدخل رقم العملية بعد التحويل">
+        <label>ملاحظات</label>
+        <textarea id="rizqPayNote" placeholder="أي تفاصيل إضافية"></textarea>
+        <button id="rizqSendRequest" onclick="window.rizqSendPackageRequest()">إرسال طلب الاشتراك</button>
+        <button class="secondary" onclick="document.getElementById('rizqPackageForm').classList.add('hidden')">إلغاء</button>
+      </div>
+      <h3>طلباتي</h3>
+      <div id="rizqMyRequests">جارٍ التحميل...</div>
+    </div>
+  `);
+
+  let selectedPackage=null;
+
+  window.rizqChoosePackage=function(id,name,price){
+    selectedPackage={id,name,price};
+    document.getElementById('rizqSelectedPackage').textContent=name+' — '+Number(price).toLocaleString('ar-EG')+' جنيه';
+    document.getElementById('rizqPackageForm').classList.remove('hidden');
+    document.getElementById('rizqPackageForm').scrollIntoView({behavior:'smooth'});
+  };
+
+  window.rizqLoadPackages=async function(){
+    if(!currentUser)return;
+    const list=document.getElementById('rizqPackageList');
+    const methods=document.getElementById('rizqPayMethod');
+    const requests=document.getElementById('rizqMyRequests');
+
+    const [p,m,r]=await Promise.all([
+      db.from('packages').select('id,name,price').eq('active',true).order('price'),
+      db.from('payment_methods').select('id,name,details').eq('active',true).order('created_at'),
+      db.from('package_purchase_requests').select('id,package_id,status,transaction_reference,created_at').eq('user_id',currentUser.id).order('created_at',{ascending:false})
+    ]);
+
+    if(p.error){list.textContent='تعذر تحميل الباقات: '+p.error.message;return;}
+
+    list.innerHTML=p.data.length?p.data.map(x=>`
+      <div class="package-card">
+        <h3>${safe(x.name)}</h3>
+        <div class="package-price">${money(x.price)}</div>
+        <button onclick="window.rizqChoosePackage('${x.id}','${safe(x.name).replace(/'/g,'&#39;')}',${Number(x.price)})">اشترك الآن</button>
+      </div>
+    `).join(''):'لا توجد باقات متاحة حالياً';
+
+    if(m.error){methods.innerHTML='<option value="">تعذر تحميل وسائل التحويل</option>';}
+    else{
+      methods.innerHTML=m.data.map(x=>`<option value="${x.id}">${safe(x.name)} — ${safe(x.details)}</option>`).join('')||'<option value="">لا توجد وسيلة نشطة</option>';
+    }
+
+    if(r.error){requests.textContent='تعذر تحميل الطلبات: '+r.error.message;return;}
+    requests.innerHTML=r.data.length?r.data.map(x=>`
+      <div class="item">
+        <b>طلب اشتراك</b> — ${safe(x.status)}
+        <div class="muted">رقم العملية: ${safe(x.transaction_reference||'لم يضاف')}</div>
+        <div class="muted">${new Date(x.created_at).toLocaleString('ar-EG')}</div>
+      </div>
+    `).join(''):'لم ترسل طلبات اشتراك حتى الآن';
+  };
+
+  window.rizqSendPackageRequest=async function(){
+    if(!currentUser||!selectedPackage)return;
+    const method=document.getElementById('rizqPayMethod').value;
+    const reference=document.getElementById('rizqPayReference').value.trim();
+    const note=document.getElementById('rizqPayNote').value.trim();
+    const button=document.getElementById('rizqSendRequest');
+
+    if(!method)return msg('لا توجد وسيلة تحويل نشطة',true);
+    if(!reference)return msg('اكتب رقم عملية التحويل أولاً',true);
+    if(!confirm('هل نفذت التحويل فعلياً؟ أرسل الطلب بعد التحويل فقط.'))return;
+
+    button.disabled=true;
+    try{
+      const {error}=await db.from('package_purchase_requests').insert({
+        user_id:currentUser.id,
+        package_id:selectedPackage.id,
+        method_id:method,
+        transaction_reference:reference,
+        proof_note:note,
+        status:'pending'
+      });
+      if(error)throw error;
+      msg('تم إرسال طلب الاشتراك للمراجعة. لم يتم تفعيل الباقة بعد.');
+      document.getElementById('rizqPayReference').value='';
+      document.getElementById('rizqPayNote').value='';
+      document.getElementById('rizqPackageForm').classList.add('hidden');
+      await window.rizqLoadPackages();
+    }catch(e){msg('تعذر إرسال الطلب: '+e.message,true);}
+    finally{button.disabled=false;}
+  };
+
+  const app=document.getElementById('app');
+  const observer=new MutationObserver(()=>{
+    if(!app.classList.contains('hidden'))window.rizqLoadPackages();
+  });
+  observer.observe(app,{attributes:true,attributeFilter:['class']});
+  if(!app.classList.contains('hidden'))window.rizqLoadPackages();
+})();
+</script>
+ 
+<script>
+(function(){
+  const list = document.getElementById('rizqPackageList');
+  if (!list) return;
+
+  function addPackageDetails(){
+    list.querySelectorAll('.package-card').forEach(card => {
+      if (card.querySelector('.rizq-details-btn')) return;
+
+      const name = card.querySelector('h3')?.textContent || 'باقة RIZQ';
+      const price = card.querySelector('.package-price')?.textContent || '';
+
+      const btn = document.createElement('button');
+      btn.className = 'secondary rizq-details-btn';
+      btn.textContent = 'تفاصيل الباقة';
+
+      const details = document.createElement('div');
+      details.hidden = true;
+      details.style.cssText =
+        'margin-top:10px;padding:12px;border-radius:10px;background:#f1f7f3;line-height:1.9';
+
+      const title = document.createElement('b');
+      title.textContent = name;
+
+      const priceLine = document.createElement('p');
+      priceLine.textContent = 'قيمة الاشتراك: ' + price;
+
+      const duration = document.createElement('p');
+      duration.textContent = 'الصلاحية: بدون انتهاء.';
+
+      const activation = document.createElement('p');
+      activation.textContent =
+        'يتم تفعيل الباقة بعد مراجعة طلب الاشتراك والتحقق من وصول الدفع فعلياً.';
+
+      const rewards = document.createElement('p');
+      rewards.textContent =
+        'المكافآت مرتبطة بالمهام الفعلية وتوافر ميزانية المكافآت، ولا يوجد عائد يومي ثابت أو مضمون.';
+
+      details.append(title, priceLine, duration, activation, rewards);
+
+      btn.addEventListener('click', function(){
+        details.hidden = !details.hidden;
+        btn.textContent = details.hidden ? 'تفاصيل الباقة' : 'إخفاء التفاصيل';
+      });
+
+      card.append(btn, details);
+    });
+  }
+
+  addPackageDetails();
+
+  new MutationObserver(addPackageDetails).observe(list, {
+    childList:true,
+    subtree:true
+  });
+})();
+</script>
+
+<script>
+(function(){
+  const rewards = {
+    3000: 100,
+    9000: 300,
+    18000: 600,
+    30000: 1000
+  };
+
+  function updatePackageDetails(){
+    document.querySelectorAll('#rizqPackageList .package-card').forEach(card => {
+      const details = card.querySelector('.rizq-details-btn + div');
+      const priceText = card.querySelector('.package-price')?.textContent || '';
+      const price = Math.round(
+        Number(priceText.replace(/[^\d.]/g, ''))
+      );
+
+      if (!details || !rewards[price]) return;
+      if (details.querySelector('.rizq-reward-info')) return;
+
+      const info = document.createElement('div');
+      info.className = 'rizq-reward-info';
+      info.style.cssText =
+        'margin-top:12px;padding-top:10px;border-top:1px solid #cbdccf;line-height:2';
+
+      const daily = document.createElement('p');
+      daily.textContent =
+        'المكافأة اليومية المستهدفة: ' +
+        rewards[price].toLocaleString('ar-EG') + ' جنيه، عند إنجاز المهام اليومية وقبولها.';
+
+      const referral = document.createElement('p');
+      referral.textContent =
+        'مكافأة الإحالة: 5% من قيمة باقة الصديق بعد التحقق من الدفع الفعلي واعتماد المكافأة.';
+
+      const condition = document.createElement('p');
+      condition.textContent =
+        'صرف المكافآت مشروط بإنجاز المهام وقبولها وتوفر ميزانية ممولة للمكافآت.';
+
+      info.append(daily, referral, condition);
+      details.appendChild(info);
+    });
+  }
+
+  updatePackageDetails();
+
+  const list = document.getElementById('rizqPackageList');
+  if(list){
+    new MutationObserver(updatePackageDetails).observe(list,{
+      childList:true,
+      subtree:true
+    });
+  }
+})();
+</script>
+ 
+<script>
+(function(){
+  const dailyRewards = [100, 300, 600, 1000];
+
+  function addRewards(){
+    const cards = document.querySelectorAll('#rizqPackageList .package-card');
+
+    cards.forEach(function(card, index){
+      const button = card.querySelector('.rizq-details-btn');
+      if(!button) return;
+
+      const details = button.nextElementSibling;
+      if(!details || details.querySelector('.rizq-reward-info')) return;
+
+      const amount = dailyRewards[index];
+      if(!amount) return;
+
+      const box = document.createElement('div');
+      box.className = 'rizq-reward-info';
+      box.style.cssText =
+        'margin-top:12px;padding:12px;border-top:1px solid #ccc;line-height:2';
+
+      box.innerHTML = '';
+
+      const daily = document.createElement('p');
+      daily.textContent = 'المكافأة اليومية المستهدفة: ' +
+        amount + ' جنيه عند إنجاز المهام اليومية وقبولها.';
+
+      const referral = document.createElement('p');
+      referral.textContent =
+        'مكافأة دعوة صديق: 5% من قيمة باقته بعد التحقق من الدفع الفعلي واعتماد المكافأة.';
+
+      const condition = document.createElement('p');
+      condition.textContent =
+        'المكافآت مشروطة بإنجاز المهام وقبولها وتوفر ميزانية ممولة للصرف، وليست مضمونة يومياً.';
+
+      box.appendChild(daily);
+      box.appendChild(referral);
+      box.appendChild(condition);
+      details.appendChild(box);
+    });
+  }
+
+  addRewards();
+
+  const list = document.getElementById('rizqPackageList');
+  if(list){
+    new MutationObserver(addRewards).observe(list,{
+      childList:true,
+      subtree:true
+    });
+  }
+})();
+</script>
+
+<script>
+(function(){
+  function removeOldLine(){
+    document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p){
+      if(p.textContent.includes('المكافآت مرتبطة بالمهام الفعلية')){
+        p.remove();
+      }
+    });
+  }
+
+  removeOldLine();
+
+  const list = document.getElementById('rizqPackageList');
+  if(list){
+    new MutationObserver(removeOldLine).observe(list,{
+      childList:true,
+      subtree:true
+    });
+  }
+})();
+</script>
+
+<script>
+document.querySelectorAll('.rizq-reward-info p').forEach(function(p){
+  if(p.textContent.includes('المكافآت مشروطة')){
+    p.textContent='يتم احتساب المكافآت بعد إنجاز المهام المطلوبة واعتمادها وفق نظام RIZQ.';
+  }
+});
+</script>
+
+<script>
+document.querySelectorAll('.rizq-reward-info p').forEach(function(p){
+  if(p.textContent.includes('المكافآت مشروطة')){
+    p.textContent='يتم احتساب المكافآت بعد إنجاز المهام المطلوبة واعتمادها وفق نظام RIZQ.';
+  }
+});
+</script>
+
+<script>
+document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p){
+  if(/مضمون|مضمونة/.test(p.textContent)){
+    p.textContent='تُحتسب المكافآت اليومية بعد إنجاز المهام المطلوبة واعتمادها وفق نظام RIZQ.';
+  }
+});
+</script>
+
+<script>
+(function(){
+  function fixOldText(){
+    document.querySelectorAll('#rizqPackageList p, #rizqPackageList div').forEach(function(el){
+      if(el.children.length === 0 &&
+         /لا يوجد عائد يومي ثابت أو مضمون|ليست مضمونة|غير مضمونة/.test(el.textContent)){
+        el.textContent =
+          'تُحتسب المكافآت اليومية بعد إنجاز المهام المطلوبة واعتمادها وفق نظام RIZQ.';
+      }
+    });
+  }
+
+  fixOldText();
+
+  new MutationObserver(fixOldText).observe(document.body,{
+    childList:true,
+    subtree:true,
+    characterData:true
+  });
+})();
+</script>
+
+<script>
+(function(){
+  const admin = document.getElementById('tab-admin');
+  if(!admin || document.getElementById('rizqTaskManager')) return;
+
+  admin.insertAdjacentHTML('beforeend', `
+    <div class="card" id="rizqTaskManager">
+      <h2>إدارة مهام الباقات</h2>
+      <p>أضف مهمة لباقة محددة أو اجعلها عامة لكل الباقات النشطة.</p>
+
+      <label>نطاق المهمة</label>
+      <select id="rizqTaskPackage"></select>
+
+      <label>عنوان المهمة</label>
+      <input id="rizqTaskTitle" placeholder="مثال: مراجعة محتوى تعليمي">
+
+      <label>وصف المهمة وطريقة تنفيذها</label>
+      <textarea id="rizqTaskDescription"
+        placeholder="اكتب المطلوب من العميل وطريقة تقديم الإثبات"></textarea>
+
+      <p id="rizqTaskRewardInfo" class="notice">
+        مكافأة المهمة تُحدد تلقائياً حسب الباقة.
+      </p>
+
+      <button id="rizqAddTaskButton"
+        onclick="window.rizqAddTask()">إضافة المهمة</button>
+
+      <h3>المهام المضافة</h3>
+      <div id="rizqTaskList">جارٍ تحميل المهام...</div>
+    </div>
+  `);
+
+  const packageSelect = document.getElementById('rizqTaskPackage');
+
+  const rewardText = {
+    '3000':'10 جنيه للمهمة',
+    '9000':'30 جنيه للمهمة',
+    '18000':'60 جنيه للمهمة',
+    '30000':'100 جنيه للمهمة'
+  };
+
+  packageSelect.addEventListener('change', function(){
+    const option = packageSelect.selectedOptions[0];
+    document.getElementById('rizqTaskRewardInfo').textContent =
+      packageSelect.value === 'all'
+        ? 'مهمة عامة: المكافأة حسب باقة كل عميل (10 أو 30 أو 60 أو 100 جنيه).'
+        : 'مكافأة المهمة: ' + (rewardText[option?.dataset.price] || 'حسب إعداد الباقة');
+  });
+
+  window.rizqLoadTaskManager = async function(){
+    if(!isAdmin || !currentUser) return;
+
+    const {data:packages,error:packageError} = await db
+      .from('packages')
+      .select('id,name,price')
+      .eq('active',true)
+      .order('price');
+
+    if(packageError){
+      packageSelect.innerHTML = '<option>تعذر تحميل الباقات</option>';
+      return;
+    }
+
+    packageSelect.innerHTML = '<option value="all">كل الباقات النشطة — مهمة عامة</option>' +
+      (packages || []).map(p =>
+        `<option value="${p.id}" data-price="${p.price}">
+          ${safe(p.name)} — ${money(p.price)}
+        </option>`
+      ).join('');
+
+    packageSelect.dispatchEvent(new Event('change'));
+
+    const {data:tasks,error} = await db
+      .from('tasks')
+      .select('id,title,description,reward,active,package_id')
+      .order('created_at',{ascending:false});
+
+    const box = document.getElementById('rizqTaskList');
+
+    if(error){
+      box.textContent = error.message;
+      return;
+    }
+
+    box.innerHTML = tasks?.length ? tasks.map(t => {
+      const p = (packages || []).find(x => x.id === t.package_id);
+      return `<div class="item">
+        <b>${safe(t.title)}</b>
+        <div>${safe(p?.name || (t.package_id ? 'باقة غير محددة' : 'كل الباقات النشطة'))}</div>
+        <div>${safe(t.description)}</div>
+        <div>المكافأة: ${t.package_id ? money(t.reward) : 'حسب باقة العميل'}</div>
+        <div>الحالة: ${t.active ? 'نشطة' : 'متوقفة'}</div>
+        <button class="${t.active?'danger':'secondary'}" onclick="window.rizqToggleTask('${t.id}',${!t.active})">${t.active?'إيقاف المهمة':'إعادة تفعيل المهمة'}</button>
+      </div>`;
+    }).join('') : 'لم تتم إضافة مهام بعد';
+  };
+
+  window.rizqAddTask = async function(){
+    if(!isAdmin) return msg('غير مصرح لك بإضافة المهام',true);
+
+    const packageId = packageSelect.value;
+    const title = document.getElementById('rizqTaskTitle').value.trim();
+    const description = document.getElementById('rizqTaskDescription').value.trim();
+    const button = document.getElementById('rizqAddTaskButton');
+
+    if(!packageId) return msg('اختر نطاق المهمة',true);
+    if(!title || !description) return msg('اكتب عنوان ووصف المهمة',true);
+
+    button.disabled = true;
+
+    try{
+      const countQuery = db.from('tasks')
+        .select('id',{count:'exact',head:true})
+        .eq('active',true);
+      const {count,error:countError} = packageId === 'all'
+        ? await countQuery.is('package_id',null)
+        : await countQuery.eq('package_id',packageId);
+
+      if(countError) throw countError;
+      if(count >= 10) throw Error('وصلت إلى 10 مهام نشطة في هذا النطاق');
+
+      const {error} = await db.from('tasks').insert({
+        package_id:packageId === 'all' ? null : packageId,
+        title:title,
+        description:description,
+        active:true
+      });
+
+      if(error) throw error;
+
+      msg('تمت إضافة المهمة بنجاح');
+      document.getElementById('rizqTaskTitle').value = '';
+      document.getElementById('rizqTaskDescription').value = '';
+
+      await window.rizqLoadTaskManager();
+
+    }catch(e){
+      msg('تعذر إضافة المهمة: ' + e.message,true);
+    }finally{
+      button.disabled = false;
+    }
+  };
+
+  window.rizqToggleTask = async function(taskId, active){
+    if(!isAdmin) return msg('غير مصرح لك',true);
+    const action = active ? 'إعادة تفعيل' : 'إيقاف';
+    if(!confirm('هل تريد ' + action + ' هذه المهمة؟')) return;
+    try{
+      const {error}=await db.from('tasks').update({active}).eq('id',taskId);
+      if(error) throw error;
+      msg(active?'تمت إعادة تفعيل المهمة':'تم إيقاف المهمة');
+      await window.rizqLoadTaskManager();
+    }catch(e){msg('تعذر تحديث المهمة: '+e.message,true);}
+  };
+
+  const observer = new MutationObserver(function(){
+    if(!admin.classList.contains('hidden')){
+      window.rizqLoadTaskManager();
+    }
+  });
+
+  observer.observe(admin,{
+    attributes:true,
+    attributeFilter:['class']
+  });
+
+  if(!admin.classList.contains('hidden')){
+    window.rizqLoadTaskManager();
+  }
+})();
+</script>
+
+<script>
+(function(){
+  const admin = document.getElementById('tab-admin');
+  const taskTab = document.getElementById('tab-tasks');
+  if(!admin || !taskTab || document.getElementById('rizqTaskReviews')) return;
+
+  admin.insertAdjacentHTML('beforeend', `
+    <div class="card" id="rizqTaskReviews">
+      <h2>مراجعة إثباتات المهام</h2>
+      <div id="rizqPendingTaskReviews">جارٍ تحميل الطلبات...</div>
+    </div>
+  `);
+
+  window.rizqReloadCustomerTasks = async function(){
+    const box = document.getElementById('rizqDailyTasks');
+    if(!currentUser){box.textContent='سجل الدخول أولاً';return;}
+
+    box.textContent='جارٍ تجهيز مهام الباقات...';
+
+    try{
+      const {error:generateError} =
+        await db.rpc('generate_rizq_daily_tasks');
+      if(generateError) throw generateError;
+
+      const {data:assignments,error} = await db
+        .from('daily_task_assignments')
+        .select('id,task_id,user_package_id,reward_amount,task_date,status')
+        .eq('user_id',currentUser.id)
+        .eq('task_date',new Date().toLocaleDateString('en-CA',{
+          timeZone:'Africa/Cairo'
+        }))
+        .order('created_at');
+
+      if(error) throw error;
+
+      if(!assignments?.length){
+        box.textContent='لا توجد مهام اليوم. تأكد من تفعيل باقتك أو راجعنا لاحقاً.';
+        return;
+      }
+
+      const ids=assignments.map(x=>x.id);
+      const taskIds=[...new Set(assignments.map(x=>x.task_id))];
+      const packageIds=[...new Set(assignments.map(x=>x.user_package_id))];
+
+      const [tasksResult,submissionsResult,userPackagesResult] = await Promise.all([
+        db.from('tasks').select('id,title,description,active')
+          .in('id',taskIds),
+        db.from('task_submissions')
+          .select('id,assignment_id,status,review_note,submitted_at')
+          .eq('user_id',currentUser.id)
+          .in('assignment_id',ids)
+          .order('submitted_at',{ascending:false}),
+        db.from('user_packages').select('id,package_id').in('id',packageIds)
+      ]);
+
+      if(tasksResult.error) throw tasksResult.error;
+      if(submissionsResult.error) throw submissionsResult.error;
+      if(userPackagesResult.error) throw userPackagesResult.error;
+
+      const tasks=tasksResult.data||[];
+      const submissions=submissionsResult.data||[];
+      const userPackages=userPackagesResult.data||[];
+      const packageIds2=[...new Set(userPackages.map(x=>x.package_id))];
+      const {data:packages,error:packagesError}=await db.from('packages')
+        .select('id,name').in('id',packageIds2);
+      if(packagesError) throw packagesError;
+
+      const available=[];
+      const pending=[];
+      const completed=[];
+
+      assignments.forEach(a=>{
+        const t=tasks.find(x=>x.id===a.task_id);
+        const s=submissions.find(x=>x.assignment_id===a.id);
+        const up=userPackages.find(x=>x.id===a.user_package_id);
+        const pack=(packages||[]).find(x=>x.id===up?.package_id);
+        const label=safe(pack?.name||'الباقة');
+        const taskTitle=safe(t?.title||'مهمة');
+        const desc=safe(t?.description||'');
+        const reward=`<span class="tag">المكافأة: ${money(a.reward_amount)}</span>`;
+        const packageLabel=`<p class="muted">تكليف ضمن: ${label}</p>`;
+
+        if(a.status==='approved' || s?.status==='approved'){
+          completed.push(`<div class="item"><h3>${taskTitle}</h3>${packageLabel}<p>${desc}</p>${reward}<p>الحالة: ${statusTag('approved')}</p></div>`);
+          return;
+        }
+        if(a.status==='submitted' || s?.status==='pending'){
+          pending.push(`<div class="item"><h3>${taskTitle}</h3>${packageLabel}<p>${desc}</p>${reward}<p>الحالة: ${statusTag('pending')}</p><p class="muted">تم استلام إثباتك، والطلب قيد المراجعة.</p></div>`);
+          return;
+        }
+        if(!t?.active) return;
+
+        const rejected=s?.status==='rejected' || a.status==='rejected';
+        const retry=rejected?`<p>الحالة: ${statusTag('rejected')}</p><p class="muted">${safe(s?.review_note||'يمكنك مراجعة الملاحظة وإرسال إثبات جديد.')}</p>`:'';
+        available.push(`<div class="item"><h3>${taskTitle}</h3>${packageLabel}<p>${desc}</p>${reward}${retry}
+          <label>إثبات تنفيذ المهمة</label>
+          <input type="file" id="rizqProof-${a.id}" accept="image/jpeg,image/png,image/webp">
+          <button onclick="window.rizqSubmitTaskProof('${a.id}')">${rejected?'إعادة إرسال الإثبات':'إرسال الإثبات للمراجعة'}</button>
+        </div>`);
+      });
+
+      box.innerHTML=`<h3>المهام المتاحة</h3>${available.length?available.join(''):'لا توجد مهام متاحة حالياً'}
+        <h3 style="margin-top:18px">قيد المراجعة</h3>${pending.length?pending.join(''):'لا توجد مهام قيد المراجعة'}
+        <h3 style="margin-top:18px">المهام المنجزة</h3>${completed.length?completed.join(''):'لا توجد مهام منجزة بعد'}`;
+
+    }catch(e){
+      box.textContent='تعذر تحميل المهام: '+e.message;
+    }
+  };
+
+  window.rizqSubmitTaskProof = async function(assignmentId){
+    const input=document.getElementById('rizqProof-'+assignmentId);
+    const file=input?.files?.[0];
+
+    if(!file)return msg('اختر صورة إثبات المهمة أولاً',true);
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type))
+      return msg('استخدم صورة JPG أو PNG أو WEBP',true);
+    if(file.size>5*1024*1024)
+      return msg('حجم الصورة أكبر من 5 ميجابايت',true);
+
+    try{
+      const ext=file.type==='image/jpeg'?'jpg':
+        file.type==='image/png'?'png':'webp';
+      const path=currentUser.id+'/'+crypto.randomUUID()+'.'+ext;
+
+      const {error:uploadError}=await db.storage
+        .from('task-proofs')
+        .upload(path,file,{contentType:file.type,upsert:false});
+
+      if(uploadError)throw uploadError;
+
+      const {error}=await db.rpc('submit_rizq_task_proof',{
+        p_assignment_id:assignmentId,
+        p_proof_path:path
+      });
+
+      if(error){
+        await db.storage.from('task-proofs').remove([path]);
+        throw error;
+      }
+
+      msg('تم إرسال إثبات المهمة للمراجعة');
+      await window.rizqReloadCustomerTasks();
+
+    }catch(e){
+      msg('تعذر إرسال الإثبات: '+e.message,true);
+    }
+  };
+
+  window.rizqLoadTaskReviews = async function(){
+    const box=document.getElementById('rizqPendingTaskReviews');
+    if(!isAdmin)return;
+
+    box.textContent='جارٍ تحميل الإثباتات...';
+
+    const {data,error}=await db.from('task_submissions')
+      .select('*')
+      .eq('status','pending')
+      .order('submitted_at',{ascending:false});
+
+    if(error){box.textContent=error.message;return;}
+
+    if(!data?.length){
+      box.textContent='لا توجد إثباتات مهام معلقة حالياً';
+      return;
+    }
+
+    const taskIds=[...new Set(data.map(x=>x.task_id))];
+    const {data:tasks,error:taskError}=await db.from('tasks')
+      .select('id,title')
+      .in('id',taskIds);
+
+    if(taskError){box.textContent=taskError.message;return;}
+
+    const cards=await Promise.all(data.map(async s=>{
+      const t=tasks.find(x=>x.id===s.task_id);
+      let proof='تعذر تحميل صورة الإثبات';
+
+      if(s.proof_image_path){
+        const {data:signed,error:signedError}=await db.storage
+          .from('task-proofs')
+          .createSignedUrl(s.proof_image_path,300);
+
+        if(!signedError){
+          proof=`<a class="proof-link" target="_blank"
+            rel="noopener noreferrer"
+            href="${safe(signed.signedUrl)}">عرض صورة الإثبات</a>`;
+        }
+      }
+
+      return `<div class="item">
+        <b>${safe(t?.title||'مهمة')}</b>
+        <p class="muted">العميل: ${safe(s.user_id)}</p>
+        <p>${proof}</p>
+        <label>ملاحظة المراجعة</label>
+        <input id="rizqReviewNote-${s.id}" placeholder="ملاحظة اختيارية">
+        <button onclick="window.rizqReviewTask('${s.id}',true)">
+          قبول المهمة واعتماد المكافأة
+        </button>
+        <button class="danger" onclick="window.rizqReviewTask('${s.id}',false)">
+          رفض المهمة
+        </button>
+      </div>`;
+    }));
+
+    box.innerHTML=cards.join('');
+  };
+
+  window.rizqReviewTask = async function(id,approve){
+    if(!isAdmin)return msg('غير مصرح',true);
+
+    const note=document.getElementById('rizqReviewNote-'+id)?.value||null;
+    const question=approve
+      ?'هل راجعت الإثبات وتأكدت من تنفيذ المهمة؟'
+      :'هل تريد رفض إثبات المهمة؟';
+
+    if(!confirm(question))return;
+
+    try{
+      const {error}=await db.rpc('admin_review_rizq_task',{
+        p_submission_id:id,
+        p_approve:approve,
+        p_note:note
+      });
+
+      if(error)throw error;
+
+      msg(approve?'تم اعتماد المهمة وإضافة مكافأتها':'تم رفض المهمة');
+      await window.rizqLoadTaskReviews();
+      await loadWallet();
+      await loadTransactions();
+      await window.rizqReloadCustomerTasks();
+
+    }catch(e){
+      msg('تعذرت المراجعة: '+e.message,true);
+    }
+  };
+
+  const originalLoadAdmin=window.loadAdmin;
+  window.loadAdmin=async function(){
+    await originalLoadAdmin();
+    await window.rizqLoadTaskReviews();
+  };
+
+  const observer=new MutationObserver(()=>{
+    if(!taskTab.classList.contains('hidden') && currentUser){
+      window.rizqReloadCustomerTasks();
+    }
+    if(!admin.classList.contains('hidden') && isAdmin){
+      window.rizqLoadTaskReviews();
+    }
+  });
+
+  observer.observe(taskTab,{attributes:true,attributeFilter:['class']});
+  observer.observe(admin,{attributes:true,attributeFilter:['class']});
+
+  if(isAdmin)window.rizqLoadTaskReviews();
+})();
+</script>
+
+<script>
+(function(){
+  const list = document.getElementById('rizqPackageList');
+  if(!list) return;
+
+  const oldForm = document.getElementById('rizqPackageForm');
+  if(oldForm) oldForm.remove();
+
+  window.rizqWalletBuy = async function(packageId, button){
+    if(!currentUser) return msg('سجل الدخول أولاً',true);
+    if(button.disabled) return;
+
+    if(!confirm('تأكيد شراء الباقة والخصم من محفظتك؟')) return;
+
+    button.disabled = true;
+    const oldText = button.textContent;
+    button.textContent = 'جارٍ تنفيذ الاشتراك...';
+
+    try{
+      const purchaseKey = crypto.randomUUID();
+
+      const {data,error} = await db.rpc(
+        'buy_rizq_package_from_wallet',
+        {
+          p_package_id: packageId,
+          p_purchase_key: purchaseKey
+        }
+      );
+
+      if(error) throw error;
+      if(!data?.success) throw Error('لم يتم تأكيد عملية الشراء');
+
+      msg(data.already_processed
+        ? 'عملية الشراء مسجلة بالفعل'
+        : 'تم الاشتراك وتحديث رصيد محفظتك بنجاح');
+
+      await Promise.all([
+        loadWallet(),
+        loadTransactions(),
+        window.rizqLoadPackages()
+      ]);
+
+    }catch(e){
+      msg('تعذر الاشتراك: '+e.message,true);
+      button.disabled = false;
+      button.textContent = oldText;
+    }
+  };
+
+  function updateButtons(){
+    list.querySelectorAll('.package-card').forEach(card=>{
+      const button = card.querySelector('button:not(.rizq-details-btn)');
+      if(!button || button.dataset.walletReady) return;
+
+      const match = button.getAttribute('onclick')?.match(/rizqChoosePackage\('([^']+)'/);
+      if(!match) return;
+
+      const packageId = match[1];
+      button.removeAttribute('onclick');
+      button.dataset.walletReady = 'yes';
+      button.textContent = 'اشترك الآن من المحفظة';
+      button.addEventListener('click',()=>{
+        window.rizqWalletBuy(packageId,button);
+      });
+    });
+  }
+
+  updateButtons();
+  new MutationObserver(updateButtons).observe(list,{
+    childList:true,
+    subtree:true
+  });
+})();
+</script>
+
+<script>
+(function(){
+  function hideOldTasks(){
+    const oldList = document.getElementById('tasksList');
+    if(oldList){
+      const oldCard = oldList.closest('.card');
+      if(oldCard) oldCard.style.display = 'none';
+      else oldList.style.display = 'none';
+    }
+  }
+
+  hideOldTasks();
+
+  new MutationObserver(hideOldTasks).observe(document.body,{
+    childList:true,
+    subtree:true
+  });
+})();
+</script>
+
+<style>
+#rizqAdminNavigation{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin:16px 0;
+}
+#rizqAdminNavigation button{
+  padding:14px 8px;
+  border:1px solid var(--border,#ddd);
+  border-radius:12px;
+  background:var(--card,#fff);
+  color:inherit;
+  font-weight:700;
+  cursor:pointer;
+}
+#rizqAdminNavigation button.active{
+  background:#176b55;
+  color:white;
+}
+.rizq-admin-hidden{display:none!important}
+</style>
+
+<script>
+(function(){
+  const admin=document.getElementById('tab-admin');
+  if(!admin || document.getElementById('rizqAdminNavigation')) return;
+
+  const nav=document.createElement('div');
+  nav.id='rizqAdminNavigation';
+
+  const sections=[
+    {name:'إدارة المهام',icon:'📋',id:'rizqTaskManager'},
+    {name:'مراجعة إثباتات المهام',icon:'📝',id:'rizqTaskReviews'},
+    {name:'الباقات',icon:'📦',id:null,match:'package'},
+    {name:'الإيداعات',icon:'💰',match:'deposit'},
+    {name:'السحوبات',icon:'💸',match:'withdraw'},
+    {name:'وسائل الدفع',icon:'🏦',match:'method'}
+  ];
+
+  nav.innerHTML=sections.map((s,i)=>
+    `<button type="button" data-index="${i}">
+      ${s.icon} ${s.name}
+    </button>`
+  ).join('');
+
+  const head=admin.querySelector('.admin-head');
+  if(head) head.after(nav);
+  else admin.prepend(nav);
+
+  function findSection(s){
+    if(s.id) return document.getElementById(s.id);
+
+    const cards=[...admin.querySelectorAll('.card')];
+    return cards.find(card=>{
+      const text=(card.innerText||'').toLowerCase();
+      const heading=card.querySelector('h2,h3');
+      const title=(heading?.innerText||'').toLowerCase();
+      if(s.match==='package')
+        return title.includes('باقة')||title.includes('اشتراك');
+      if(s.match==='deposit')
+        return title.includes('إيداع');
+      if(s.match==='withdraw')
+        return title.includes('سحب');
+      if(s.match==='method')
+        return title.includes('وسيلة')||title.includes('استقبال');
+      return false;
+    });
+  }
+
+  let active=null;
+
+  function showSection(index){
+    const selected=sections[index];
+    const target=findSection(selected);
+
+    if(!target){
+      msg('القسم لم يتم العثور عليه بعد: '+selected.name,true);
+      return;
+    }
+
+    if(active && active!==target)
+      active.classList.add('rizq-admin-hidden');
+
+    target.classList.remove('rizq-admin-hidden');
+    active=target;
+
+    nav.querySelectorAll('button').forEach((b,i)=>
+      b.classList.toggle('active',i===index)
+    );
+
+    target.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  nav.querySelectorAll('button').forEach(button=>{
+    button.addEventListener('click',()=>{
+      showSection(Number(button.dataset.index));
+    });
+  });
+
+  showSection(0);
+})();
+</script>
+
+<script>
+(function(){
+  const admin=document.getElementById('tab-admin');
+  if(!admin || !isAdmin) return;
+
+  document.getElementById('rizqAdminNavigation')?.remove();
+
+  const style=document.createElement('style');
+  style.textContent=`
+    #rizqAdminPages{margin-top:15px}
+    #rizqAdminPages .rizq-menu{
+      display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px
+    }
+    #rizqAdminPages .rizq-menu button{
+      min-height:76px;background:white;color:#153e31;
+      border:1px solid #dce8df;border-radius:13px;font-size:15px
+    }
+    #rizqAdminPages .rizq-menu button span{
+      display:block;font-size:23px;margin-bottom:5px
+    }
+    #rizqAdminPages .rizq-back{background:#153e31;color:white;margin-bottom:12px}
+    #rizqAdminPages .rizq-page-title{margin:10px 0 15px}
+  `;
+  document.head.appendChild(style);
+
+  const oldHead=admin.querySelector('.admin-head');
+  const oldStats=oldHead?.nextElementSibling;
+
+  const app=document.createElement('div');
+  app.id='rizqAdminPages';
+  app.innerHTML=`
+    <div id="rizqAdminHome">
+      <div class="card">
+        <h2>لوحة تحكم المدير</h2>
+        <p class="muted">اختر القسم الذي تريد إدارته</p>
+        <div class="rizq-menu">
+          <button data-page="tasks"><span>📋</span>إدارة المهام</button>
+          <button data-page="reviews"><span>📝</span>مراجعة إثباتات المهام</button>
+          <button data-page="packages"><span>📦</span>الباقات</button>
+          <button data-page="deposits"><span>💰</span>طلبات الإيداع</button>
+          <button data-page="withdrawals"><span>💸</span>طلبات السحب</button>
+          <button data-page="methods"><span>🏦</span>وسائل الدفع</button>
+          <button data-page="evidence"><span>📨</span>إثباتات المعاملات</button>
+        </div>
+      </div>
+    </div>
+    <div id="rizqAdminInner" class="hidden">
+      <button class="rizq-back" id="rizqAdminBack">← رجوع للوحة الرئيسية</button>
+      <h2 class="rizq-page-title" id="rizqAdminTitle"></h2>
+      <div id="rizqAdminPageContent"></div>
+    </div>
+  `;
+
+  admin.appendChild(app);
+
+  const home=document.getElementById('rizqAdminHome');
+  const inner=document.getElementById('rizqAdminInner');
+  const content=document.getElementById('rizqAdminPageContent');
+  const title=document.getElementById('rizqAdminTitle');
+
+  const sections={
+    tasks:{name:'إدارة المهام',id:'rizqTaskManager'},
+    reviews:{name:'مراجعة إثباتات المهام',id:'rizqTaskReviews'},
+    deposits:{name:'طلبات الإيداع',id:'adminDeposits'},
+    withdrawals:{name:'طلبات السحب',id:'adminWithdrawals'},
+    methods:{name:'وسائل الدفع',id:'adminMethods'},
+    evidence:{name:'إثباتات المعاملات',id:'evidenceTransaction'}
+  };
+
+  let currentCard=null;
+  let placeholder=null;
+
+  function openPage(key){
+    if(key==='packages'){
+      title.textContent='إدارة الباقات';
+      content.innerHTML='<div class="card">جارٍ تحميل الباقات...</div>';
+      home.classList.add('hidden');
+      inner.classList.remove('hidden');
+      db.from('packages').select('id,name,price,active').order('price')
+        .then(({data,error})=>{
+          if(error){
+            content.textContent='تعذر تحميل الباقات: '+error.message;
+            return;
+          }
+          content.innerHTML='<div class="card">'+
+            (data?.length?data.map(p=>`
+              <div class="item">
+                <b>${safe(p.name)}</b>
+                <p>${money(p.price)}</p>
+                <span class="tag">${p.active?'نشطة':'متوقفة'}</span>
+              </div>`).join(''):'لا توجد باقات')+
+            '</div>';
+        });
+      return;
+    }
+
+    const section=sections[key];
+    const element=section&&document.getElementById(section.id);
+    const card=element?.closest('.card');
+
+    if(!card){
+      msg('القسم غير متاح حاليًا: '+(section?.name||''),true);
+      return;
+    }
+
+    title.textContent=section.name;
+    placeholder=document.createComment('rizq-section-position');
+    card.parentNode.insertBefore(placeholder,card);
+    currentCard=card;
+    content.replaceChildren(card);
+
+    home.classList.add('hidden');
+    inner.classList.remove('hidden');
+
+    if(key==='tasks') window.rizqLoadTaskManager?.();
+    if(key==='reviews') window.rizqLoadTaskReviews?.();
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  function goBack(){
+    if(currentCard && placeholder?.parentNode){
+      placeholder.parentNode.insertBefore(currentCard,placeholder);
+      placeholder.remove();
+    }
+    currentCard=null;
+    placeholder=null;
+    inner.classList.add('hidden');
+    home.classList.remove('hidden');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  app.querySelectorAll('[data-page]').forEach(button=>{
+    button.addEventListener('click',()=>openPage(button.dataset.page));
+  });
+
+  document.getElementById('rizqAdminBack').addEventListener('click',goBack);
+
+  if(oldStats) oldStats.classList.add('hidden');
+  if(oldHead) oldHead.classList.add('hidden');
+})();
+</script>
+
+<style>
+#rizqAdminHome {
+  direction: rtl;
+  display: none;
+  padding: 15px;
+}
+#rizqAdminHome h2 {text-align:center;margin-bottom:20px}
+.rizq-admin-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+.rizq-admin-tile {
+  background:#fff;
+  border:1px solid #ddd;
+  border-radius:14px;
+  padding:20px 10px;
+  text-align:center;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+  color:#222;
+  min-height:85px;
+}
+.rizq-admin-tile:active {background:#eee}
+#rizqAdminScreen {
+  direction:rtl;
+  display:none;
+  padding:12px;
+}
+#rizqAdminScreen .rizq-back {
+  border:0;
+  border-radius:10px;
+  padding:12px 20px;
+  margin-bottom:15px;
+  background:#222;
+  color:white;
+  font-weight:bold;
+}
+#rizqAdminScreen .rizq-screen-title {
+  font-size:21px;
+  font-weight:bold;
+  margin:10px 0 18px;
+}
+.rizq-admin-hidden {display:none!important}
+</style>
+
+<script>
+(function(){
+  if(window.rizqAdminSectionsInstalled) return;
+  window.rizqAdminSectionsInstalled=true;
+
+  const definitions=[
+    {title:'إدارة الباقات',words:['الباقات','الباقة','الاشتراكات','الاشتراك'],ids:['rizqPackageManager','rizqPackages','rizqPackageList']},
+    {title:'إدارة المهام',words:['إدارة المهام'],ids:['rizqTaskManager']},
+    {title:'مراجعة إثباتات المهام',words:['مراجعة إثباتات المهام'],ids:['rizqTaskReviews']},
+    {title:'الإيداعات',words:['طلبات الإيداع','الإيداعات']},
+    {title:'السحوبات',words:['طلبات السحب','السحوبات']},
+    {title:'وسائل الدفع',words:['وسائل الدفع','وسائل الاستقبال']},
+    {title:'العملاء والمحافظ',words:['العملاء','المحافظ والأرصدة']},
+    {title:'الإحالات',words:['الإحالات','الإحالة']},
+    {title:'سجل المعاملات',words:['سجل المعاملات','المعاملات']},
+  ];
+
+  function start(){
+    const admin=document.getElementById('tab-admin');
+    if(!admin || document.getElementById('rizqAdminHome')) return;
+
+    const home=document.createElement('div');
+    home.id='rizqAdminHome';
+    home.innerHTML='<h2>لوحة المدير</h2><div class="rizq-admin-grid"></div>';
+
+    const screen=document.createElement('div');
+    screen.id='rizqAdminScreen';
+
+    const grid=home.querySelector('.rizq-admin-grid');
+
+    const sections=definitions.map((def,index)=>{
+      let target=null;
+
+      for(const id of def.ids||[]){
+        target=document.getElementById(id);
+        if(target) break;
+      }
+
+      if(!target){
+        const headings=admin.querySelectorAll('h2,h3,h4');
+        for(const heading of headings){
+          const value=(heading.textContent||'').trim();
+          if(def.words.some(word=>value.includes(word))){
+            target=heading.closest('.card') ||
+                   heading.closest('.section') ||
+                   heading.parentElement;
+            if(target && target!==admin) break;
+          }
+        }
+      }
+
+      const tile=document.createElement('button');
+      tile.type='button';
+      tile.className='rizq-admin-tile';
+      tile.textContent=def.title;
+      tile.addEventListener('click',()=>{
+        if(!target){
+          alert('القسم غير موجود حاليًا: '+def.title);
+          return;
+        }
+        home.style.display='none';
+        screen.style.display='block';
+        screen.innerHTML='';
+        const back=document.createElement('button');
+        back.className='rizq-back';
+        back.textContent='← رجوع للرئيسية';
+        back.onclick=()=>{
+          screen.style.display='none';
+          home.style.display='block';
+        };
+        const heading=document.createElement('div');
+        heading.className='rizq-screen-title';
+        heading.textContent=def.title;
+        screen.append(back,heading);
+
+        target.classList.remove('rizq-admin-hidden');
+        screen.appendChild(target);
+      });
+      grid.appendChild(tile);
+      return {target};
+    });
+
+    admin.insertBefore(home,admin.firstChild);
+    admin.insertBefore(screen,home.nextSibling);
+    home.style.display='block';
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',start);
+  }else{
+    start();
+  }
+})();
+</script>
+
+<style>
+#rizqAdminWorkspace{direction:rtl;margin:15px 0}
+#rizqAdminWorkspace .rizq-menu-grid{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px
+}
+#rizqAdminWorkspace .rizq-menu-button{
+ background:white;color:#173c2d;border:1px solid #dce8df;
+ border-radius:14px;padding:20px 8px;min-height:90px;
+ font-size:16px;font-weight:bold;width:100%;margin:0
+}
+#rizqAdminWorkspace .rizq-menu-button:active{background:#e6f4ed}
+#rizqAdminWorkspace .rizq-screen{
+ display:none;background:white;border:1px solid #dce8df;
+ border-radius:14px;padding:14px;min-height:180px
+}
+#rizqAdminWorkspace .rizq-back{
+ background:#173c2d;color:white;margin-bottom:16px
+}
+#rizqAdminWorkspace .rizq-screen-title{
+ font-size:20px;font-weight:bold;margin:10px 0 18px
+}
+</style>
+
+<script>
+(function(){
+ function initRizqAdminWorkspace(){
+  const admin=document.getElementById('tab-admin');
+  if(!admin || document.getElementById('rizqAdminWorkspace')) return;
+
+  // إزالة القائمة القديمة فقط
+  const oldNav=document.getElementById('rizqAdminNavigation');
+  if(oldNav) oldNav.remove();
+
+  const workspace=document.createElement('div');
+  workspace.id='rizqAdminWorkspace';
+
+  const menu=document.createElement('div');
+  menu.innerHTML=`
+   <h2 style="margin-bottom:15px">أقسام إدارة المنصة</h2>
+   <div class="rizq-menu-grid"></div>
+  `;
+
+  const screen=document.createElement('div');
+  screen.className='rizq-screen';
+
+  workspace.append(menu,screen);
+  const head=admin.querySelector('.admin-head');
+  if(head) head.after(workspace);
+  else admin.prepend(workspace);
+
+  const definitions=[
+   {name:'إدارة المهام',icon:'📋',id:'rizqTaskManager'},
+   {name:'مراجعة إثباتات المهام',icon:'📝',id:'rizqTaskReviews'},
+   {name:'الباقات',icon:'📦',id:'rizqPackages'},
+   {name:'طلبات الإيداع',icon:'💰',id:'adminDeposits'},
+   {name:'طلبات السحب',icon:'💸',id:'adminWithdrawals'},
+   {name:'وسائل الدفع',icon:'🏦',id:'adminMethods'},
+   {name:'إثباتات المعاملات',icon:'📨',id:'evidenceTransaction'}
+  ];
+
+  const targets=[];
+
+  function getTarget(def){
+   const element=document.getElementById(def.id);
+   if(!element) return null;
+   return element.closest('.card') || element;
+  }
+
+  definitions.forEach(def=>{
+   const target=getTarget(def);
+   const button=document.createElement('button');
+   button.type='button';
+   button.className='rizq-menu-button';
+   button.textContent=def.icon+'  '+def.name;
+
+   if(!target){
+    button.style.opacity='.55';
+    button.title='القسم غير موجود في النسخة الحالية';
+   }else{
+    const record={
+     target:target,
+     parent:target.parentNode,
+     next:target.nextSibling,
+     display:target.style.display
+    };
+    targets.push(record);
+    target.style.display='none';
+
+    button.addEventListener('click',()=>{
+     menu.style.display='none';
+     screen.style.display='block';
+     screen.innerHTML='';
+
+     const back=document.createElement('button');
+     back.type='button';
+     back.className='rizq-back';
+     back.textContent='← رجوع للرئيسية';
+     back.onclick=()=>{
+      record.parent.insertBefore(
+       record.target,
+       record.next && record.next.parentNode===record.parent
+        ? record.next : null
+      );
+      record.target.style.display='none';
+      screen.style.display='none';
+      menu.style.display='block';
+      window.scrollTo({top:0,behavior:'smooth'});
+     };
+
+     const title=document.createElement('div');
+     title.className='rizq-screen-title';
+     title.textContent=def.name;
+
+     screen.append(back,title);
+     record.target.style.display=record.display;
+     screen.appendChild(record.target);
+
+     window.scrollTo({top:0,behavior:'smooth'});
+    });
+   }
+
+   menu.querySelector('.rizq-menu-grid').appendChild(button);
+  });
+
+  // توضيح الأقسام التي لم تُنشأ إدارتها بعد
+  const note=document.createElement('p');
+  note.className='muted';
+  note.style.marginTop='14px';
+  note.textContent='الأقسام التي لا توجد لها وظيفة إدارية في النسخة الحالية ستحتاج إلى إنشائها.';
+  menu.appendChild(note);
+ }
+
+ if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',initRizqAdminWorkspace);
+ }else{
+  initRizqAdminWorkspace();
+ }
+})();
+</script>
+
+<style>
+#rizqPackageAdmin {
+  direction:rtl;
+  background:white;
+  border-radius:15px;
+  padding:16px;
+  margin:12px 0;
+}
+#rizqPackageAdmin .package-admin-item {
+  border:1px solid #dce8df;
+  border-radius:12px;
+  padding:13px;
+  margin:10px 0;
+}
+#rizqPackageAdmin .package-admin-item strong {
+  display:block;
+  font-size:17px;
+  margin-bottom:8px;
+}
+</style>
+
+<script>
+(function(){
+  function initPackageAdmin(){
+    const admin=document.getElementById('tab-admin');
+    if(!admin || document.getElementById('rizqPackageAdmin')) return;
+
+    const panel=document.createElement('div');
+    panel.id='rizqPackageAdmin';
+    panel.style.display='none';
+
+    panel.innerHTML=`
+      <button type="button" id="rizqPackageBack" class="secondary">
+        ← رجوع للوحة المدير
+      </button>
+      <h2>📦 إدارة الباقات</h2>
+      <div class="notice">
+        أضف الباقات أو عدّل أسعارها أو أوقفها مؤقتاً.
+      </div>
+
+      <h3>إضافة باقة جديدة</h3>
+      <label>اسم الباقة</label>
+      <input id="rizqNewPackageName" placeholder="مثال: الباقة الذهبية">
+
+      <label>السعر بالجنيه المصري</label>
+      <input id="rizqNewPackagePrice" type="number" min="1" placeholder="السعر">
+
+      <button type="button" id="rizqCreatePackage">
+        إضافة الباقة
+      </button>
+
+      <hr>
+      <h3>الباقات الحالية</h3>
+      <button type="button" class="secondary" id="rizqRefreshPackages">
+        تحديث القائمة
+      </button>
+      <div id="rizqPackageAdminList">جارٍ تحميل الباقات...</div>
+    `;
+
+    admin.appendChild(panel);
+
+    const grid=document.querySelector(
+      '#rizqAdminWorkspace .rizq-menu-grid'
+    );
+    const oldNav=document.getElementById('rizqAdminNavigation');
+
+    const tile=document.createElement('button');
+    tile.type='button';
+    tile.textContent='📦 إدارة الباقات';
+    tile.style.cssText=
+      'width:100%;padding:17px;border-radius:12px;font-weight:bold;margin:5px 0';
+
+    if(grid){
+      tile.className='rizq-menu-button';
+      grid.appendChild(tile);
+    }else if(oldNav){
+      oldNav.appendChild(tile);
+    }else{
+      admin.insertBefore(tile,panel);
+    }
+
+    let previousDisplays=[];
+
+    function openPanel(){
+      previousDisplays=[...admin.children]
+        .filter(el=>el!==panel && !el.classList.contains('admin-head'))
+        .map(el=>({el,display:el.style.display}));
+
+      previousDisplays.forEach(x=>x.el.style.display='none');
+      panel.style.display='block';
+      window.scrollTo({top:0,behavior:'smooth'});
+      window.rizqAdminLoadPackages();
+    }
+
+    function closePanel(){
+      panel.style.display='none';
+      previousDisplays.forEach(x=>x.el.style.display=x.display);
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    tile.addEventListener('click',openPanel);
+    document.getElementById('rizqPackageBack')
+      .addEventListener('click',closePanel);
+
+    function notify(text,error){
+      if(typeof msg==='function') msg(text,!!error);
+      else alert(text);
+    }
+
+    window.rizqAdminLoadPackages=async function(){
+      const box=document.getElementById('rizqPackageAdminList');
+      if(!isAdmin){
+        box.textContent='غير مصرح لك بإدارة الباقات';
+        return;
+      }
+
+      box.textContent='جارٍ تحميل الباقات...';
+
+      try{
+        const {data,error}=await db.from('packages')
+          .select('id,name,price,active')
+          .order('price');
+
+        if(error) throw error;
+
+        if(!data?.length){
+          box.textContent='لا توجد باقات مسجلة';
+          return;
+        }
+
+        box.innerHTML='';
+
+        data.forEach(p=>{
+          const card=document.createElement('div');
+          card.className='package-admin-item';
+
+          const name=document.createElement('strong');
+          name.textContent=p.name;
+
+          const price=document.createElement('p');
+          price.textContent=Number(p.price).toLocaleString('ar-EG')+' جنيه';
+
+          const status=document.createElement('p');
+          status.textContent=p.active?'الحالة: نشطة':'الحالة: متوقفة';
+
+          const edit=document.createElement('button');
+          edit.className='secondary';
+          edit.textContent='تعديل الاسم والسعر';
+
+          edit.onclick=async()=>{
+            const newName=prompt('اسم الباقة:',p.name);
+            if(newName===null)return;
+            if(!newName.trim())return notify('اكتب اسم الباقة',true);
+
+            const newPrice=prompt('السعر بالجنيه:',p.price);
+            if(newPrice===null)return;
+            const priceValue=Number(newPrice);
+
+            if(!Number.isFinite(priceValue)||priceValue<=0)
+              return notify('السعر غير صحيح',true);
+
+            try{
+              const {error}=await db.from('packages')
+                .update({
+                  name:newName.trim(),
+                  price:priceValue
+                })
+                .eq('id',p.id);
+
+              if(error)throw error;
+              notify('تم تعديل الباقة');
+              await window.rizqAdminLoadPackages();
+            }catch(e){notify('تعذر التعديل: '+e.message,true)}
+          };
+
+          const toggle=document.createElement('button');
+          toggle.className=p.active?'danger':'secondary';
+          toggle.textContent=p.active?'إيقاف الباقة':'تفعيل الباقة';
+
+          toggle.onclick=async()=>{
+            if(!confirm(p.active?'إيقاف هذه الباقة؟':'تفعيل هذه الباقة؟'))return;
+            try{
+              const {error}=await db.from('packages')
+                .update({active:!p.active})
+                .eq('id',p.id);
+
+              if(error)throw error;
+              notify('تم تحديث حالة الباقة');
+              await window.rizqAdminLoadPackages();
+            }catch(e){notify('تعذر تحديث الحالة: '+e.message,true)}
+          };
+
+          card.append(name,price,status,edit,toggle);
+          box.appendChild(card);
+        });
+
+      }catch(e){
+        box.textContent='تعذر تحميل الباقات: '+e.message;
+      }
+    };
+
+    document.getElementById('rizqCreatePackage')
+      .addEventListener('click',async()=>{
+        if(!isAdmin)return notify('غير مصرح لك',true);
+
+        const name=document.getElementById('rizqNewPackageName').value.trim();
+        const price=Number(document.getElementById('rizqNewPackagePrice').value);
+        const button=document.getElementById('rizqCreatePackage');
+
+        if(!name)return notify('اكتب اسم الباقة',true);
+        if(!Number.isFinite(price)||price<=0)
+          return notify('اكتب سعراً صحيحاً',true);
+
+        button.disabled=true;
+
+        try{
+          const {error}=await db.from('packages').insert({
+            name,
+            price,
+            active:true
+          });
+
+          if(error)throw error;
+
+          document.getElementById('rizqNewPackageName').value='';
+          document.getElementById('rizqNewPackagePrice').value='';
+          notify('تمت إضافة الباقة بنجاح');
+          await window.rizqAdminLoadPackages();
+
+        }catch(e){
+          notify('تعذرت إضافة الباقة: '+e.message,true);
+        }finally{
+          button.disabled=false;
+        }
+      });
+
+    document.getElementById('rizqRefreshPackages')
+      .addEventListener('click',window.rizqAdminLoadPackages);
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',initPackageAdmin);
+  }else{
+    initPackageAdmin();
+  }
+})();
+</script>
+
+<style>
+#rizqAdminAll{direction:rtl;margin:12px 0}
+#rizqAdminAll .rizq-grid{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px
+}
+#rizqAdminAll .rizq-tile{
+ background:white;color:#174b38;border:1px solid #dce8df;
+ border-radius:14px;padding:19px 8px;min-height:88px;
+ font-size:15px;font-weight:bold;width:100%;margin:0
+}
+#rizqAdminAll .rizq-page{
+ display:none;background:white;border:1px solid #dce8df;
+ border-radius:14px;padding:14px;margin-top:12px
+}
+#rizqAdminAll .rizq-back{background:#174b38;color:white}
+#rizqAdminAll .rizq-row{
+ border:1px solid #e1e9e3;border-radius:10px;
+ padding:12px;margin:9px 0;overflow-wrap:anywhere
+}
+#rizqAdminAll .rizq-row small{display:block;color:#718078;margin-top:6px}
+#rizqAdminAll input{width:100%;padding:11px;margin:7px 0}
+</style>
+
+<script>
+(function(){
+ function init(){
+  const admin=document.getElementById('tab-admin');
+  if(!admin || document.getElementById('rizqAdminAll'))return;
+
+  // إزالة قوائم التنقل القديمة فقط
+  document.getElementById('rizqAdminNavigation')?.remove();
+  document.getElementById('rizqAdminWorkspace')?.remove();
+
+  const workspace=document.createElement('div');
+  workspace.id='rizqAdminAll';
+
+  workspace.innerHTML=`
+   <div id="rizqAllHome">
+    <h2>لوحة إدارة RIZQ</h2>
+    <p class="muted">اختر القسم الذي تريد إدارته</p>
+    <div class="rizq-grid" id="rizqAllGrid"></div>
+   </div>
+   <div class="rizq-page" id="rizqAllScreen">
+    <button type="button" class="rizq-back" id="rizqAllBack">
+     ← رجوع للرئيسية
+    </button>
+    <h2 id="rizqAllTitle"></h2>
+    <div id="rizqAllContent"></div>
+   </div>
+  `;
+
+  admin.prepend(workspace);
+
+  const screen=document.getElementById('rizqAllScreen');
+  const home=document.getElementById('rizqAllHome');
+  const content=document.getElementById('rizqAllContent');
+  const title=document.getElementById('rizqAllTitle');
+  const grid=document.getElementById('rizqAllGrid');
+
+  function cardFor(id){
+   const el=document.getElementById(id);
+   return el ? (el.closest('.card')||el) : null;
+  }
+
+  // إنشاء إدارة الباقات إذا لم تكن موجودة
+  let packagePanel=document.getElementById('rizqPackageAdmin');
+  if(!packagePanel){
+   packagePanel=document.createElement('div');
+   packagePanel.id='rizqPackageAdmin';
+   packagePanel.className='card';
+   packagePanel.innerHTML=`
+    <h2>إدارة الباقات</h2>
+    <label>اسم الباقة</label>
+    <input id="rizqAllPackageName" placeholder="اسم الباقة">
+    <label>السعر بالجنيه</label>
+    <input id="rizqAllPackagePrice" type="number" min="1" placeholder="السعر">
+    <button type="button" id="rizqAllPackageAdd">إضافة باقة</button>
+    <h3>الباقات الحالية</h3>
+    <div id="rizqAllPackageList">جارٍ التحميل...</div>
+   `;
+   admin.appendChild(packagePanel);
+  }
+
+  // إنشاء الأقسام الإضافية
+  function makePanel(id,heading){
+   let el=document.getElementById(id);
+   if(el)return el;
+   el=document.createElement('div');
+   el.id=id;
+   el.className='card';
+   el.innerHTML='<h2>'+heading+'</h2><div id="'+id+'Content">جارٍ التحميل...</div>';
+   admin.appendChild(el);
+   return el;
+  }
+
+  const customers=makePanel('rizqAdminCustomers','العملاء والمحافظ');
+  const referrals=makePanel('rizqAdminReferrals','الإحالات');
+  const transactions=makePanel('rizqAdminTransactions','سجل المعاملات');
+
+  const definitions=[
+   {name:'إدارة الباقات',icon:'📦',target:packagePanel,load:loadPackages},
+   {name:'إدارة المهام',icon:'📋',target:cardFor('rizqTaskManager'),load:()=>window.rizqLoadTaskManager?.()},
+   {name:'مراجعة المهام',icon:'📝',target:cardFor('rizqTaskReviews'),load:()=>window.rizqLoadTaskReviews?.()},
+   {name:'طلبات الإيداع',icon:'💰',target:cardFor('adminDeposits'),load:()=>typeof loadAdmin==='function'&&loadAdmin()},
+   {name:'طلبات السحب',icon:'💸',target:cardFor('adminWithdrawals'),load:()=>typeof loadAdmin==='function'&&loadAdmin()},
+   {name:'وسائل الدفع',icon:'🏦',target:cardFor('adminMethods'),load:()=>typeof loadAdminMethods==='function'&&loadAdminMethods()},
+   {name:'إثباتات المعاملات',icon:'📨',target:cardFor('evidenceTransaction'),load:()=>typeof loadTransactionEvidence==='function'&&loadTransactionEvidence()},
+   {name:'العملاء والمحافظ',icon:'👥',target:customers,load:loadCustomers},
+   {name:'الإحالات',icon:'🔗',target:referrals,load:loadReferrals},
+   {name:'سجل المعاملات',icon:'📚',target:transactions,load:loadTransactions}
+  ];
+
+  let previous=null;
+
+  function show(def){
+   if(!def.target){
+    alert('القسم غير موجود في النسخة الحالية: '+def.name);
+    return;
+   }
+
+   if(!previous){
+    previous=[...admin.children].filter(x=>x!==workspace)
+      .map(el=>({el,display:el.style.display}));
+   }
+
+   previous.forEach(x=>x.el.style.display='none');
+
+   // نقل القسم المختار إلى شاشة مستقلة
+   const target=def.target;
+   const parent=target.parentNode;
+   const next=target.nextSibling;
+   const oldDisplay=target.style.display;
+
+   target.classList.remove('hidden','rizq-admin-hidden');
+   target.style.display='block';
+
+   title.textContent=def.name;
+   content.innerHTML='';
+   content.appendChild(target);
+
+   screen.style.display='block';
+   home.style.display='none';
+
+   screen.dataset.active='yes';
+   screen._restore=()=>{
+    if(parent){
+     parent.insertBefore(target,next&&next.parentNode===parent?next:null);
+    }
+    target.style.display=oldDisplay;
+    screen.style.display='none';
+    home.style.display='block';
+    previous?.forEach(x=>x.el.style.display=x.display);
+    previous=null;
+   };
+
+   if(typeof def.load==='function'){
+    try{
+     const result=def.load();
+     if(result?.catch)result.catch(e=>console.error(e));
+    }catch(e){console.error(e)}
+   }
+   window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  document.getElementById('rizqAllBack').onclick=()=>{
+   if(screen._restore)screen._restore();
+  };
+
+  definitions.forEach(def=>{
+   const button=document.createElement('button');
+   button.type='button';
+   button.className='rizq-tile';
+   button.textContent=def.icon+' '+def.name;
+   button.onclick=()=>show(def);
+   grid.appendChild(button);
+  });
+
+  // صلاحيات الإدارة
+  function allowed(){
+   return typeof isAdmin!=='undefined' && isAdmin &&
+          typeof currentUser!=='undefined' && currentUser;
+  }
+
+  function notice(box,message){
+   box.textContent=message;
+  }
+
+  async function loadPackages(){
+   const box=document.getElementById('rizqAllPackageList');
+   if(!allowed()){notice(box,'غير مصرح لك');return}
+   box.textContent='جارٍ تحميل الباقات...';
+
+   const {data,error}=await db.from('packages')
+    .select('id,name,price,active').order('price');
+
+   if(error){notice(box,'خطأ: '+error.message);return}
+   box.innerHTML='';
+
+   (data||[]).forEach(p=>{
+    const row=document.createElement('div');
+    row.className='rizq-row';
+
+    const name=document.createElement('b');
+    name.textContent=p.name;
+
+    const price=document.createElement('p');
+    price.textContent=Number(p.price).toLocaleString('ar-EG')+' جنيه';
+
+    const status=document.createElement('small');
+    status.textContent=p.active?'نشطة':'متوقفة';
+
+    const edit=document.createElement('button');
+    edit.className='secondary';
+    edit.textContent='تعديل';
+    edit.onclick=async()=>{
+     const n=prompt('اسم الباقة:',p.name);
+     if(n===null)return;
+     if(!n.trim())return alert('اكتب الاسم');
+
+     const v=prompt('السعر:',p.price);
+     if(v===null)return;
+     if(!Number.isFinite(Number(v))||Number(v)<=0)
+      return alert('السعر غير صحيح');
+
+     const {error}=await db.from('packages')
+      .update({name:n.trim(),price:Number(v)}).eq('id',p.id);
+     if(error)alert(error.message);
+     else loadPackages();
+    };
+
+    const toggle=document.createElement('button');
+    toggle.className=p.active?'danger':'secondary';
+    toggle.textContent=p.active?'إيقاف':'تفعيل';
+    toggle.onclick=async()=>{
+     if(!confirm('تأكيد تغيير حالة الباقة؟'))return;
+     const {error}=await db.from('packages')
+      .update({active:!p.active}).eq('id',p.id);
+     if(error)alert(error.message);
+     else loadPackages();
+    };
+
+    row.append(name,price,status,edit,toggle);
+    box.appendChild(row);
+   });
+
+   if(!data?.length)notice(box,'لا توجد باقات');
+  }
+
+  document.getElementById('rizqAllPackageAdd').onclick=async()=>{
+   if(!allowed())return alert('غير مصرح لك');
+   const name=document.getElementById('rizqAllPackageName').value.trim();
+   const price=Number(document.getElementById('rizqAllPackagePrice').value);
+   if(!name||!Number.isFinite(price)||price<=0)
+    return alert('أدخل اسم وسعر صحيحين');
+
+   const {error}=await db.from('packages').insert({
+    name,price,active:true
+   });
+   if(error)alert('تعذرت الإضافة: '+error.message);
+   else{
+    document.getElementById('rizqAllPackageName').value='';
+    document.getElementById('rizqAllPackagePrice').value='';
+    alert('تمت إضافة الباقة');
+    loadPackages();
+   }
+  };
+
+  async function loadCustomers(){
+   const box=document.getElementById('rizqAdminCustomersContent');
+   if(!allowed())return notice(box,'غير مصرح لك');
+   box.textContent='جارٍ تحميل العملاء...';
+
+   const [p,w]=await Promise.all([
+    db.from('profiles').select('id,full_name,referral_code,created_at')
+      .order('created_at',{ascending:false}).limit(200),
+    db.from('wallets').select('user_id,balance')
+   ]);
+
+   if(p.error||w.error)return notice(box,'تعذر التحميل: '+(p.error||w.error).message);
+
+   box.innerHTML='';
+   (p.data||[]).forEach(user=>{
+    const wallet=(w.data||[]).find(x=>x.user_id===user.id);
+    const row=document.createElement('div');
+    row.className='rizq-row';
+
+    const name=document.createElement('b');
+    name.textContent=user.full_name||'عميل بدون اسم';
+
+    const id=document.createElement('small');
+    id.textContent='معرف العميل: '+user.id;
+
+    const balance=document.createElement('p');
+    balance.textContent='رصيد المحفظة: '+Number(wallet?.balance||0).toLocaleString('ar-EG')+' جنيه';
+
+    const code=document.createElement('small');
+    code.textContent='كود الإحالة: '+(user.referral_code||'غير موجود');
+
+    row.append(name,id,balance,code);
+    box.appendChild(row);
+   });
+   if(!p.data?.length)notice(box,'لا يوجد عملاء');
+  }
+
+  async function loadReferrals(){
+   const box=document.getElementById('rizqAdminReferralsContent');
+   if(!allowed())return notice(box,'غير مصرح لك');
+   box.textContent='جارٍ تحميل الإحالات...';
+
+   const {data,error}=await db.from('referrals').select('*')
+    .order('created_at',{ascending:false}).limit(200);
+
+   if(error)return notice(box,'تعذر تحميل الإحالات: '+error.message);
+   box.innerHTML='';
+
+   (data||[]).forEach(r=>{
+    const row=document.createElement('div');
+    row.className='rizq-row';
+    row.textContent='المُحيل: '+r.referrer_id+
+     ' | العميل الجديد: '+r.referred_user_id+
+     ' | الحالة: '+r.status;
+    box.appendChild(row);
+   });
+   if(!data?.length)notice(box,'لا توجد إحالات');
+  }
+
+  async function loadTransactions(){
+   const box=document.getElementById('rizqAdminTransactionsContent');
+   if(!allowed())return notice(box,'غير مصرح لك');
+   box.textContent='جارٍ تحميل المعاملات...';
+
+   const {data,error}=await db.from('wallet_transactions').select('*')
+    .order('created_at',{ascending:false}).limit(200);
+
+   if(error)return notice(box,'تعذر تحميل السجل: '+error.message);
+   box.innerHTML='';
+
+   (data||[]).forEach(t=>{
+    const row=document.createElement('div');
+    row.className='rizq-row';
+
+    const amount=document.createElement('b');
+    amount.textContent=Number(t.amount).toLocaleString('ar-EG')+' جنيه';
+
+    const type=document.createElement('p');
+    type.textContent='النوع: '+t.transaction_type;
+
+    const user=document.createElement('small');
+    user.textContent='العميل: '+t.user_id;
+
+    const desc=document.createElement('small');
+    desc.textContent='التفاصيل: '+(t.description||'');
+
+    const date=document.createElement('small');
+    date.textContent=t.created_at?new Date(t.created_at).toLocaleString('ar-EG'):'';
+
+    row.append(amount,type,user,desc,date);
+    box.appendChild(row);
+   });
+   if(!data?.length)notice(box,'لا توجد معاملات');
+  }
+
+  // أزرار تحديث للأقسام الإضافية
+  [
+   ['rizqAdminCustomers','تحديث العملاء',loadCustomers],
+   ['rizqAdminReferrals','تحديث الإحالات',loadReferrals],
+   ['rizqAdminTransactions','تحديث السجل',loadTransactions]
+  ].forEach(([id,label,fn])=>{
+   const panel=document.getElementById(id);
+   const button=document.createElement('button');
+   button.className='secondary';
+   button.textContent=label;
+   button.onclick=fn;
+   panel.prepend(button);
+  });
+
+  // فتح لوحة الأقسام كصفحة البداية
+  home.style.display='block';
+  screen.style.display='none';
+ }
+
+ if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',init);
+ }else{
+  init();
+ }
+})();
+</script>
+
+</body>
+</html>
+
+<section id="rizq-packages" dir="rtl" style="padding:20px;background:#101827;color:white;border-radius:15px;margin:20px auto;max-width:700px;font-family:Arial">
+  <h2 style="text-align:center;color:#f5c542">باقات رزق RIZQ</h2>
+  <p style="text-align:center">اختر الباقة المناسبة لك</p>
+  <div style="display:grid;gap:12px">
+    <div style="background:#1e293b;padding:18px;border-radius:12px">
+      <h3>الباقة الأولى</h3><h2>3,000 جنيه</h2>
+    </div>
+    <div style="background:#1e293b;padding:18px;border-radius:12px">
+      <h3>الباقة الثانية</h3><h2>9,000 جنيه</h2>
+    </div>
+    <div style="background:#1e293b;padding:18px;border-radius:12px">
+      <h3>الباقة الثالثة</h3><h2>18,000 جنيه</h2>
+    </div>
+    <div style="background:#1e293b;padding:18px;border-radius:12px">
+      <h3>الباقة الرابعة</h3><h2>30,000 جنيه</h2>
+    </div>
+  </div>
+  <p style="text-align:center;color:#f5c542">
+    تفاصيل الاشتراك والمكافآت تخضع لشروط البرنامج والتحقق من التمويل الفعلي.
+  </p>
+</section>
