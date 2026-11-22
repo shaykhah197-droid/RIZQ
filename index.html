@@ -42,10 +42,34 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 .small{font-size:12px}
 .proof-link{display:inline-block;margin:8px 0;padding:9px 12px;background:var(--light);border-radius:8px;color:var(--green);text-decoration:none;font-weight:bold}
 
-#supportCustomerBox .support-message{padding:10px 12px;border-radius:12px;margin:8px 0;background:#f1f6f3;overflow-wrap:anywhere}
-#supportCustomerBox .support-message.mine{background:#e2f4e9;margin-right:12%}
-#supportCustomerBox .support-message.theirs{background:#fff;margin-left:12%;border:1px solid var(--border)}
-#supportCustomerMessages .support-message img,#supportAdminMessages .support-message img{display:block!important;width:auto!important;height:auto!important;max-width:140px!important;max-height:110px!important;object-fit:contain!important;border-radius:9px;margin-top:8px;cursor:default;flex:none!important}#supportCustomerMessages .support-message,#supportAdminMessages .support-message{max-width:100%;overflow:hidden;overflow-wrap:anywhere}
+/* واجهة محادثة العميل: صندوق محدود الارتفاع وفقاعات مثل تطبيقات المحادثة */
+#supportCustomerMessages{
+ max-height: min(52vh,440px);min-height:90px;overflow-y:auto;overscroll-behavior:contain;
+ display:flex;flex-direction:column;gap:8px;padding:10px;margin:12px 0;
+ background:var(--light);border:1px solid var(--border);border-radius:12px;
+}
+#supportCustomerConversation .support-message{
+ display:block;width:fit-content;max-width:82%;box-sizing:border-box;
+ padding:9px 11px;border-radius:14px;margin:0;overflow-wrap:anywhere;
+ white-space:pre-wrap;line-height:1.45;
+}
+#supportCustomerConversation .support-message.mine{
+ align-self:flex-end;background:#e2f4e9;border-bottom-right-radius:4px;
+}
+#supportCustomerConversation .support-message.theirs{
+ align-self:flex-start;background:#fff;border:1px solid var(--border);border-bottom-left-radius:4px;
+}
+#supportCustomerMessages .support-message img{
+ display:block!important;width:auto!important;height:auto!important;
+ max-width:104px!important;max-height:88px!important;object-fit:contain!important;
+ border-radius:8px;margin-top:7px;cursor:default;flex:none!important;
+}
+#supportAdminMessages .support-message img{
+ display:block!important;width:auto!important;height:auto!important;
+ max-width:140px!important;max-height:110px!important;object-fit:contain!important;
+ border-radius:9px;margin-top:8px;cursor:default;flex:none!important;
+}
+#supportAdminMessages .support-message{max-width:100%;overflow:hidden;overflow-wrap:anywhere}
 #supportAdminList .item{cursor:pointer}
 </style>
 </head>
