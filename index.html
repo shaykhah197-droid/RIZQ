@@ -1263,6 +1263,18 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
     const box = document.getElementById('rizqDailyTasks');
     if(!currentUser){box.textContent='سجل الدخول أولاً';return;}
 
+    // تحديث تلقائي بعد انتقال تاريخ القاهرة إلى يوم جديد، حتى لو ظلت الصفحة مفتوحة
+    if(!window.rizqTaskDayWatcher){
+      window.rizqTaskDayWatcher={date:new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())};
+      window.rizqTaskDayWatcher.timer=setInterval(()=>{
+        const currentDate=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+        if(currentDate!==window.rizqTaskDayWatcher.date){
+          window.rizqTaskDayWatcher.date=currentDate;
+          window.rizqReloadCustomerTasks();
+        }
+      },30000);
+    }
+
     box.textContent='جارٍ تجهيز مهام الباقات...';
 
     try{
@@ -1270,23 +1282,28 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
         await db.rpc('generate_rizq_daily_tasks');
       if(generateError) throw generateError;
 
-      const {data:assignments,error} = await db
+      const todayCairo=new Intl.DateTimeFormat('en-CA',{
+        timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'
+      }).format(new Date());
+
+      // اقرأ التكليفات السابقة للاحتفاظ بالمراجعات والسجل، لكن اعرض المتاح لليوم فقط
+      const {data:allAssignments,error} = await db
         .from('daily_task_assignments')
         .select('id,task_id,user_package_id,reward_amount,task_date,status')
         .eq('user_id',currentUser.id)
-        .eq('task_date',new Date().toLocaleDateString('en-CA',{
-          timeZone:'Africa/Cairo'
-        }))
-        .order('created_at');
+        .order('task_date',{ascending:false})
+        .order('created_at',{ascending:false});
 
       if(error) throw error;
 
-      if(!assignments?.length){
-        box.textContent='لا توجد مهام اليوم. تأكد من تفعيل باقتك أو راجعنا لاحقاً.';
+      const assignments=allAssignments||[];
+      const todayAssignments=assignments.filter(a=>a.task_date===todayCairo);
+      const ids=assignments.map(x=>x.id);
+      if(!ids.length){
+        box.innerHTML='<h3>مهام اليوم</h3><p class="muted">لا توجد مهام اليوم. تأكد من تفعيل باقتك أو راجعنا لاحقاً.</p><h3>سجل الإنجاز</h3><p class="muted">لا توجد مهام منجزة سابقة.</p>';
         return;
       }
 
-      const ids=assignments.map(x=>x.id);
       const taskIds=[...new Set(assignments.map(x=>x.task_id))];
       const packageIds=[...new Set(assignments.map(x=>x.user_package_id))];
 
@@ -1316,6 +1333,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
       const available=[];
       const pending=[];
       const completed=[];
+      const history=[];
 
       assignments.forEach(a=>{
         const t=tasks.find(x=>x.id===a.task_id);
@@ -1328,15 +1346,20 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
         const reward=`<span class="tag">المكافأة: ${money(a.reward_amount)}</span>`;
         const packageLabel=`<p class="muted">تكليف ضمن: ${label}</p>`;
 
+        const isToday=a.task_date===todayCairo;
         if(a.status==='approved' || s?.status==='approved'){
-          completed.push(`<div class="item"><h3>${taskTitle}</h3>${packageLabel}<p>${desc}</p>${reward}<p>الحالة: ${statusTag('approved')}</p></div>`);
+          if(isToday){
+            completed.push(`<div class="item"><h3>${taskTitle}</h3>${packageLabel}<p>${desc}</p>${reward}<p>الحالة: ${statusTag('approved')}</p></div>`);
+          }else{
+            history.push(`<tr><td>${safe(a.task_date)}</td><td>${taskTitle}</td><td>${label}</td><td>${money(a.reward_amount)}</td></tr>`);
+          }
           return;
         }
         if(a.status==='submitted' || s?.status==='pending'){
-          pending.push(`<div class="item"><h3>${taskTitle}</h3>${packageLabel}<p>${desc}</p>${reward}<p>الحالة: ${statusTag('pending')}</p><p class="muted">تم استلام إثباتك، والطلب قيد المراجعة.</p></div>`);
+          pending.push(`<div class="item"><h3>${taskTitle}</h3>${packageLabel}<p>${desc}</p>${reward}<p>التاريخ: ${safe(a.task_date)}</p><p>الحالة: ${statusTag('pending')}</p><p class="muted">تم استلام إثباتك، والطلب قيد المراجعة.</p></div>`);
           return;
         }
-        if(!t?.active) return;
+        if(!isToday || !t?.active) return;
 
         const rejected=s?.status==='rejected' || a.status==='rejected';
         const retry=rejected?`<p>الحالة: ${statusTag('rejected')}</p><p class="muted">${safe(s?.review_note||'يمكنك مراجعة الملاحظة وإرسال إثبات جديد.')}</p>`:'';
@@ -1347,9 +1370,14 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
         </div>`);
       });
 
-      box.innerHTML=`<h3>المهام المتاحة</h3>${available.length?available.join(''):'لا توجد مهام متاحة حالياً'}
+      const historyTable=history.length
+        ? `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;text-align:right"><thead><tr><th style="padding:9px;border-bottom:1px solid var(--border)">التاريخ</th><th style="padding:9px;border-bottom:1px solid var(--border)">المهمة</th><th style="padding:9px;border-bottom:1px solid var(--border)">الباقة</th><th style="padding:9px;border-bottom:1px solid var(--border)">المكافأة</th></tr></thead><tbody>${history.map(row=>row.replace('<tr>','<tr style="border-bottom:1px solid var(--border)">').replaceAll('<td>','<td style="padding:9px">')).join('')}</tbody></table></div>`
+        : 'لا توجد مهام منجزة في الأيام السابقة';
+
+      box.innerHTML=`<h3>مهام اليوم</h3>${available.length?available.join(''):'لا توجد مهام متاحة حالياً'}
         <h3 style="margin-top:18px">قيد المراجعة</h3>${pending.length?pending.join(''):'لا توجد مهام قيد المراجعة'}
-        <h3 style="margin-top:18px">المهام المنجزة</h3>${completed.length?completed.join(''):'لا توجد مهام منجزة بعد'}`;
+        <h3 style="margin-top:18px">منجزة اليوم</h3>${completed.length?completed.join(''):'لا توجد مهام منجزة اليوم'}
+        <details style="margin-top:18px"><summary style="cursor:pointer;font-weight:bold;padding:10px 0">سجل الإنجاز السابق حسب التاريخ</summary>${historyTable}</details>`;
 
     }catch(e){
       box.textContent='تعذر تحميل المهام: '+e.message;
