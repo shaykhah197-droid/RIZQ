@@ -45,7 +45,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 #supportCustomerBox .support-message{padding:10px 12px;border-radius:12px;margin:8px 0;background:#f1f6f3;overflow-wrap:anywhere}
 #supportCustomerBox .support-message.mine{background:#e2f4e9;margin-right:12%}
 #supportCustomerBox .support-message.theirs{background:#fff;margin-left:12%;border:1px solid var(--border)}
-#supportCustomerMessages .support-message img,#supportAdminMessages .support-message img{display:block!important;width:auto!important;height:auto!important;max-width:min(100%,180px)!important;max-height:150px!important;object-fit:contain!important;border-radius:9px;margin-top:8px;cursor:default}
+#supportCustomerMessages .support-message img,#supportAdminMessages .support-message img{display:block!important;width:auto!important;height:auto!important;max-width:140px!important;max-height:110px!important;object-fit:contain!important;border-radius:9px;margin-top:8px;cursor:default;flex:none!important}#supportCustomerMessages .support-message,#supportAdminMessages .support-message{max-width:100%;overflow:hidden;overflow-wrap:anywhere}
 #supportAdminList .item{cursor:pointer}
 </style>
 </head>
@@ -2857,6 +2857,15 @@ async function rizqSupportImageUrls(paths){
  }
  return out;
 }
+function rizqAppendSupportImages(row,urls){
+ (urls||[]).forEach(url=>{
+  const img=document.createElement('img');
+  img.src=url;img.alt='صورة مرفقة';img.loading='lazy';img.decoding='async';
+  img.style.cssText='display:block!important;width:auto!important;height:auto!important;max-width:140px!important;max-height:110px!important;object-fit:contain!important;border-radius:9px;margin-top:8px;flex:none!important';
+  img.onerror=()=>{img.remove();const note=document.createElement('div');note.className='muted';note.textContent='تعذر تحميل الصورة المرفقة';row.appendChild(note)};
+  row.appendChild(img);
+ });
+}
 async function loadSupportConversation(){
  const box=document.getElementById('supportCustomerMessages');
  if(!box||!currentUser)return;
@@ -2884,7 +2893,7 @@ async function loadSupportConversation(){
    row.append(who,body);
    box.appendChild(row);
    const urls=await rizqSupportImageUrls(m.image_path);
-   urls.forEach(url=>{const img=document.createElement('img');img.src=url;img.alt='صورة مرفقة';row.appendChild(img)});
+   rizqAppendSupportImages(row,urls);
   });
   if(!messages?.length)box.insertAdjacentHTML('beforeend','<p class="muted">لا توجد رسائل بعد. اكتب رسالتك وسنرد عليك هنا.</p>');
  }catch(e){box.textContent='تعذر تحميل المحادثة: '+(e.message||e)}
@@ -2954,7 +2963,7 @@ async function loadSupportAdmin(){
    item.appendChild(open);list.appendChild(item);
   });
   if(!ordered.length)list.textContent='لا توجد محادثات حتى الآن';
- }catch(e){box.textContent='تعذر تحميل المحادثات: '+(e.message||e)}
+ }catch(e){box.innerHTML='<div class="notice error" style="white-space:pre-wrap">تعذر تحميل محادثات العملاء. تفاصيل الخطأ: '+safe(e.message||e)+'</div><button type="button" class="secondary" onclick="loadSupportAdmin()">إعادة المحاولة</button>'}
 }
 async function openSupportAdminThread(id,status){
  const thread=document.getElementById('supportAdminThread');
@@ -2970,7 +2979,7 @@ async function openSupportAdminThread(id,status){
    const body=document.createElement('div');body.textContent=m.message||'';
    row.append(who,body);messageBox.appendChild(row);
    const urls=await rizqSupportImageUrls(m.image_path);
-   urls.forEach(url=>{const img=document.createElement('img');img.src=url;img.alt='صورة مرفقة';row.appendChild(img)});
+   rizqAppendSupportImages(row,urls);
   });
   document.getElementById('supportAdminSend').onclick=()=>sendSupportAdminReply(id);
   document.getElementById('supportAdminClose').onclick=async()=>{
