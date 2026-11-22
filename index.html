@@ -111,8 +111,12 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 </section>
 
 <section id="tab-tasks" class="tab hidden">
-<div class="card"><h2>المهام المتاحة</h2><div id="tasksList">جارٍ التحميل...</div></div>
-<div class="card"><h2>مهامي المرسلة</h2><div id="mySubmissions">جارٍ التحميل...</div></div>
+<div class="card">
+<h2>مهامك اليومية</h2>
+<p class="muted">تظهر حتى 10 مهام يوميًا لكل باقة نشطة. كل باقة لها تكليف ومكافأة مستقلة.</p>
+<button class="secondary" onclick="window.rizqReloadCustomerTasks()">تحديث المهام</button>
+<div id="rizqDailyTasks">افتح صفحة المهام لعرض تكليفاتك.</div>
+</div>
 </section>
 
 <section id="tab-deposit" class="tab hidden">
@@ -240,7 +244,9 @@ function safe(v){
  return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 function statusTag(s){
- return `<span class="tag ${s==='pending'?'pending':''}">${safe(s)}</span>`;
+ const labels={pending:'قيد المراجعة',submitted:'قيد المراجعة',approved:'منجزة',rejected:'مرفوضة',available:'متاحة'};
+ const cls=(s==='pending'||s==='submitted')?'pending':(s==='rejected'?'error':'');
+ return `<span class="tag ${cls}">${safe(labels[s]||s||'غير محددة')}</span>`;
 }
 
 function toggleAuth(){
@@ -293,7 +299,7 @@ async function loadApp(){
  document.getElementById('roleLabel').classList.toggle('hidden',!isAdmin);
  await loadProfile();
  await Promise.all([
-  loadWallet(),loadReferral(),loadTasks(),loadSubmissions(),
+  loadWallet(),loadReferral(),
   loadMethods(),loadDepositHistory(),loadWithdrawalHistory(),loadTransactions()
  ]);
  if(isAdmin)await loadAdmin();
@@ -315,29 +321,6 @@ async function loadReferral(){
  const {count,error}=await db.from('referrals').select('*',{count:'exact',head:true}).eq('referrer_id',currentUser.id);
  if(error)throw error;
  document.getElementById('refCount').textContent=count||0;
-}
-async function loadTasks(){
- const box=document.getElementById('tasksList');
- const {data,error}=await db.from('tasks').select('*').eq('active',true).order('created_at',{ascending:false});
- if(error){box.textContent=error.message;return}
- box.innerHTML=data?.length?data.map(t=>`
- <div class="item"><h3>${safe(t.title)}</h3><p>${safe(t.description)}</p>
- <p><span class="tag">المكافأة: ${money(t.reward)}</span></p>
- <button onclick="submitTask('${t.id}')">إرسال للمراجعة</button></div>`).join(''):'لا توجد مهام متاحة حالياً';
-}
-async function submitTask(id){
- try{
-  const {error}=await db.from('task_submissions').insert({task_id:id,user_id:currentUser.id,status:'pending'});
-  if(error)throw error;
-  msg('تم إرسال المهمة للمراجعة');
-  await loadSubmissions();
- }catch(e){msg(e.message,true)}
-}
-async function loadSubmissions(){
- const box=document.getElementById('mySubmissions');
- const {data,error}=await db.from('task_submissions').select('*').eq('user_id',currentUser.id).order('submitted_at',{ascending:false});
- if(error){box.textContent=error.message;return}
- box.innerHTML=data?.length?data.map(x=>`<div class="item">الحالة: ${statusTag(x.status)}<div class="muted">${safe(x.review_note||'')}</div></div>`).join(''):'لا توجد مهام مرسلة';
 }
 async function loadMethods(){
  const box=document.getElementById('paymentMethods');
@@ -1099,9 +1082,9 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   admin.insertAdjacentHTML('beforeend', `
     <div class="card" id="rizqTaskManager">
       <h2>إدارة مهام الباقات</h2>
-      <p>أضف حتى 10 مهام نشطة لكل باقة.</p>
+      <p>أضف مهمة لباقة محددة أو اجعلها عامة لكل الباقات النشطة.</p>
 
-      <label>اختر الباقة</label>
+      <label>نطاق المهمة</label>
       <select id="rizqTaskPackage"></select>
 
       <label>عنوان المهمة</label>
@@ -1135,7 +1118,9 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   packageSelect.addEventListener('change', function(){
     const option = packageSelect.selectedOptions[0];
     document.getElementById('rizqTaskRewardInfo').textContent =
-      'مكافأة المهمة: ' + (rewardText[option?.dataset.price] || 'حسب إعداد الباقة');
+      packageSelect.value === 'all'
+        ? 'مهمة عامة: المكافأة حسب باقة كل عميل (10 أو 30 أو 60 أو 100 جنيه).'
+        : 'مكافأة المهمة: ' + (rewardText[option?.dataset.price] || 'حسب إعداد الباقة');
   });
 
   window.rizqLoadTaskManager = async function(){
@@ -1152,11 +1137,12 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
       return;
     }
 
-    packageSelect.innerHTML = (packages || []).map(p =>
-      `<option value="${p.id}" data-price="${p.price}">
-        ${safe(p.name)} — ${money(p.price)}
-      </option>`
-    ).join('');
+    packageSelect.innerHTML = '<option value="all">كل الباقات النشطة — مهمة عامة</option>' +
+      (packages || []).map(p =>
+        `<option value="${p.id}" data-price="${p.price}">
+          ${safe(p.name)} — ${money(p.price)}
+        </option>`
+      ).join('');
 
     packageSelect.dispatchEvent(new Event('change'));
 
@@ -1173,13 +1159,14 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
     }
 
     box.innerHTML = tasks?.length ? tasks.map(t => {
-      const p = packages.find(x => x.id === t.package_id);
+      const p = (packages || []).find(x => x.id === t.package_id);
       return `<div class="item">
         <b>${safe(t.title)}</b>
-        <div>${safe(p?.name || 'باقة غير محددة')}</div>
+        <div>${safe(p?.name || (t.package_id ? 'باقة غير محددة' : 'كل الباقات النشطة'))}</div>
         <div>${safe(t.description)}</div>
-        <div>مكافأة المهمة: ${money(t.reward)}</div>
+        <div>المكافأة: ${t.package_id ? money(t.reward) : 'حسب باقة العميل'}</div>
         <div>الحالة: ${t.active ? 'نشطة' : 'متوقفة'}</div>
+        <button class="${t.active?'danger':'secondary'}" onclick="window.rizqToggleTask('${t.id}',${!t.active})">${t.active?'إيقاف المهمة':'إعادة تفعيل المهمة'}</button>
       </div>`;
     }).join('') : 'لم تتم إضافة مهام بعد';
   };
@@ -1192,23 +1179,24 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
     const description = document.getElementById('rizqTaskDescription').value.trim();
     const button = document.getElementById('rizqAddTaskButton');
 
-    if(!packageId) return msg('اختر الباقة',true);
+    if(!packageId) return msg('اختر نطاق المهمة',true);
     if(!title || !description) return msg('اكتب عنوان ووصف المهمة',true);
 
     button.disabled = true;
 
     try{
-      const {count,error:countError} = await db
-        .from('tasks')
+      const countQuery = db.from('tasks')
         .select('id',{count:'exact',head:true})
-        .eq('package_id',packageId)
         .eq('active',true);
+      const {count,error:countError} = packageId === 'all'
+        ? await countQuery.is('package_id',null)
+        : await countQuery.eq('package_id',packageId);
 
       if(countError) throw countError;
-      if(count >= 10) throw Error('هذه الباقة لديها 10 مهام نشطة بالفعل');
+      if(count >= 10) throw Error('وصلت إلى 10 مهام نشطة في هذا النطاق');
 
       const {error} = await db.from('tasks').insert({
-        package_id:packageId,
+        package_id:packageId === 'all' ? null : packageId,
         title:title,
         description:description,
         active:true
@@ -1227,6 +1215,18 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
     }finally{
       button.disabled = false;
     }
+  };
+
+  window.rizqToggleTask = async function(taskId, active){
+    if(!isAdmin) return msg('غير مصرح لك',true);
+    const action = active ? 'إعادة تفعيل' : 'إيقاف';
+    if(!confirm('هل تريد ' + action + ' هذه المهمة؟')) return;
+    try{
+      const {error}=await db.from('tasks').update({active}).eq('id',taskId);
+      if(error) throw error;
+      msg(active?'تمت إعادة تفعيل المهمة':'تم إيقاف المهمة');
+      await window.rizqLoadTaskManager();
+    }catch(e){msg('تعذر تحديث المهمة: '+e.message,true);}
   };
 
   const observer = new MutationObserver(function(){
@@ -1252,15 +1252,6 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   const taskTab = document.getElementById('tab-tasks');
   if(!admin || !taskTab || document.getElementById('rizqTaskReviews')) return;
 
-  taskTab.insertAdjacentHTML('afterbegin', `
-    <div class="card">
-      <h2>مهام باقاتك اليومية</h2>
-      <p class="muted">تظهر 10 مهام يوميًا لكل باقة نشطة.</p>
-      <button onclick="window.rizqReloadCustomerTasks()">تحديث المهام</button>
-      <div id="rizqDailyTasks">جارٍ تحميل مهامك...</div>
-    </div>
-  `);
-
   admin.insertAdjacentHTML('beforeend', `
     <div class="card" id="rizqTaskReviews">
       <h2>مراجعة إثباتات المهام</h2>
@@ -1281,7 +1272,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
 
       const {data:assignments,error} = await db
         .from('daily_task_assignments')
-        .select('id,task_id,reward_amount,task_date')
+        .select('id,task_id,user_package_id,reward_amount,task_date,status')
         .eq('user_id',currentUser.id)
         .eq('task_date',new Date().toLocaleDateString('en-CA',{
           timeZone:'Africa/Cairo'
@@ -1291,53 +1282,74 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
       if(error) throw error;
 
       if(!assignments?.length){
-        box.textContent='لا توجد مهام متاحة. تأكد من تفعيل باقتك وإضافة مهام لها.';
+        box.textContent='لا توجد مهام اليوم. تأكد من تفعيل باقتك أو راجعنا لاحقاً.';
         return;
       }
 
       const ids=assignments.map(x=>x.id);
       const taskIds=[...new Set(assignments.map(x=>x.task_id))];
+      const packageIds=[...new Set(assignments.map(x=>x.user_package_id))];
 
-      const [tasksResult,submissionsResult] = await Promise.all([
-        db.from('tasks').select('id,title,description')
+      const [tasksResult,submissionsResult,userPackagesResult] = await Promise.all([
+        db.from('tasks').select('id,title,description,active')
           .in('id',taskIds),
         db.from('task_submissions')
-          .select('id,assignment_id,status,review_note')
+          .select('id,assignment_id,status,review_note,submitted_at')
           .eq('user_id',currentUser.id)
           .in('assignment_id',ids)
+          .order('submitted_at',{ascending:false}),
+        db.from('user_packages').select('id,package_id').in('id',packageIds)
       ]);
 
       if(tasksResult.error) throw tasksResult.error;
       if(submissionsResult.error) throw submissionsResult.error;
+      if(userPackagesResult.error) throw userPackagesResult.error;
 
       const tasks=tasksResult.data||[];
       const submissions=submissionsResult.data||[];
+      const userPackages=userPackagesResult.data||[];
+      const packageIds2=[...new Set(userPackages.map(x=>x.package_id))];
+      const {data:packages,error:packagesError}=await db.from('packages')
+        .select('id,name').in('id',packageIds2);
+      if(packagesError) throw packagesError;
 
-      box.innerHTML=assignments.map(a=>{
+      const available=[];
+      const pending=[];
+      const completed=[];
+
+      assignments.forEach(a=>{
         const t=tasks.find(x=>x.id===a.task_id);
         const s=submissions.find(x=>x.assignment_id===a.id);
+        const up=userPackages.find(x=>x.id===a.user_package_id);
+        const pack=(packages||[]).find(x=>x.id===up?.package_id);
+        const label=safe(pack?.name||'الباقة');
+        const taskTitle=safe(t?.title||'مهمة');
+        const desc=safe(t?.description||'');
+        const reward=`<span class="tag">المكافأة: ${money(a.reward_amount)}</span>`;
+        const packageLabel=`<p class="muted">تكليف ضمن: ${label}</p>`;
 
-        let action='';
-        if(s){
-          action=`<p>الحالة: ${statusTag(s.status)}</p>
-          <p class="muted">${safe(s.review_note||'')}</p>`;
-        }else{
-          action=`
-            <label>إثبات تنفيذ المهمة</label>
-            <input type="file" id="rizqProof-${a.id}"
-              accept="image/jpeg,image/png,image/webp">
-            <button onclick="window.rizqSubmitTaskProof('${a.id}')">
-              إرسال الإثبات للمراجعة
-            </button>`;
+        if(a.status==='approved' || s?.status==='approved'){
+          completed.push(`<div class="item"><h3>${taskTitle}</h3>${packageLabel}<p>${desc}</p>${reward}<p>الحالة: ${statusTag('approved')}</p></div>`);
+          return;
         }
+        if(a.status==='submitted' || s?.status==='pending'){
+          pending.push(`<div class="item"><h3>${taskTitle}</h3>${packageLabel}<p>${desc}</p>${reward}<p>الحالة: ${statusTag('pending')}</p><p class="muted">تم استلام إثباتك، والطلب قيد المراجعة.</p></div>`);
+          return;
+        }
+        if(!t?.active) return;
 
-        return `<div class="item">
-          <h3>${safe(t?.title||'مهمة')}</h3>
-          <p>${safe(t?.description||'')}</p>
-          <span class="tag">المكافأة: ${money(a.reward_amount)}</span>
-          ${action}
-        </div>`;
-      }).join('');
+        const rejected=s?.status==='rejected' || a.status==='rejected';
+        const retry=rejected?`<p>الحالة: ${statusTag('rejected')}</p><p class="muted">${safe(s?.review_note||'يمكنك مراجعة الملاحظة وإرسال إثبات جديد.')}</p>`:'';
+        available.push(`<div class="item"><h3>${taskTitle}</h3>${packageLabel}<p>${desc}</p>${reward}${retry}
+          <label>إثبات تنفيذ المهمة</label>
+          <input type="file" id="rizqProof-${a.id}" accept="image/jpeg,image/png,image/webp">
+          <button onclick="window.rizqSubmitTaskProof('${a.id}')">${rejected?'إعادة إرسال الإثبات':'إرسال الإثبات للمراجعة'}</button>
+        </div>`);
+      });
+
+      box.innerHTML=`<h3>المهام المتاحة</h3>${available.length?available.join(''):'لا توجد مهام متاحة حالياً'}
+        <h3 style="margin-top:18px">قيد المراجعة</h3>${pending.length?pending.join(''):'لا توجد مهام قيد المراجعة'}
+        <h3 style="margin-top:18px">المهام المنجزة</h3>${completed.length?completed.join(''):'لا توجد مهام منجزة بعد'}`;
 
     }catch(e){
       box.textContent='تعذر تحميل المهام: '+e.message;
@@ -1377,7 +1389,6 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
 
       msg('تم إرسال إثبات المهمة للمراجعة');
       await window.rizqReloadCustomerTasks();
-      await loadSubmissions();
 
     }catch(e){
       msg('تعذر إرسال الإثبات: '+e.message,true);
