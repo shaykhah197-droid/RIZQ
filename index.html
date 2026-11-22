@@ -43,34 +43,41 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 .proof-link{display:inline-block;margin:8px 0;padding:9px 12px;background:var(--light);border-radius:8px;color:var(--green);text-decoration:none;font-weight:bold}
 
 /* واجهة محادثة العميل: صندوق محدود الارتفاع وفقاعات مثل تطبيقات المحادثة */
-#supportCustomerMessages{
- max-height: min(52vh,440px);min-height:90px;overflow-y:auto;overscroll-behavior:contain;
- display:flex;flex-direction:column;gap:8px;padding:10px;margin:12px 0;
- background:var(--light);border:1px solid var(--border);border-radius:12px;
+/* واجهة دردشة مباشرة للعميل والمدير */
+#supportCustomerConversation{overflow:hidden}
+#supportCustomerMessages,#supportAdminMessages{
+ height:min(48vh,420px);min-height:180px;overflow-y:auto;overscroll-behavior:contain;
+ display:flex;flex-direction:column;gap:10px;padding:12px;margin:12px 0;
+ background:linear-gradient(180deg,#f4f8f6,#edf3f0);
+ border:1px solid var(--border);border-radius:16px;
 }
-#supportCustomerConversation .support-message{
- display:block;width:fit-content;max-width:82%;box-sizing:border-box;
- padding:9px 11px;border-radius:14px;margin:0;overflow-wrap:anywhere;
- white-space:pre-wrap;line-height:1.45;
+#supportCustomerConversation .support-message,#supportAdminThread .support-message{
+ display:block;width:fit-content;max-width:min(82%,440px);box-sizing:border-box;
+ padding:10px 13px;border-radius:16px;margin:0;overflow-wrap:anywhere;
+ white-space:pre-wrap;line-height:1.5;box-shadow:0 1px 2px rgba(0,0,0,.06);
 }
-#supportCustomerConversation .support-message.mine{
- align-self:flex-end;background:#e2f4e9;border-bottom-right-radius:4px;
+#supportCustomerConversation .support-message.mine,#supportAdminThread .support-message.mine{
+ align-self:flex-end;background:#dff5e8;border-bottom-right-radius:5px;
 }
-#supportCustomerConversation .support-message.theirs{
- align-self:flex-start;background:#fff;border:1px solid var(--border);border-bottom-left-radius:4px;
+#supportCustomerConversation .support-message.theirs,#supportAdminThread .support-message.theirs{
+ align-self:flex-start;background:#fff;border:1px solid #e3e9e5;border-bottom-left-radius:5px;
 }
-#supportCustomerMessages .support-message img{
+#supportCustomerMessages .support-message img,#supportAdminMessages .support-message img{
  display:block!important;width:auto!important;height:auto!important;
- max-width:104px!important;max-height:88px!important;object-fit:contain!important;
- border-radius:8px;margin-top:7px;cursor:default;flex:none!important;
+ max-width:150px!important;max-height:120px!important;object-fit:contain!important;
+ border-radius:10px;margin-top:8px;cursor:default;flex:none!important;
 }
-#supportAdminMessages .support-message img{
- display:block!important;width:auto!important;height:auto!important;
- max-width:140px!important;max-height:110px!important;object-fit:contain!important;
- border-radius:9px;margin-top:8px;cursor:default;flex:none!important;
-}
-#supportAdminMessages .support-message{max-width:100%;overflow:hidden;overflow-wrap:anywhere}
+#supportCustomerText,#supportAdminReply{border-radius:12px;min-height:76px}
+#supportCustomerSend,#supportAdminSend{min-width:120px}
+#supportHistoryToggle{width:100%;margin-top:10px}
+#supportAdminThread{background:var(--card,#fff);border:1px solid var(--border);border-radius:16px;padding:12px}
+#supportAdminThread h3{margin:12px 0}
+#supportAdminBack{margin-bottom:8px}
 #supportAdminList .item{cursor:pointer}
+@media(max-width:600px){
+ #supportCustomerMessages,#supportAdminMessages{height:42vh;min-height:160px;padding:9px}
+ #supportCustomerConversation .support-message,#supportAdminThread .support-message{max-width:90%}
+}
 </style>
 </head>
 <body>
@@ -209,8 +216,11 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <input id="supportCustomerFiles" type="file" accept="image/jpeg,image/png,image/webp">
 <p class="muted small">JPG أو PNG أو WEBP، بحد أقصى 5 ميجابايت.</p>
 <button id="supportCustomerSend" type="button" onclick="sendSupportCustomerMessage()">إرسال الرسالة</button>
-<div style="margin-top:14px">
-<button id="supportHistoryToggle" class="secondary" type="button" onclick="toggleSupportHistory()">عرض الرسائل السابقة</button>
+<div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
+<div class="row" style="align-items:center;justify-content:space-between">
+<b>محادثتك مع فريق RIZQ</b><span class="tag">محادثة خاصة</span>
+</div>
+<button id="supportHistoryToggle" class="secondary" type="button" onclick="toggleSupportHistory()">فتح المحادثة وعرض الرسائل</button>
 <div id="supportCustomerMessages" class="hidden" aria-live="polite"></div>
 </div>
 </div>
@@ -3040,7 +3050,7 @@ async function openSupportAdminThread(id,status){
  try{
   const {data:messages,error}=await db.from('support_messages').select('*').eq('conversation_id',id).order('created_at',{ascending:true});
   if(error)throw error;
-  thread.innerHTML='<button type="button" class="secondary" id="supportAdminBack">← الرجوع لقائمة المحادثات</button><h3>المحادثة</h3><div id="supportAdminMessages"></div><label>الرد على العميل</label><textarea id="supportAdminReply" placeholder="اكتب ردك"></textarea><label>إرفاق صور (اختياري)</label><input id="supportAdminFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple><div class="row"><button type="button" id="supportAdminSend">إرسال الرد</button><button type="button" class="secondary" id="supportAdminClose">'+(status==='closed'?'إعادة فتح المحادثة':'إغلاق المحادثة')+'</button></div>';
+  thread.innerHTML='<button type="button" class="secondary" id="supportAdminBack">← قائمة المحادثات</button><div class="row" style="align-items:center;justify-content:space-between"><h3>محادثة مباشرة مع العميل</h3><span class="tag">رسائل خاصة</span></div><div id="supportAdminMessages" aria-live="polite"></div><label>اكتب ردك</label><textarea id="supportAdminReply" placeholder="اكتب رسالتك للعميل..." rows="3"></textarea><label>إرفاق صورة (اختياري)</label><input id="supportAdminFiles" type="file" accept="image/jpeg,image/png,image/webp"><div class="row"><button type="button" id="supportAdminSend">إرسال الرسالة</button><button type="button" class="secondary" id="supportAdminClose">'+(status==='closed'?'إعادة فتح المحادثة':'إغلاق المحادثة')+'</button></div>';
   document.getElementById('supportAdminBack').onclick=()=>loadSupportAdmin();
   const messageBox=document.getElementById('supportAdminMessages');
   (messages||[]).forEach(async m=>{
