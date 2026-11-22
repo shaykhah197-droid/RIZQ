@@ -2950,12 +2950,13 @@ async function loadSupportAdmin(){
   const userIds=[...new Set((data||[]).map(c=>c.user_id).filter(Boolean))];
   let customerNames={};
   if(userIds.length){
-   const {data:profiles}=await db.from('profiles').select('id,full_name').in('id',userIds);
+   const {data:profiles,error:profilesError}=await db.from('profiles').select('id,full_name').in('id',userIds);
+   if(profilesError)throw profilesError;
    (profiles||[]).forEach(p=>{customerNames[p.id]=p.full_name||''});
   }
   let latestByConversation={};
   if(ids.length){
-   const {data:allMessages,error:messagesError}=await db.from('support_messages').select('conversation_id,sender,created_at').in('conversation_id',ids).order('created_at',{ascending:false});
+   const {data:allMessages,error:messagesError}=await db.from('support_messages').select('conversation_id,sender,message,created_at').in('conversation_id',ids).order('created_at',{ascending:false});
    if(messagesError)throw messagesError;
    (allMessages||[]).forEach(m=>{if(!latestByConversation[m.conversation_id])latestByConversation[m.conversation_id]=m});
   }
@@ -2965,17 +2966,27 @@ async function loadSupportAdmin(){
    return new Date(tb)-new Date(ta);
   });
   const unread=ordered.filter(c=>latestByConversation[c.id]?.sender==='customer').length;
-  box.innerHTML='<div class="notice" style="font-size:16px;font-weight:bold">'+(unread?'لديك '+unread+' محادثة بها رسالة أخيرة من العميل':'لا توجد رسائل جديدة من العملاء')+'</div><h3>محادثات الدعم</h3><div id="supportAdminList"></div><div id="supportAdminThread" style="margin-top:14px"><p class="muted">اختر محادثة لعرض الرسائل والرد.</p></div>';
+  box.innerHTML='<div class="notice" style="font-size:16px;font-weight:bold">'+(unread?'لديك '+unread+' محادثة بها رسالة أخيرة من العميل':'لا توجد رسائل جديدة من العملاء')+'</div><h3>صندوق رسائل العملاء</h3><div id="supportAdminList"></div><div id="supportAdminThread" style="margin-top:14px"><p class="muted">اختر اسم العميل لفتح المحادثة.</p></div>';
   const list=document.getElementById('supportAdminList');
   ordered.forEach(c=>{
-   const item=document.createElement('div');item.className='item';
-   const heading=document.createElement('b');heading.textContent='محادثة '+c.id.slice(0,8);
-   const meta=document.createElement('div');meta.className='muted';meta.textContent='العميل: '+(customerNames[c.user_id]||'عميل')+' — الحالة: '+({open:'مفتوحة',replied:'تم الرد',closed:'مغلقة'}[c.status]||c.status);
-   const open=document.createElement('button');open.className='secondary';open.textContent='فتح المحادثة';open.onclick=()=>openSupportAdminThread(c.id,c.status);
-   item.append(heading,meta);
-   if(latestByConversation[c.id]?.sender==='customer'){
-    const notice=document.createElement('div');notice.style.cssText='color:#b45309;font-weight:bold;margin:6px 0';notice.textContent='● رسالة جديدة من العميل';item.appendChild(notice);
+   const last=latestByConversation[c.id];
+   const item=document.createElement('div');
+   item.className='item';
+   item.style.cssText='padding:13px;margin:8px 0;border:1px solid var(--border);border-radius:12px;background:var(--card,#fff)';
+   const open=document.createElement('button');
+   open.type='button';open.className='secondary';open.style.cssText='width:100%;text-align:right;display:block';
+   const name=document.createElement('b');name.textContent=customerNames[c.user_id]||'عميل';
+   const status=document.createElement('span');status.className='tag';status.style.cssText='float:left';status.textContent=({open:'مفتوحة',replied:'تم الرد',closed:'مغلقة'}[c.status]||c.status);
+   const preview=document.createElement('div');preview.className='muted';preview.style.cssText='margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+   preview.textContent=last?(last.sender==='admin'?'الإدارة: ':'العميل: ')+(last.message||'📷 صورة مرفقة'):'لا توجد رسائل';
+   const time=document.createElement('div');time.className='muted small';time.style.marginTop='5px';
+   const stamp=last?.created_at||c.updated_at||c.created_at;
+   time.textContent=stamp?new Date(stamp).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}):'';
+   open.append(name,status,preview,time);
+   if(last?.sender==='customer'){
+    const unreadMark=document.createElement('div');unreadMark.style.cssText='color:#b45309;font-weight:bold;margin-top:6px';unreadMark.textContent='● رسالة جديدة من العميل';open.appendChild(unreadMark);
    }
+   open.onclick=()=>openSupportAdminThread(c.id,c.status);
    item.appendChild(open);list.appendChild(item);
   });
   if(!ordered.length)list.textContent='لا توجد محادثات حتى الآن';
@@ -2983,11 +2994,16 @@ async function loadSupportAdmin(){
 }
 async function openSupportAdminThread(id,status){
  const thread=document.getElementById('supportAdminThread');
+ const list=document.getElementById('supportAdminList');
+ if(list)list.style.display='none';
+ const listTitle=thread.parentElement?.querySelector('h3');
+ if(listTitle)listTitle.style.display='none';
  thread.textContent='جارٍ تحميل الرسائل...';
  try{
   const {data:messages,error}=await db.from('support_messages').select('*').eq('conversation_id',id).order('created_at',{ascending:true});
   if(error)throw error;
-  thread.innerHTML='<h3>الرسائل</h3><div id="supportAdminMessages"></div><label>الرد على العميل</label><textarea id="supportAdminReply" placeholder="اكتب ردك"></textarea><label>إرفاق صور (اختياري)</label><input id="supportAdminFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple><div class="row"><button type="button" id="supportAdminSend">إرسال الرد</button><button type="button" class="secondary" id="supportAdminClose">'+(status==='closed'?'إعادة فتح المحادثة':'إغلاق المحادثة')+'</button></div>';
+  thread.innerHTML='<button type="button" class="secondary" id="supportAdminBack">← الرجوع لقائمة المحادثات</button><h3>المحادثة</h3><div id="supportAdminMessages"></div><label>الرد على العميل</label><textarea id="supportAdminReply" placeholder="اكتب ردك"></textarea><label>إرفاق صور (اختياري)</label><input id="supportAdminFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple><div class="row"><button type="button" id="supportAdminSend">إرسال الرد</button><button type="button" class="secondary" id="supportAdminClose">'+(status==='closed'?'إعادة فتح المحادثة':'إغلاق المحادثة')+'</button></div>';
+  document.getElementById('supportAdminBack').onclick=()=>loadSupportAdmin();
   const messageBox=document.getElementById('supportAdminMessages');
   (messages||[]).forEach(async m=>{
    const row=document.createElement('div');row.className='support-message '+(m.sender==='admin'?'mine':'theirs');
