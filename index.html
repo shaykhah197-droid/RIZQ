@@ -2991,17 +2991,13 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
    if(!allowed())return notice(box,'غير مصرح لك');
    box.textContent='جارٍ تحميل العملاء...';
 
-   const [p,w]=await Promise.all([
-    db.from('profiles').select('id,full_name,referral_code,created_at')
-      .order('created_at',{ascending:false}).limit(200),
-    db.from('wallets').select('user_id,balance')
-   ]);
+   // القائمة تأتي من دالة آمنة على الخادم وتستبعد الحسابات غير المؤكدة.
+   const {data,error}=await db.rpc('admin_list_confirmed_customers');
 
-   if(p.error||w.error)return notice(box,'تعذر التحميل: '+(p.error||w.error).message);
+   if(error)return notice(box,'تعذر التحميل: '+error.message);
 
    box.innerHTML='';
-   (p.data||[]).forEach(user=>{
-    const wallet=(w.data||[]).find(x=>x.user_id===user.id);
+   (data||[]).forEach(user=>{
     const row=document.createElement('div');
     row.className='rizq-row';
 
@@ -3012,7 +3008,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
     id.textContent='معرف العميل: '+user.id;
 
     const balance=document.createElement('p');
-    balance.textContent='رصيد المحفظة: '+Number(wallet?.balance||0).toLocaleString('ar-EG')+' جنيه';
+    balance.textContent='رصيد المحفظة: '+Number(user.balance||0).toLocaleString('ar-EG')+' جنيه';
 
     const code=document.createElement('small');
     code.textContent='كود الإحالة: '+(user.referral_code||'غير موجود');
@@ -3020,7 +3016,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
     row.append(name,id,balance,code);
     box.appendChild(row);
    });
-   if(!p.data?.length)notice(box,'لا يوجد عملاء');
+   if(!data?.length)notice(box,'لا يوجد عملاء مؤكَّدون');
   }
 
   async function loadReferrals(){
