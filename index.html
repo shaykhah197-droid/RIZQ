@@ -918,7 +918,7 @@ start();
   document.head.appendChild(style);
 
   const packagesTab=document.getElementById('tab-packages');
-  if(!home)return;
+  if(!packagesTab)return;
 
   packagesTab.insertAdjacentHTML('beforeend',`
     <div class="card" id="rizqPackages">
