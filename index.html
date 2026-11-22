@@ -2616,6 +2616,51 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   const referrals=makePanel('rizqAdminReferrals','الإحالات');
   const transactions=makePanel('rizqAdminTransactions','سجل المعاملات');
   const supportPanel=makePanel('rizqAdminSupport','خدمة العملاء');
+  const managersPanel=makePanel('rizqAdminManagers','إدارة المديرين');
+
+  async function loadManagers(){
+   managersPanel.innerHTML=`
+    <h2>إدارة المديرين</h2>
+    <p class="muted">أنشئ حسابًا مستقلًا لمدير جديد. لن تتغير صلاحيات أي عميل موجود.</p>
+    <label for="rizqNewAdminEmail">البريد الإلكتروني</label>
+    <input id="rizqNewAdminEmail" type="email" autocomplete="off" placeholder="admin@example.com">
+    <label for="rizqNewAdminPassword">كلمة المرور</label>
+    <input id="rizqNewAdminPassword" type="password" autocomplete="new-password" minlength="8" placeholder="8 أحرف على الأقل">
+    <button type="button" id="rizqCreateAdminBtn">إنشاء حساب المدير</button>
+    <div id="rizqAdminCreateResult" class="notice hidden" style="margin-top:12px;white-space:pre-wrap"></div>
+   `;
+   document.getElementById('rizqCreateAdminBtn').onclick=async()=>{
+    const email=document.getElementById('rizqNewAdminEmail').value.trim().toLowerCase();
+    const password=document.getElementById('rizqNewAdminPassword').value;
+    const result=document.getElementById('rizqAdminCreateResult');
+    const button=document.getElementById('rizqCreateAdminBtn');
+    if(!email||!password){result.textContent='اكتب البريد الإلكتروني وكلمة المرور.';result.className='notice error';return}
+    if(password.length<8){result.textContent='كلمة المرور لازم تكون 8 أحرف على الأقل.';result.className='notice error';return}
+    button.disabled=true;button.textContent='جارٍ إنشاء الحساب...';
+    try{
+     const {data:sessionData,error:sessionError}=await db.auth.getSession();
+     if(sessionError)throw sessionError;
+     const token=sessionData.session?.access_token;
+     if(!token)throw new Error('انتهت الجلسة. سجّل الدخول مرة أخرى.');
+     const response=await fetch(SUPABASE_URL+'/functions/v1/admin-create-user',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+token},
+      body:JSON.stringify({email,password})
+     });
+     const payload=await response.json().catch(()=>({}));
+     if(!response.ok)throw new Error(payload.error||payload.message||'تعذر إنشاء حساب المدير.');
+     result.textContent='تم إنشاء حساب المدير بنجاح: '+(payload.user?.email||email);
+     result.className='notice';
+     document.getElementById('rizqNewAdminEmail').value='';
+     document.getElementById('rizqNewAdminPassword').value='';
+    }catch(error){
+     result.textContent=error.message||'حدث خطأ أثناء إنشاء الحساب.';
+     result.className='notice error';
+    }finally{
+     button.disabled=false;button.textContent='إنشاء حساب المدير';
+    }
+   };
+  }
 
   const definitions=[
    {name:'إدارة الباقات',icon:'📦',target:packagePanel,load:loadPackages},
@@ -2628,7 +2673,8 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
    {name:'العملاء والمحافظ',icon:'👥',target:customers,load:loadCustomers},
    {name:'الإحالات',icon:'🔗',target:referrals,load:loadReferrals},
    {name:'سجل المعاملات',icon:'📚',target:transactions,load:loadTransactions},
-   {name:'خدمة العملاء',icon:'💬',target:supportPanel,load:loadSupportAdmin}
+   {name:'خدمة العملاء',icon:'💬',target:supportPanel,load:loadSupportAdmin},
+   {name:'إدارة المديرين',icon:'👤',target:managersPanel,load:loadManagers}
   ];
 
   let previous=null;
