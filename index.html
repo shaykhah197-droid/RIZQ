@@ -922,7 +922,10 @@ start();
 
   packagesTab.insertAdjacentHTML('beforeend',`
     <div class="card" id="rizqPackages">
-      <h2>باقات RIZQ</h2>
+      <h2>باقاتي النشطة</h2>
+      <div id="rizqActivePackages">جارٍ تحميل باقاتك...</div>
+      <hr>
+      <h2>باقات RIZQ المتاحة للاشتراك</h2>
       <p class="muted">اختر الباقة وأرسل طلب الاشتراك للمراجعة. لا يتم التفعيل إلا بعد التحقق من الدفع الفعلي.</p>
       <div id="rizqPackageList">جارٍ تحميل الباقات...</div>
       <div id="rizqPackageForm" class="hidden">
@@ -956,6 +959,7 @@ start();
     const list=document.getElementById('rizqPackageList');
     const methods=document.getElementById('rizqPayMethod');
     const requests=document.getElementById('rizqMyRequests');
+    const activeList=document.getElementById('rizqActivePackages');
 
     const [p,m,r]=await Promise.all([
       db.from('packages').select('id,name,price').eq('active',true).order('price'),
@@ -964,6 +968,29 @@ start();
     ]);
 
     if(p.error){list.textContent='تعذر تحميل الباقات: '+p.error.message;return;}
+
+    try{
+      const {data:owned,error:ownedError}=await db.from('user_packages')
+        .select('id,package_id').eq('user_id',currentUser.id);
+      if(ownedError) throw ownedError;
+      const ownedIds=[...new Set((owned||[]).map(x=>x.package_id).filter(Boolean))];
+      if(!ownedIds.length){
+        activeList.textContent='لا توجد باقات مفعّلة على حسابك حالياً.';
+      }else{
+        const {data:ownedPackages,error:ownedPackagesError}=await db.from('packages')
+          .select('id,name,price').in('id',ownedIds);
+        if(ownedPackagesError) throw ownedPackagesError;
+        activeList.innerHTML=(ownedPackages||[]).map(x=>`
+          <div class="package-card">
+            <h3>${safe(x.name)}</h3>
+            <div class="package-price">${money(x.price)}</div>
+            <span class="muted">باقة مرتبطة بحسابك</span>
+          </div>
+        `).join('')||'لا توجد باقات مفعّلة على حسابك حالياً.';
+      }
+    }catch(activeError){
+      activeList.textContent='تعذر تحميل باقاتك النشطة: '+activeError.message;
+    }
 
     list.innerHTML=p.data.length?p.data.map(x=>`
       <div class="package-card">
