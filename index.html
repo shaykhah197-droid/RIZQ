@@ -117,7 +117,17 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 </div>
 <button id="authBtn" onclick="authenticate()">دخول</button>
 <button class="secondary" onclick="toggleAuth()" id="toggleBtn">إنشاء حساب جديد</button>
+<button type="button" class="secondary" onclick="sendPasswordReset()">نسيت كلمة المرور؟</button>
 <p class="muted">التسجيل والدخول بالبريد الإلكتروني.</p>
+</section>
+
+<section id="passwordRecovery" class="card hidden">
+<h2>تعيين كلمة مرور جديدة</h2>
+<label>كلمة المرور الجديدة</label>
+<input id="recoveryPassword" type="password" minlength="8" autocomplete="new-password" placeholder="8 أحرف على الأقل">
+<label>تأكيد كلمة المرور</label>
+<input id="recoveryPasswordConfirm" type="password" minlength="8" autocomplete="new-password" placeholder="أعد كتابة كلمة المرور">
+<button type="button" onclick="saveRecoveredPassword()">حفظ كلمة المرور الجديدة</button>
 </section>
 
 <section id="app" class="hidden">
@@ -138,6 +148,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <button class="secondary" onclick="showTab('deposit')">إيداع</button>
 <button class="secondary" onclick="showTab('withdraw')">سحب</button>
 <button class="secondary" onclick="showTab('history')">السجل</button>
+<button class="secondary" onclick="showTab('account')">الحساب</button>
 <button id="adminNav" class="hidden" onclick="showTab('admin')">لوحة المدير</button>
 </nav>
 
@@ -216,6 +227,20 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 
 <section id="tab-history" class="tab hidden">
 <div class="card"><h2>سجل معاملات المحفظة</h2><div id="allTransactions">جارٍ التحميل...</div></div>
+</section>
+
+<section id="tab-account" class="tab hidden">
+<div class="card">
+<h2>إعدادات الحساب</h2>
+<p class="muted">يمكنك تغيير كلمة المرور في أي وقت.</p>
+<label>كلمة المرور الحالية</label>
+<input id="currentAccountPassword" type="password" autocomplete="current-password" placeholder="كلمة المرور الحالية">
+<label>كلمة المرور الجديدة</label>
+<input id="newAccountPassword" type="password" minlength="8" autocomplete="new-password" placeholder="8 أحرف على الأقل">
+<label>تأكيد كلمة المرور الجديدة</label>
+<input id="confirmAccountPassword" type="password" minlength="8" autocomplete="new-password" placeholder="أعد كتابة كلمة المرور الجديدة">
+<button type="button" id="changeAccountPasswordBtn" onclick="changeAccountPassword()">تغيير كلمة المرور</button>
+</div>
 </section>
 
 <section id="tab-support" class="tab hidden">
@@ -319,6 +344,56 @@ function toggleAuth(){
  document.getElementById('toggleBtn').textContent=signupMode?'لديك حساب؟ تسجيل الدخول':'إنشاء حساب جديد';
  document.getElementById('nameWrap').classList.toggle('hidden',!signupMode);
  document.getElementById('refWrap').classList.toggle('hidden',!signupMode);
+}
+
+async function sendPasswordReset(){
+ const email=document.getElementById('email').value.trim();
+ if(!email)return msg('اكتب بريدك الإلكتروني أولاً',true);
+ const button=document.querySelector('#auth button[onclick="sendPasswordReset()"]');
+ if(button)button.disabled=true;
+ try{
+  const {error}=await db.auth.resetPasswordForEmail(email);
+  if(error)throw error;
+  msg('لو البريد مسجل عندنا، هيوصلك رابط لاستعادة كلمة المرور. راجع الوارد والرسائل غير المرغوب فيها.');
+ }catch(e){msg('تعذر إرسال رابط الاستعادة: '+e.message,true)}
+ finally{if(button)button.disabled=false}
+}
+
+async function saveRecoveredPassword(){
+ const password=document.getElementById('recoveryPassword').value;
+ const confirm=document.getElementById('recoveryPasswordConfirm').value;
+ if(!password||password.length<8)return msg('كلمة المرور لازم تكون 8 أحرف على الأقل',true);
+ if(password!==confirm)return msg('تأكيد كلمة المرور غير مطابق',true);
+ try{
+  const {error}=await db.auth.updateUser({password});
+  if(error)throw error;
+  document.getElementById('passwordRecovery').classList.add('hidden');
+  document.getElementById('recoveryPassword').value='';
+  document.getElementById('recoveryPasswordConfirm').value='';
+  msg('تم تحديث كلمة المرور بنجاح. يمكنك الدخول بكلمة المرور الجديدة.');
+  const {data:{session}}=await db.auth.getSession();
+  if(session){currentUser=session.user;await loadApp()}
+ }catch(e){msg('تعذر تحديث كلمة المرور: '+e.message,true)}
+}
+
+async function changeAccountPassword(){
+ const current=document.getElementById('currentAccountPassword').value;
+ const password=document.getElementById('newAccountPassword').value;
+ const confirm=document.getElementById('confirmAccountPassword').value;
+ const button=document.getElementById('changeAccountPasswordBtn');
+ if(!current||!password||!confirm)return msg('املأ الخانات الثلاثة',true);
+ if(password.length<8)return msg('كلمة المرور الجديدة لازم تكون 8 أحرف على الأقل',true);
+ if(password!==confirm)return msg('تأكيد كلمة المرور الجديدة غير مطابق',true);
+ button.disabled=true;
+ try{
+  const {error:verifyError}=await db.auth.signInWithPassword({email:currentUser.email,password:current});
+  if(verifyError)throw new Error('كلمة المرور الحالية غير صحيحة');
+  const {error}=await db.auth.updateUser({password});
+  if(error)throw error;
+  ['currentAccountPassword','newAccountPassword','confirmAccountPassword'].forEach(id=>document.getElementById(id).value='');
+  msg('تم تغيير كلمة المرور بنجاح');
+ }catch(e){msg('تعذر تغيير كلمة المرور: '+e.message,true)}
+ finally{button.disabled=false}
 }
 
 async function authenticate(){
@@ -773,6 +848,11 @@ async function start(){
 }
 
 db.auth.onAuthStateChange((event,session)=>{
+ if(event==='PASSWORD_RECOVERY'){
+  document.getElementById('auth').classList.add('hidden');
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('passwordRecovery').classList.remove('hidden');
+ }
  if(event==='SIGNED_OUT'){
   currentUser=null;isAdmin=false;
   document.getElementById('app').classList.add('hidden');
