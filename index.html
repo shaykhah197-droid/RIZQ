@@ -1659,11 +1659,17 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
     }
 
     const taskIds=[...new Set(data.map(x=>x.task_id))];
-    const {data:tasks,error:taskError}=await db.from('tasks')
-      .select('id,title')
-      .in('id',taskIds);
+    const userIds=[...new Set(data.map(x=>x.user_id).filter(Boolean))];
+    const [{data:tasks,error:taskError},{data:profiles,error:profilesError}]=await Promise.all([
+      db.from('tasks').select('id,title').in('id',taskIds),
+      db.from('profiles').select('id,full_name').in('id',userIds)
+    ]);
 
     if(taskError){box.textContent=taskError.message;return;}
+    if(profilesError){box.textContent='تعذر تحميل أسماء العملاء: '+profilesError.message;return;}
+
+    const customerNames={};
+    (profiles||[]).forEach(p=>{customerNames[p.id]=p.full_name||''});
 
     const cards=await Promise.all(data.map(async s=>{
       const t=tasks.find(x=>x.id===s.task_id);
@@ -1683,7 +1689,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
 
       return `<div class="item">
         <b>${safe(t?.title||'مهمة')}</b>
-        <p class="muted">العميل: ${safe(s.user_id)}</p>
+        <p class="muted">العميل: ${safe(customerNames[s.user_id]||'عميل بدون اسم')}</p>
         <p>${proof}</p>
         <label>ملاحظة المراجعة</label>
         <input id="rizqReviewNote-${s.id}" placeholder="ملاحظة اختيارية">
