@@ -145,6 +145,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <nav>
 <button onclick="showTab('home')">الرئيسية</button>
 <button class="secondary" onclick="showTab('tasks')">المهام</button>
+<button class="secondary" onclick="showTab('packages')">الباقات</button>
 <button class="secondary" onclick="showTab('deposit')">إيداع</button>
 <button class="secondary" onclick="showTab('withdraw')">سحب</button>
 <button class="secondary" onclick="showTab('history')">السجل</button>
@@ -183,6 +184,8 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <div id="rizqDailyTasks">افتح صفحة المهام لعرض تكليفاتك.</div>
 </div>
 </section>
+
+<section id="tab-packages" class="tab hidden"></section>
 
 <section id="tab-deposit" class="tab hidden">
 <div class="card">
@@ -914,10 +917,10 @@ start();
   `;
   document.head.appendChild(style);
 
-  const home=document.getElementById('tab-home');
+  const packagesTab=document.getElementById('tab-packages');
   if(!home)return;
 
-  home.insertAdjacentHTML('beforeend',`
+  packagesTab.insertAdjacentHTML('beforeend',`
     <div class="card" id="rizqPackages">
       <h2>باقات RIZQ</h2>
       <p class="muted">اختر الباقة وأرسل طلب الاشتراك للمراجعة. لا يتم التفعيل إلا بعد التحقق من الدفع الفعلي.</p>
