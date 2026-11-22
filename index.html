@@ -201,15 +201,18 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 
 <section id="tab-support" class="tab hidden">
 <div class="card" id="supportCustomerConversation">
-<div class="row" style="align-items:center"><h2 style="flex:2">محادثة خدمة العملاء</h2><button class="secondary" type="button" onclick="loadSupportConversation()">تحديث</button></div>
-<div class="notice">أهلاً بك. اكتب رسالتك وسيقوم فريق الدعم بالرد عليك هنا.</div>
-<div id="supportCustomerMessages" aria-live="polite">جارٍ تحميل المحادثة...</div>
-<label>رسالتك</label>
-<textarea id="supportCustomerText" placeholder="اكتب رسالتك هنا"></textarea>
-<label>إرفاق صور (يمكن اختيار أكثر من صورة)</label>
-<input id="supportCustomerFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple>
-<p class="muted">JPG أو PNG أو WEBP، بحد أقصى 5 ميجابايت للصورة.</p>
+<div class="row" style="align-items:center"><h2 style="flex:2">خدمة العملاء</h2><button class="secondary" type="button" onclick="loadSupportConversation()">تحديث</button></div>
+<p class="muted" style="margin:4px 0 12px">اكتب رسالتك الجديدة هنا، ويمكنك فتح سجل المحادثة عند الحاجة.</p>
+<label>رسالتك الجديدة</label>
+<textarea id="supportCustomerText" placeholder="اكتب رسالتك هنا" rows="3"></textarea>
+<label>إرفاق صورة (اختياري)</label>
+<input id="supportCustomerFiles" type="file" accept="image/jpeg,image/png,image/webp">
+<p class="muted small">JPG أو PNG أو WEBP، بحد أقصى 5 ميجابايت.</p>
 <button id="supportCustomerSend" type="button" onclick="sendSupportCustomerMessage()">إرسال الرسالة</button>
+<div style="margin-top:14px">
+<button id="supportHistoryToggle" class="secondary" type="button" onclick="toggleSupportHistory()">عرض الرسائل السابقة</button>
+<div id="supportCustomerMessages" class="hidden" aria-live="polite"></div>
+</div>
 </div>
 </section>
 
@@ -2900,6 +2903,14 @@ function rizqAppendSupportImages(row,urls){
   row.appendChild(img);
  });
 }
+function toggleSupportHistory(){
+ const box=document.getElementById('supportCustomerMessages');
+ const button=document.getElementById('supportHistoryToggle');
+ if(!box||!button)return;
+ const opening=box.classList.contains('hidden');
+ box.classList.toggle('hidden',!opening);
+ button.textContent=opening?'إخفاء الرسائل السابقة':'عرض الرسائل السابقة';
+}
 async function loadSupportConversation(){
  const box=document.getElementById('supportCustomerMessages');
  if(!box||!currentUser)return;
@@ -2929,7 +2940,10 @@ async function loadSupportConversation(){
    const urls=await rizqSupportImageUrls(m.image_path);
    rizqAppendSupportImages(row,urls);
   });
-  if(!messages?.length)box.insertAdjacentHTML('beforeend','<p class="muted">لا توجد رسائل بعد. اكتب رسالتك وسنرد عليك هنا.</p>');
+  if(!messages?.length)box.insertAdjacentHTML('beforeend','<p class="muted">لا توجد رسائل سابقة حتى الآن.</p>');
+  box.classList.add('hidden');
+  const historyButton=document.getElementById('supportHistoryToggle');
+  if(historyButton)historyButton.textContent=messages?.length?'عرض الرسائل السابقة ('+messages.length+')':'لا توجد رسائل سابقة';
  }catch(e){box.textContent='تعذر تحميل المحادثة: '+(e.message||e)}
 }
 async function sendSupportCustomerMessage(){
