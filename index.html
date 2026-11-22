@@ -2932,7 +2932,7 @@ async function sendSupportCustomerMessage(){
   if(error)throw error;
   document.getElementById('supportCustomerText').value='';
   input.value='';
-  msg('تم إرسال رسالتك لفريق الدعم');
+  msg('تم استلام رسالتك، وسيتم الرد من أحد ممثلي خدمة العملاء');
   await loadSupportConversation();
  }catch(e){
   if(uploaded.length)await db.storage.from('support-attachments').remove(uploaded);
@@ -2947,6 +2947,12 @@ async function loadSupportAdmin(){
   const {data,error}=await db.from('support_conversations').select('*').order('updated_at',{ascending:false}).limit(100);
   if(error)throw error;
   const ids=(data||[]).map(c=>c.id);
+  const userIds=[...new Set((data||[]).map(c=>c.user_id).filter(Boolean))];
+  let customerNames={};
+  if(userIds.length){
+   const {data:profiles}=await db.from('profiles').select('id,full_name').in('id',userIds);
+   (profiles||[]).forEach(p=>{customerNames[p.id]=p.full_name||''});
+  }
   let latestByConversation={};
   if(ids.length){
    const {data:allMessages,error:messagesError}=await db.from('support_messages').select('conversation_id,sender,created_at').in('conversation_id',ids).order('created_at',{ascending:false});
@@ -2964,7 +2970,7 @@ async function loadSupportAdmin(){
   ordered.forEach(c=>{
    const item=document.createElement('div');item.className='item';
    const heading=document.createElement('b');heading.textContent='محادثة '+c.id.slice(0,8);
-   const meta=document.createElement('div');meta.className='muted';meta.textContent='العميل: '+c.user_id+' — الحالة: '+({open:'مفتوحة',replied:'تم الرد',closed:'مغلقة'}[c.status]||c.status);
+   const meta=document.createElement('div');meta.className='muted';meta.textContent='العميل: '+(customerNames[c.user_id]||'عميل')+' — الحالة: '+({open:'مفتوحة',replied:'تم الرد',closed:'مغلقة'}[c.status]||c.status);
    const open=document.createElement('button');open.className='secondary';open.textContent='فتح المحادثة';open.onclick=()=>openSupportAdminThread(c.id,c.status);
    item.append(heading,meta);
    if(latestByConversation[c.id]?.sender==='customer'){
