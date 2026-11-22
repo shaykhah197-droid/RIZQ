@@ -2827,7 +2827,8 @@ let rizqSupportConversationId=null;
 function rizqSupportIsAdmin(){return !!(isAdmin && currentUser)}
 async function rizqSupportImageUrls(paths){
  const out=[];
- for(const path of (paths||[])){
+ const items=Array.isArray(paths)?paths:(paths?[paths]:[]);
+ for(const path of items){
   const {data,error}=await db.storage.from('support-attachments').createSignedUrl(path,900);
   if(!error&&data?.signedUrl)out.push(data.signedUrl);
  }
@@ -2852,14 +2853,14 @@ async function loadSupportConversation(){
   box.innerHTML='';
   (messages||[]).forEach(async m=>{
    const row=document.createElement('div');
-   row.className='support-message '+(m.sender_id===currentUser.id?'mine':'theirs');
+   row.className='support-message '+(m.sender==='customer'?'mine':'theirs');
    const who=document.createElement('b');
-   who.textContent=m.sender_role==='admin'?'خدمة العملاء':'أنت';
+   who.textContent=m.sender==='admin'?'خدمة العملاء':'أنت';
    const body=document.createElement('div');
-   body.textContent=m.body||'';
+   body.textContent=m.message||'';
    row.append(who,body);
    box.appendChild(row);
-   const urls=await rizqSupportImageUrls(m.attachment_paths);
+   const urls=await rizqSupportImageUrls(m.image_path);
    urls.forEach(url=>{const img=document.createElement('img');img.src=url;img.alt='صورة مرفقة';row.appendChild(img)});
   });
   if(!messages?.length)box.insertAdjacentHTML('beforeend','<p class="muted">لا توجد رسائل بعد. اكتب رسالتك وسنرد عليك هنا.</p>');
@@ -2877,6 +2878,7 @@ async function sendSupportCustomerMessage(){
  try{
   if(!rizqSupportConversationId)await loadSupportConversation();
   if(!rizqSupportConversationId)throw Error('تعذر فتح المحادثة');
+  if(files.length>1)throw Error('يمكن إرفاق صورة واحدة فقط في الرسالة');
   for(const file of files){
    const ext=file.type==='image/jpeg'?'jpg':file.type==='image/png'?'png':'webp';
    const path=currentUser.id+'/'+crypto.randomUUID()+'.'+ext;
@@ -2884,7 +2886,7 @@ async function sendSupportCustomerMessage(){
    if(error)throw error;
    uploaded.push(path);
   }
-  const {error}=await db.from('support_messages').insert({conversation_id:rizqSupportConversationId,sender_id:currentUser.id,sender_role:'customer',body:text,attachment_paths:uploaded});
+  const {error}=await db.from('support_messages').insert({conversation_id:rizqSupportConversationId,sender:'customer',message:text,image_path:uploaded[0]||null});
   if(error)throw error;
   document.getElementById('supportCustomerText').value='';
   input.value='';
@@ -2923,11 +2925,11 @@ async function openSupportAdminThread(id,status){
   thread.innerHTML='<h3>الرسائل</h3><div id="supportAdminMessages"></div><label>الرد على العميل</label><textarea id="supportAdminReply" placeholder="اكتب ردك"></textarea><label>إرفاق صور (اختياري)</label><input id="supportAdminFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple><div class="row"><button type="button" id="supportAdminSend">إرسال الرد</button><button type="button" class="secondary" id="supportAdminClose">'+(status==='closed'?'إعادة فتح المحادثة':'إغلاق المحادثة')+'</button></div>';
   const messageBox=document.getElementById('supportAdminMessages');
   (messages||[]).forEach(async m=>{
-   const row=document.createElement('div');row.className='support-message '+(m.sender_role==='admin'?'mine':'theirs');
-   const who=document.createElement('b');who.textContent=m.sender_role==='admin'?'الإدارة':'العميل';
-   const body=document.createElement('div');body.textContent=m.body||'';
+   const row=document.createElement('div');row.className='support-message '+(m.sender==='admin'?'mine':'theirs');
+   const who=document.createElement('b');who.textContent=m.sender==='admin'?'الإدارة':'العميل';
+   const body=document.createElement('div');body.textContent=m.message||'';
    row.append(who,body);messageBox.appendChild(row);
-   const urls=await rizqSupportImageUrls(m.attachment_paths);
+   const urls=await rizqSupportImageUrls(m.image_path);
    urls.forEach(url=>{const img=document.createElement('img');img.src=url;img.alt='صورة مرفقة';row.appendChild(img)});
   });
   document.getElementById('supportAdminSend').onclick=()=>sendSupportAdminReply(id);
@@ -2947,13 +2949,14 @@ async function sendSupportAdminReply(id){
  if(files.some(f=>!['image/jpeg','image/png','image/webp'].includes(f.type)||f.size>5*1024*1024))return msg('صيغة أو حجم إحدى الصور غير مسموح',true);
  const uploaded=[];
  try{
+  if(files.length>1)throw Error('يمكن إرفاق صورة واحدة فقط في الرد');
   for(const file of files){
    const ext=file.type==='image/jpeg'?'jpg':file.type==='image/png'?'png':'webp';
    const path=currentUser.id+'/'+crypto.randomUUID()+'.'+ext;
    const {error}=await db.storage.from('support-attachments').upload(path,file,{contentType:file.type,upsert:false});
    if(error)throw error;uploaded.push(path);
   }
-  const {error}=await db.from('support_messages').insert({conversation_id:id,sender_id:currentUser.id,sender_role:'admin',body,attachment_paths:uploaded});
+  const {error}=await db.from('support_messages').insert({conversation_id:id,sender:'admin',message:body,image_path:uploaded[0]||null});
   if(error)throw error;
   msg('تم إرسال الرد للعميل');
   await openSupportAdminThread(id,'replied');
