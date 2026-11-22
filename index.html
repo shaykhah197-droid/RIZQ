@@ -1839,6 +1839,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
           <button data-page="withdrawals"><span>💸</span>طلبات السحب</button>
           <button data-page="methods"><span>🏦</span>وسائل الدفع</button>
           <button data-page="evidence"><span>📨</span>إثباتات المعاملات</button>
+          <button data-page="managers"><span>👥</span>إدارة المديرين</button>
         </div>
       </div>
     </div>
@@ -1869,6 +1870,54 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   let placeholder=null;
 
   function openPage(key){
+    if(key==='managers'){
+      title.textContent='إدارة المديرين';
+      home.classList.add('hidden');
+      inner.classList.remove('hidden');
+      content.innerHTML=`
+        <div class="card" dir="rtl">
+          <h3>إضافة مدير جديد</h3>
+          <p class="muted">أنشئ حسابًا مستقلًا للمدير. لن يتم تغيير صلاحيات أي عميل موجود.</p>
+          <label for="rizqNewAdminEmail">البريد الإلكتروني</label>
+          <input id="rizqNewAdminEmail" type="email" autocomplete="off" placeholder="admin@example.com">
+          <label for="rizqNewAdminPassword">كلمة المرور</label>
+          <input id="rizqNewAdminPassword" type="password" autocomplete="new-password" minlength="8" placeholder="8 أحرف على الأقل">
+          <button type="button" id="rizqCreateAdminBtn">إنشاء حساب المدير</button>
+          <div id="rizqAdminCreateResult" class="notice hidden" style="margin-top:12px;white-space:pre-wrap"></div>
+        </div>`;
+      document.getElementById('rizqCreateAdminBtn').onclick=async()=>{
+        const email=document.getElementById('rizqNewAdminEmail').value.trim().toLowerCase();
+        const password=document.getElementById('rizqNewAdminPassword').value;
+        const result=document.getElementById('rizqAdminCreateResult');
+        const button=document.getElementById('rizqCreateAdminBtn');
+        if(!email||!password){result.textContent='اكتب البريد الإلكتروني وكلمة المرور.';result.className='notice error';return}
+        if(password.length<8){result.textContent='كلمة المرور لازم تكون 8 أحرف على الأقل.';result.className='notice error';return}
+        button.disabled=true;button.textContent='جارٍ إنشاء الحساب...';
+        try{
+          const {data:sessionData,error:sessionError}=await db.auth.getSession();
+          if(sessionError)throw sessionError;
+          const token=sessionData.session?.access_token;
+          if(!token)throw new Error('انتهت الجلسة. سجّل الدخول مرة أخرى.');
+          const response=await fetch(SUPABASE_URL+'/functions/v1/admin-create-user',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+token},
+            body:JSON.stringify({email,password})
+          });
+          const payload=await response.json().catch(()=>({}));
+          if(!response.ok)throw new Error(payload.error||payload.message||'تعذر إنشاء حساب المدير.');
+          result.textContent='تم إنشاء حساب المدير بنجاح: '+(payload.user?.email||email);
+          result.className='notice';
+          document.getElementById('rizqNewAdminEmail').value='';
+          document.getElementById('rizqNewAdminPassword').value='';
+        }catch(error){
+          result.textContent=error.message||'حدث خطأ أثناء إنشاء الحساب.';
+          result.className='notice error';
+        }finally{
+          button.disabled=false;button.textContent='إنشاء حساب المدير';
+        }
+      };
+      return;
+    }
     if(key==='packages'){
       title.textContent='إدارة الباقات';
       content.innerHTML='<div class="card">جارٍ تحميل الباقات...</div>';
