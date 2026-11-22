@@ -2846,7 +2846,17 @@ async function loadSupportAdminBadge(){
     button.style.color=count?'#805b00':'';
    }
   });
- }catch(e){console.error('Support badge:',e)}
+ }catch(e){
+  console.error('Support badge:',e);
+  document.querySelectorAll('.rizq-tile').forEach(button=>{
+   if(button.textContent.includes('خدمة العملاء')){
+    button.textContent='💬 خدمة العملاء — تعذر تحميل التنبيه';
+    button.title='تعذر تحميل إشعارات خدمة العملاء: '+(e.message||e);
+    button.style.background='#fee2e2';
+    button.style.color='#991b1b';
+   }
+  });
+ }
 }
 async function rizqSupportImageUrls(paths){
  const out=[];
