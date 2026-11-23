@@ -118,6 +118,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <button id="authBtn" onclick="authenticate()">دخول</button>
 <button class="secondary" onclick="toggleAuth()" id="toggleBtn">إنشاء حساب جديد</button>
 <button type="button" class="secondary" onclick="sendPasswordReset()">نسيت كلمة المرور؟</button>
+<button type="button" class="secondary" onclick="resendConfirmation()">إعادة إرسال رسالة التأكيد</button>
 <p class="muted">التسجيل والدخول بالبريد الإلكتروني.</p>
 </section>
 
@@ -367,6 +368,19 @@ async function sendPasswordReset(){
   if(error)throw error;
   msg('لو البريد مسجل عندنا، هيوصلك رابط لاستعادة كلمة المرور. راجع الوارد والرسائل غير المرغوب فيها.');
  }catch(e){msg('تعذر إرسال رابط الاستعادة: '+e.message,true)}
+ finally{if(button)button.disabled=false}
+}
+
+async function resendConfirmation(){
+ const email=document.getElementById('email').value.trim();
+ if(!email)return msg('اكتب بريدك الإلكتروني أولاً',true);
+ const button=document.querySelector('#auth button[onclick="resendConfirmation()"]');
+ if(button)button.disabled=true;
+ try{
+  const {error}=await db.auth.resend({type:'signup',email});
+  if(error)throw error;
+  msg('تم طلب إعادة إرسال رسالة التأكيد. راجع البريد الوارد والرسائل غير المرغوب فيها.');
+ }catch(e){msg('تعذر إعادة إرسال رسالة التأكيد: '+e.message,true)}
  finally{if(button)button.disabled=false}
 }
 
