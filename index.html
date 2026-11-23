@@ -2866,6 +2866,9 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   const supportPanel=makePanel('rizqAdminSupport','خدمة العملاء');
   const managersPanel=makePanel('rizqAdminManagers','إدارة المديرين');
 
+  // إخفاء أقسام الإدارة القديمة من الصفحة الرئيسية؛ تظهر فقط عند فتح زر القسم الخاص بها.
+  [...admin.children].filter(el=>el!==workspace).forEach(el=>{el.style.display='none'});
+
   async function loadManagers(){
    managersPanel.innerHTML=`
     <h2>إدارة المديرين</h2>
