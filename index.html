@@ -110,6 +110,79 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
  .support-chat-messages{height:42vh;min-height:180px;padding:9px}
  #supportCustomerConversation .support-message,#supportAdminThread .support-message{max-width:90%}
 }
+
+/* تحسين شكل محادثات الدعم */
+#supportCustomerMessages,#supportAdminMessages{
+  background:#eef4f1!important;
+  padding:14px!important;
+  gap:12px!important;
+  scroll-behavior:auto;
+  scrollbar-width:thin;
+}
+#supportCustomerConversation .support-message,#supportAdminThread .support-message{
+  width:fit-content!important;
+  max-width:min(84%,420px)!important;
+  padding:11px 14px!important;
+  border-radius:17px!important;
+  font-size:14px!important;
+  line-height:1.65!important;
+  color:#20332a;
+  box-shadow:0 2px 7px rgba(20,55,38,.07)!important;
+}
+#supportCustomerConversation .support-message.mine,#supportAdminThread .support-message.mine{
+  background:#d9f3e4!important;
+  border:1px solid #c7e9d5!important;
+  border-bottom-right-radius:5px!important;
+}
+#supportCustomerConversation .support-message.theirs,#supportAdminThread .support-message.theirs{
+  background:#fff!important;
+  border:1px solid #e3ebe6!important;
+  border-bottom-left-radius:5px!important;
+}
+#supportCustomerConversation .support-message b,#supportAdminThread .support-message b{
+  display:block;
+  color:#397257;
+  font-size:11px;
+  font-weight:700;
+  margin-bottom:4px;
+}
+#supportCustomerConversation .support-message div:not(.muted),#supportAdminThread .support-message div:not(.muted){
+  font-size:14px;
+  overflow-wrap:anywhere;
+}
+#supportCustomerMessages .support-message img,#supportAdminMessages .support-message img{
+  width:180px!important;
+  height:130px!important;
+  max-width:100%!important;
+  max-height:130px!important;
+  object-fit:contain!important;
+  background:#f7faf8;
+  border:1px solid #e5ece8;
+  border-radius:12px!important;
+  margin-top:9px!important;
+}
+#supportCustomerConversation .support-chat-head,#supportAdminThread .support-chat-head{
+  background:#f5faf7;
+  border-radius:14px;
+}
+#supportCustomerConversation .support-chat-compose,#supportAdminThread .support-chat-compose{
+  border:1px solid #dce8e1;
+  border-radius:15px;
+  box-shadow:0 3px 12px rgba(20,55,38,.04);
+}
+#supportCustomerText,#supportAdminReply{
+  font-size:14px!important;
+  line-height:1.6;
+}
+#supportCustomerSend,#supportAdminSend{
+  border-radius:11px;
+  min-width:105px;
+}
+@media(max-width:600px){
+  #supportCustomerMessages,#supportAdminMessages{padding:10px!important;gap:10px!important}
+  #supportCustomerConversation .support-message,#supportAdminThread .support-message{max-width:88%!important;padding:10px 12px!important}
+}
+
 </style>
 </head>
 <body>
@@ -3271,7 +3344,7 @@ function rizqAppendSupportImages(row,urls,hasAttachment=false){
  (urls||[]).forEach((url,index)=>{
   const img=document.createElement('img');
   img.src=url;img.alt='صورة مرفقة';img.loading='lazy';img.decoding='async';
-  img.style.cssText='display:block!important;width:auto!important;height:auto!important;max-width:150px!important;max-height:120px!important;object-fit:contain!important;border-radius:9px;margin-top:8px;flex:none!important';
+  img.style.cssText='display:block!important;width:180px!important;height:130px!important;max-width:100%!important;max-height:130px!important;object-fit:contain!important;background:#f7faf8;border:1px solid #e5ece8;border-radius:12px;margin-top:9px;flex:none!important';
   const view=document.createElement('a');
   view.href=url;view.target='_blank';view.rel='noopener noreferrer';
   view.className='proof-link';view.textContent='عرض الصورة '+((urls.length>1)?(index+1):'');
