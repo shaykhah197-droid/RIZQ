@@ -60,7 +60,7 @@ begin
   return query
   select
     p.id,
-    ('RZQ-' || upper(substr(replace(p.id::text, '-', ''), 1, 8)))::text as customer_code,
+    ('RZQ-' || upper(substr(replace(p.id::text, '-', ''), 1, 12)))::text as customer_code,
     coalesce(p.full_name, '')::text,
     coalesce(u.email, '')::text,
     coalesce(p.referral_code, '')::text,
@@ -75,7 +75,7 @@ begin
       or lower(coalesce(u.email, '')) like '%' || q || '%'
       or lower(coalesce(p.referral_code, '')) like '%' || q || '%'
       or lower(p.id::text) = q
-      or lower('RZQ-' || substr(replace(p.id::text, '-', ''), 1, 8)) like '%' || q || '%'
+      or lower('RZQ-' || substr(replace(p.id::text, '-', ''), 1, 12)) like '%' || q || '%'
     )
   order by p.created_at desc
   limit 50;
@@ -112,7 +112,7 @@ begin
     'profile', (
       select jsonb_build_object(
         'id', p.id,
-        'customer_code', 'RZQ-' || upper(substr(replace(p.id::text, '-', ''), 1, 8)),
+        'customer_code', 'RZQ-' || upper(substr(replace(p.id::text, '-', ''), 1, 12)),
         'full_name', p.full_name,
         'email', u.email,
         'referral_code', p.referral_code,
