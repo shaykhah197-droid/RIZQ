@@ -3268,13 +3268,22 @@ async function rizqSupportImageUrls(paths){
  return out;
 }
 function rizqAppendSupportImages(row,urls){
- (urls||[]).forEach(url=>{
+ (urls||[]).forEach((url,index)=>{
   const img=document.createElement('img');
   img.src=url;img.alt='صورة مرفقة';img.loading='lazy';img.decoding='async';
-  img.style.cssText='display:block!important;width:auto!important;height:auto!important;max-width:140px!important;max-height:110px!important;object-fit:contain!important;border-radius:9px;margin-top:8px;flex:none!important';
-  img.onerror=()=>{img.remove();const note=document.createElement('div');note.className='muted';note.textContent='تعذر تحميل الصورة المرفقة';row.appendChild(note)};
-  row.appendChild(img);
+  img.style.cssText='display:block!important;width:auto!important;height:auto!important;max-width:150px!important;max-height:120px!important;object-fit:contain!important;border-radius:9px;margin-top:8px;flex:none!important';
+  const view=document.createElement('a');
+  view.href=url;view.target='_blank';view.rel='noopener noreferrer';
+  view.className='proof-link';view.textContent='عرض الصورة '+((urls.length>1)?(index+1):'');
+  view.style.cssText='display:inline-block;margin:7px 0 0;padding:6px 10px;font-size:12px';
+  img.onerror=()=>{img.remove();};
+  row.append(img,view);
  });
+ if(!(urls||[]).length){
+  const note=document.createElement('div');
+  note.className='muted';note.textContent='الصورة مرفقة لكن تعذر تحميلها. راجع صلاحية قراءة مرفقات الدعم في Supabase.';
+  row.appendChild(note);
+ }
 }
 function toggleSupportHistory(){
  const box=document.getElementById('supportCustomerMessages');
