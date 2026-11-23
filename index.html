@@ -3293,6 +3293,84 @@ async function sendSupportCustomerMessage(){
   msg('تعذر إرسال الرسالة: '+(e.message||e),true);
  }finally{button.disabled=false}
 }
+
+async function searchSupportCustomerByCode(){
+ const input=document.getElementById('supportCustomerCodeSearch');
+ const result=document.getElementById('supportCustomerLookupResult');
+ if(!input||!result)return;
+ const code=input.value.trim().toUpperCase();
+ if(!code){result.textContent='اكتب كود العميل أولاً';return}
+ result.textContent='جارٍ البحث عن العميل...';
+ try{
+  const {data:customer,error}=await db.from('profiles')
+   .select('id,full_name,customer_code,referral_code,created_at')
+   .eq('customer_code',code).maybeSingle();
+  if(error)throw error;
+  if(!customer){result.textContent='لم يتم العثور على عميل بهذا الكود';return}
+  const {data:conversations,error:conversationError}=await db.from('support_conversations')
+   .select('id,status,created_at,updated_at')
+   .eq('user_id',customer.id).order('updated_at',{ascending:false});
+  if(conversationError)throw conversationError;
+  result.innerHTML='';
+  const profileCard=document.createElement('div');
+  profileCard.className='notice';
+  const profileName=document.createElement('b');
+  profileName.textContent='اسم العميل: '+(customer.full_name||'بدون اسم');
+  const profileCode=document.createElement('div');
+  profileCode.textContent='كود العميل: '+customer.customer_code;
+  const profileReferral=document.createElement('div');
+  profileReferral.textContent='كود الإحالة: '+(customer.referral_code||'غير موجود');
+  const profileDate=document.createElement('div');
+  profileDate.textContent='تاريخ إنشاء الحساب: '+(customer.created_at?new Date(customer.created_at).toLocaleString('ar-EG'):'غير متاح');
+  profileCard.append(profileName,profileCode,profileReferral,profileDate);
+  result.appendChild(profileCard);
+  const heading=document.createElement('h3');
+  heading.textContent='شكاوى ومحادثات العميل ('+(conversations||[]).length+')';
+  result.appendChild(heading);
+  if(!conversations?.length){
+   const empty=document.createElement('p');empty.className='muted';empty.textContent='لا توجد شكاوى أو محادثات مسجلة لهذا العميل.';result.appendChild(empty);return;
+  }
+  for(const conversation of conversations){
+   const card=document.createElement('div');
+   card.className='item';
+   card.style.cssText='border:1px solid var(--border);border-radius:10px;padding:12px;margin:8px 0';
+   const title=document.createElement('b');
+   title.textContent='شكوى / محادثة — '+(conversation.created_at?new Date(conversation.created_at).toLocaleString('ar-EG'):'تاريخ غير متاح');
+   const statusLabel=document.createElement('div');
+   statusLabel.className='muted';
+   statusLabel.style.margin='7px 0';
+   const labels={open:'جديدة',in_review:'قيد المراجعة',replied:'تم الرد',closed:'مغلقة'};
+   statusLabel.textContent='الحالة الحالية: '+(labels[conversation.status]||conversation.status||'غير محددة');
+   const statusSelect=document.createElement('select');
+   [['open','جديدة'],['in_review','قيد المراجعة'],['replied','تم الرد'],['closed','مغلقة']].forEach(([value,label])=>{
+    const option=document.createElement('option');option.value=value;option.textContent=label;
+    if((conversation.status||'open')===value)option.selected=true;
+    statusSelect.appendChild(option);
+   });
+   const updateStatus=document.createElement('button');
+   updateStatus.type='button';updateStatus.className='secondary';updateStatus.textContent='حفظ حالة الشكوى';
+   updateStatus.onclick=async()=>{
+    updateStatus.disabled=true;
+    const {error:updateError}=await db.from('support_conversations')
+     .update({status:statusSelect.value,updated_at:new Date().toISOString()})
+     .eq('id',conversation.id);
+    updateStatus.disabled=false;
+    if(updateError){msg('تعذر تحديث حالة الشكوى: '+updateError.message,true);return}
+    msg('تم تحديث حالة الشكوى');
+    conversation.status=statusSelect.value;
+    statusLabel.textContent='الحالة الحالية: '+(labels[conversation.status]||conversation.status);
+   };
+   const openButton=document.createElement('button');
+   openButton.type='button';openButton.textContent='فتح الرسائل والرد على العميل';
+   openButton.onclick=()=>openSupportAdminThread(conversation.id,conversation.status);
+   card.append(title,statusLabel,statusSelect,updateStatus,openButton);
+   result.appendChild(card);
+  }
+ }catch(e){
+  result.textContent='تعذر البحث عن العميل: '+(e.message||e);
+ }
+}
+
 async function loadSupportAdmin(){
  const box=document.getElementById('rizqAdminSupportContent');
  if(!rizqSupportIsAdmin()){box.textContent='غير مصرح لك';return}
@@ -3320,7 +3398,9 @@ async function loadSupportAdmin(){
    return new Date(tb)-new Date(ta);
   });
   const unread=ordered.filter(c=>latestByConversation[c.id]?.sender==='customer').length;
-  box.innerHTML='<div class="notice" style="font-size:16px;font-weight:bold">'+(unread?'لديك '+unread+' محادثة بها رسالة أخيرة من العميل':'لا توجد رسائل جديدة من العملاء')+'</div><h3>صندوق رسائل العملاء</h3><div id="supportAdminList"></div><div id="supportAdminThread" style="margin-top:14px"><p class="muted">اختر اسم العميل لفتح المحادثة.</p></div>';
+  box.innerHTML='<div class="card" style="margin-bottom:12px"><h3>البحث عن عميل بكود العميل</h3><input id="supportCustomerCodeSearch" placeholder="مثال: RZQ-XXXXXXXXXX" autocomplete="off"><button type="button" id="supportCustomerCodeSearchBtn">بحث عن العميل</button><div id="supportCustomerLookupResult" style="margin-top:12px"></div></div><div class="notice" style="font-size:16px;font-weight:bold">'+(unread?'لديك '+unread+' محادثة بها رسالة أخيرة من العميل':'لا توجد رسائل جديدة من العملاء')+'</div><h3>صندوق رسائل العملاء</h3><div id="supportAdminList"></div><div id="supportAdminThread" style="margin-top:14px"><p class="muted">اختر اسم العميل لفتح المحادثة.</p></div>';
+  document.getElementById('supportCustomerCodeSearchBtn').onclick=searchSupportCustomerByCode;
+  document.getElementById('supportCustomerCodeSearch').addEventListener('keydown',e=>{if(e.key==='Enter')searchSupportCustomerByCode()});
   const list=document.getElementById('supportAdminList');
   ordered.forEach(c=>{
    const last=latestByConversation[c.id];
