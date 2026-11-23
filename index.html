@@ -138,6 +138,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <div style="flex:2">
 <h2 style="margin-bottom:5px">أهلاً <span id="userName">بك</span></h2>
 <div class="muted" id="userEmail"></div>
+<div class="muted small" id="customerCode"></div>
 <div id="roleLabel" class="hidden"><span class="tag">مدير المنصة</span></div>
 </div>
 <button class="secondary" onclick="logout()">تسجيل الخروج</button>
@@ -504,6 +505,7 @@ async function loadProfile(){
  if(error)throw error;
  profile=data;
  document.getElementById('userName').textContent=profile?.full_name||currentUser.email;
+ document.getElementById('customerCode').textContent='رقم العميل: RZQ-'+currentUser.id.replace(/-/g,'').slice(0,12).toUpperCase();
  document.getElementById('myReferral').value=profile?.referral_code||'';
 }
 async function loadWallet(){
@@ -3050,34 +3052,79 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   async function loadCustomers(){
    const box=document.getElementById('rizqAdminCustomersContent');
    if(!allowed())return notice(box,'غير مصرح لك');
-   box.textContent='جارٍ تحميل العملاء...';
+   box.innerHTML=`<p class="muted">ابحث برقم العميل أو البريد الإلكتروني أو الاسم أو كود الإحالة.</p>
+    <div class="row" style="align-items:center"><input id="rizqCustomerSearchInput" type="search" placeholder="رقم العميل RZQ-... أو البريد الإلكتروني أو الاسم"><button type="button" id="rizqCustomerSearchButton">بحث</button></div>
+    <div id="rizqCustomerSearchResults" class="muted">اكتب بيانات العميل ثم اضغط بحث.</div><div id="rizqCustomerProfileDetails"></div>`;
+   const input=document.getElementById('rizqCustomerSearchInput');
+   const button=document.getElementById('rizqCustomerSearchButton');
+   const results=document.getElementById('rizqCustomerSearchResults');
+   button.onclick=search;
+   input.addEventListener('keydown',e=>{if(e.key==='Enter')search()});
+   async function search(){
+    const query=input.value.trim();
+    if(query.length<2){results.textContent='اكتب حرفين على الأقل.';return}
+    button.disabled=true;results.textContent='جارٍ البحث...';
+    document.getElementById('rizqCustomerProfileDetails').innerHTML='';
+    try{
+     const {data,error}=await db.rpc('admin_search_customer',{p_query:query});
+     if(error)throw error;
+     results.innerHTML='';
+     if(!data?.length){results.textContent='لم يتم العثور على عميل مطابق.';return}
+     data.forEach(user=>{
+      const row=document.createElement('div');row.className='rizq-row';
+      row.style.cssText='display:flex;flex-wrap:wrap;gap:8px;align-items:center;border:1px solid #dce8df;border-radius:12px;padding:12px;margin:9px 0';
+      const info=document.createElement('div');info.style.flex='1 1 220px';
+      const name=document.createElement('b');name.textContent=user.full_name||'عميل بدون اسم';
+      const code=document.createElement('div');code.className='muted';code.textContent='رقم العميل: '+user.customer_code;
+      const email=document.createElement('div');email.className='muted';email.textContent=user.email||'';
+      const balance=document.createElement('div');balance.className='muted';balance.textContent='الرصيد: '+Number(user.balance||0).toLocaleString('ar-EG')+' جنيه';
+      info.append(name,code,email,balance);
+      const open=document.createElement('button');open.type='button';open.textContent='فتح ملف العميل';open.onclick=()=>openCustomerProfile(user.id);
+      row.append(info,open);results.appendChild(row);
+     });
+    }catch(e){results.textContent='تعذر البحث: '+(e.message||e)}
+    finally{button.disabled=false}
+   }
+  }
 
-   // القائمة تأتي من دالة آمنة على الخادم وتستبعد الحسابات غير المؤكدة.
-   const {data,error}=await db.rpc('admin_list_confirmed_customers');
-
-   if(error)return notice(box,'تعذر التحميل: '+error.message);
-
-   box.innerHTML='';
-   (data||[]).forEach(user=>{
-    const row=document.createElement('div');
-    row.className='rizq-row';
-
-    const name=document.createElement('b');
-    name.textContent=user.full_name||'عميل بدون اسم';
-
-    const id=document.createElement('small');
-    id.textContent='معرف العميل: '+user.id;
-
-    const balance=document.createElement('p');
-    balance.textContent='رصيد المحفظة: '+Number(user.balance||0).toLocaleString('ar-EG')+' جنيه';
-
-    const code=document.createElement('small');
-    code.textContent='كود الإحالة: '+(user.referral_code||'غير موجود');
-
-    row.append(name,id,balance,code);
-    box.appendChild(row);
-   });
-   if(!data?.length)notice(box,'لا يوجد عملاء مؤكَّدون');
+  async function openCustomerProfile(userId){
+   const box=document.getElementById('rizqCustomerProfileDetails');
+   if(!allowed())return notice(box,'غير مصرح لك');
+   box.innerHTML='<div class="notice">جارٍ تحميل ملف العميل...</div>';
+   try{
+    const {data,error}=await db.rpc('admin_get_customer_details',{p_user_id:userId});
+    if(error)throw error;
+    const p=data?.profile;if(!p)throw Error('ملف العميل غير متاح');
+    box.innerHTML='';
+    const head=document.createElement('div');head.style.cssText='border:2px solid #dce8df;border-radius:13px;padding:14px;margin-top:16px';
+    const h=document.createElement('h3');h.textContent='ملف العميل';head.appendChild(h);
+    [['رقم العميل',p.customer_code],['الاسم',p.full_name||'غير مسجل'],['البريد الإلكتروني',p.email||''],['كود الإحالة',p.referral_code||'غير موجود'],['تاريخ التسجيل',p.created_at?new Date(p.created_at).toLocaleString('ar-EG'):'غير متاح']].forEach(([k,v])=>{const d=document.createElement('div');d.textContent=k+': '+v;d.style.margin='6px 0';head.appendChild(d)});
+    box.appendChild(head);
+    function section(label,items,format,empty){
+     const card=document.createElement('div');card.style.cssText='border:1px solid #e2e9e4;border-radius:12px;padding:12px;margin-top:10px';
+     const title=document.createElement('h3');title.textContent=label;card.appendChild(title);
+     if(!items?.length){const d=document.createElement('p');d.className='muted';d.textContent=empty||'لا توجد بيانات مسجلة';card.appendChild(d)}
+     else items.forEach(item=>{const d=document.createElement('div');d.style.cssText='padding:9px 0;border-bottom:1px solid #edf1ee;white-space:pre-wrap;overflow-wrap:anywhere';d.textContent=format(item);card.appendChild(d)});
+     box.appendChild(card);
+    }
+    section('المحفظة',[data.wallet||{}],w=>'الرصيد الحالي: '+Number(w.balance||0).toLocaleString('ar-EG')+' جنيه');
+    section('الباقات',data.packages||[],x=>(x.name||'باقة')+' — '+Number(x.price||0).toLocaleString('ar-EG')+' جنيه');
+    section('طلبات الإيداع',data.deposits||[],x=>Number(x.amount||0).toLocaleString('ar-EG')+' جنيه — '+x.status+' — '+(x.transaction_reference||'بدون رقم مرجعي')+' — '+(x.created_at?new Date(x.created_at).toLocaleString('ar-EG'):'')); 
+    section('طلبات السحب',data.withdrawals||[],x=>Number(x.amount||0).toLocaleString('ar-EG')+' جنيه — '+x.status+' — '+(x.method||'')+' — '+(x.transaction_reference||'')+' — '+(x.created_at?new Date(x.created_at).toLocaleString('ar-EG'):'')); 
+    section('سجل معاملات المحفظة',data.transactions||[],x=>(x.transaction_type||'معاملة')+' — '+Number(x.amount||0).toLocaleString('ar-EG')+' جنيه — '+(x.description||'')+' — '+(x.created_at?new Date(x.created_at).toLocaleString('ar-EG'):''));
+    section('سجل تغييرات الإدارة',data.audit_logs||[],x=>x.entity+' — '+x.action+' — '+(x.created_at?new Date(x.created_at).toLocaleString('ar-EG'):'')+'\nقبل: '+JSON.stringify(x.before_data||{})+'\nبعد: '+JSON.stringify(x.after_data||{}),'لا توجد تغييرات إدارية مسجلة لهذا العميل'); 
+    section('محادثات الدعم',data.support_conversations||[],x=>'رقم المحادثة: '+x.id+' — الحالة: '+x.status+' — آخر تحديث: '+(x.updated_at?new Date(x.updated_at).toLocaleString('ar-EG'):''));
+    section('رسائل العميل والدعم',data.support_messages||[],x=>(x.sender_role==='admin'?'فريق RIZQ':'العميل')+' — '+(x.created_at?new Date(x.created_at).toLocaleString('ar-EG'):'')+'\\n'+(x.body||'')+((x.attachment_paths||[]).length?'\\n[يوجد مرفق صورة]':''),'لا توجد رسائل دعم');
+    const notes=document.createElement('div');notes.style.cssText='border:1px solid #e2e9e4;border-radius:12px;padding:12px;margin-top:10px';
+    const nt=document.createElement('h3');nt.textContent='ملاحظات داخلية للإدارة فقط';
+    const ni=document.createElement('textarea');ni.rows=3;ni.maxLength=2000;ni.placeholder='اكتب ملحوظة عن المشكلة أو ما تم عمله...';
+    const nb=document.createElement('button');nb.type='button';nb.textContent='حفظ الملاحظة';
+    const nl=document.createElement('div');
+    (data.notes||[]).forEach(n=>{const d=document.createElement('div');d.style.cssText='padding:9px 0;border-bottom:1px solid #edf1ee;white-space:pre-wrap';d.textContent=(n.created_at?new Date(n.created_at).toLocaleString('ar-EG')+' — ':'')+n.note;nl.appendChild(d)});
+    if(!data.notes?.length)nl.textContent='لا توجد ملاحظات سابقة.';
+    nb.onclick=async()=>{const note=ni.value.trim();if(!note)return msg('اكتب الملاحظة أولاً',true);nb.disabled=true;try{const {error:e}=await db.rpc('admin_add_customer_note',{p_user_id:userId,p_note:note});if(e)throw e;msg('تم حفظ الملاحظة الداخلية');await openCustomerProfile(userId)}catch(e){msg('تعذر حفظ الملاحظة: '+(e.message||e),true)}finally{nb.disabled=false}};
+    notes.append(nt,ni,nb,nl);box.appendChild(notes);
+   }catch(e){box.textContent='تعذر فتح ملف العميل: '+(e.message||e)}
   }
 
   async function loadReferrals(){
