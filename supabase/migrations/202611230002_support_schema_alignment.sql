@@ -16,7 +16,6 @@ do $$
 declare
   image_column text;
 begin
-  -- Copy the legacy sender label into the role used by the current app.
   if exists (
     select 1 from information_schema.columns
     where table_schema='public' and table_name='support_messages' and column_name='sender'
@@ -29,10 +28,9 @@ begin
       end
       where sender_role is null
     $q$;
+    execute 'alter table public.support_messages alter column sender drop not null';
   end if;
 
-  -- Copy old message text into body. Keep a readable placeholder only if an
-  -- old row has neither text nor an attachment.
   if exists (
     select 1 from information_schema.columns
     where table_schema='public' and table_name='support_messages' and column_name='message'
@@ -42,9 +40,9 @@ begin
       set body = coalesce(nullif(body,''), nullif(message,''))
       where body is null or body=''
     $q$;
+    execute 'alter table public.support_messages alter column message drop not null';
   end if;
 
-  -- Detect either a quoted "Image" column or a lowercase image column.
   select column_name into image_column
   from information_schema.columns
   where table_schema='public' and table_name='support_messages'
@@ -59,11 +57,10 @@ begin
          and coalesce(cardinality(attachment_paths),0)=0',
       image_column, image_column
     );
+    execute format('alter table public.support_messages alter column %I drop not null', image_column);
   end if;
 end $$;
 
--- Recover customer IDs from their conversation. Historical admin sender IDs
--- cannot be reconstructed from the old six-column table, so remain nullable.
 update public.support_messages m
 set sender_id = c.user_id
 from public.support_conversations c
