@@ -74,6 +74,17 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 #supportAdminThread h3{margin:12px 0}
 #supportAdminBack{margin-bottom:8px}
 #supportAdminList .item{cursor:pointer}
+
+/* قائمة دعم مضغوطة للمدير */
+#supportAdminList .support-admin-item{margin:0!important;padding:0!important;border:0!important;border-bottom:1px solid var(--border)!important;border-radius:0!important;background:transparent!important}
+#supportAdminList .support-admin-open{width:100%;display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;align-items:center;text-align:right;padding:9px 7px!important;margin:0!important;border-radius:8px!important;background:transparent!important;color:var(--ink)!important}
+#supportAdminList .support-admin-name{font-size:14px;line-height:1.35}
+#supportAdminList .support-admin-meta{font-size:11px;color:var(--muted);font-weight:normal}
+#supportAdminList .support-admin-preview{grid-column:1/-1;margin:1px 0 0!important;font-size:12px}
+#supportAdminList .support-admin-foot{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+#supportAdminList .support-admin-status{float:none!important;font-size:10px;padding:3px 7px}
+#supportAdminList .support-admin-unread{grid-column:1/-1;color:#b45309;font-size:11px;font-weight:bold}
+
  
 .support-chat-head{display:flex;align-items:center;gap:10px;padding:12px;margin-top:14px;background:#f1f7f4;border:1px solid #dce9e1;border-radius:14px}
 .support-online{width:10px;height:10px;border-radius:50%;background:#22a06b;flex:none;box-shadow:0 0 0 4px #d8f3e4}
@@ -3419,7 +3430,7 @@ async function loadSupportAdmin(){
   const userIds=[...new Set((data||[]).map(c=>c.user_id).filter(Boolean))];
   let customerNames={},customerCodes={};
   if(userIds.length){
-   const {data:profiles,error:profilesError}=await db.from('profiles').select('id,full_name').in('id',userIds);
+   const {data:profiles,error:profilesError}=await db.from('profiles').select('id,full_name,customer_code').in('id',userIds);
    if(profilesError)throw profilesError;
    (profiles||[]).forEach(p=>{customerNames[p.id]=p.full_name||''});
   }
@@ -3442,21 +3453,22 @@ async function loadSupportAdmin(){
   ordered.forEach(c=>{
    const last=latestByConversation[c.id];
    const item=document.createElement('div');
-   item.className='item';
-   item.style.cssText='padding:13px;margin:8px 0;border:1px solid var(--border);border-radius:12px;background:var(--card,#fff)';
+   item.className='item support-admin-item';
    const open=document.createElement('button');
-   open.type='button';open.className='secondary';open.style.cssText='width:100%;text-align:right;display:block';
-   const name=document.createElement('b');name.textContent=customerNames[c.user_id]||'عميل';
-   const code=document.createElement('div');code.className='muted small';code.style.marginTop='3px';code.textContent=customerCodes[c.user_id]||'بدون كود عميل';
-   const status=document.createElement('span');status.className='tag';status.style.cssText='float:left';status.textContent=({open:'مفتوحة',replied:'تم الرد',closed:'مغلقة'}[c.status]||c.status);
-   const preview=document.createElement('div');preview.className='muted';preview.style.cssText='margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+   open.type='button';open.className='secondary support-admin-open';
+   const name=document.createElement('b');name.className='support-admin-name';name.textContent=customerNames[c.user_id]||'عميل';
+   const code=document.createElement('span');code.className='support-admin-meta';code.textContent=customerCodes[c.user_id]||'بدون كود';
+   const status=document.createElement('span');status.className='tag support-admin-status';status.textContent=({open:'مفتوحة',replied:'تم الرد',closed:'مغلقة'}[c.status]||c.status);
+   const preview=document.createElement('div');preview.className='muted support-admin-preview';preview.style.cssText='white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
    preview.textContent=last?((last.sender||last.sender_role)==='admin'?'الإدارة: ':'العميل: ')+(last.message||last.body||'📷 صورة مرفقة'):'لا توجد رسائل';
-   const time=document.createElement('div');time.className='muted small';time.style.marginTop='5px';
+   const foot=document.createElement('div');foot.className='support-admin-foot';
+   const time=document.createElement('span');
    const stamp=last?.created_at||c.updated_at||c.created_at;
    time.textContent=stamp?new Date(stamp).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}):'';
-   open.append(name,code,status,preview,time);
+   foot.append(status,time);
+   open.append(name,code,preview,foot);
    if((last?.sender||last?.sender_role)==='customer'){
-    const unreadMark=document.createElement('div');unreadMark.style.cssText='color:#b45309;font-weight:bold;margin-top:6px';unreadMark.textContent='● رسالة جديدة من العميل';open.appendChild(unreadMark);
+    const unreadMark=document.createElement('div');unreadMark.className='support-admin-unread';unreadMark.textContent='● رسالة جديدة من العميل';open.appendChild(unreadMark);
    }
    open.onclick=()=>openSupportAdminThread(c.id,c.status);
    item.appendChild(open);list.appendChild(item);
