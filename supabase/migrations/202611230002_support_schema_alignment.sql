@@ -139,3 +139,13 @@ after insert on public.support_messages
 for each row execute function public.rizq_support_touch_conversation();
 
 grant select, insert on public.support_messages to authenticated;
+
+-- Replace legacy content checks that still validate the old message/Image columns.
+alter table public.support_messages
+  drop constraint if exists support_message_content,
+  drop constraint if exists support_message_has_content;
+
+alter table public.support_messages
+  add constraint support_message_content
+  check (length(trim(coalesce(body,''))) > 0
+         or coalesce(cardinality(attachment_paths),0) > 0);
