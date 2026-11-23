@@ -3267,7 +3267,7 @@ async function rizqSupportImageUrls(paths){
  }
  return out;
 }
-function rizqAppendSupportImages(row,urls){
+function rizqAppendSupportImages(row,urls,hasAttachment=false){
  (urls||[]).forEach((url,index)=>{
   const img=document.createElement('img');
   img.src=url;img.alt='صورة مرفقة';img.loading='lazy';img.decoding='async';
@@ -3279,7 +3279,7 @@ function rizqAppendSupportImages(row,urls){
   img.onerror=()=>{img.remove();};
   row.append(img,view);
  });
- if(!(urls||[]).length){
+ if(hasAttachment&&!(urls||[]).length){
   const note=document.createElement('div');
   note.className='muted';note.textContent='الصورة مرفقة لكن تعذر تحميلها. راجع صلاحية قراءة مرفقات الدعم في Supabase.';
   row.appendChild(note);
@@ -3320,8 +3320,9 @@ async function loadSupportConversation(){
    body.textContent=m.message||m.body||'';
    row.append(who,body);
    box.appendChild(row);
-   const urls=await rizqSupportImageUrls(m.attachment_paths?.length?m.attachment_paths:m.image_path);
-   rizqAppendSupportImages(row,urls);
+   const attachmentPaths=m.attachment_paths?.length?m.attachment_paths:m.image_path;
+   const urls=await rizqSupportImageUrls(attachmentPaths);
+   rizqAppendSupportImages(row,urls,Array.isArray(attachmentPaths)?attachmentPaths.length>0:!!attachmentPaths);
   }
   if(!messages?.length)box.innerHTML='<div class="support-chat-empty"><b>أهلاً بك في خدمة عملاء RIZQ</b><p>ابدأ المحادثة بإرسال رسالتك، وسنكون معك هنا.</p></div>';
   box.classList.remove('hidden');
@@ -3535,8 +3536,9 @@ async function openSupportAdminThread(id,status){
    const who=document.createElement('b');who.textContent=role==='admin'?'أنت — الإدارة':'العميل';
    const body=document.createElement('div');body.textContent=m.message||m.body||'';
    row.append(who,body);messageBox.appendChild(row);
-   const urls=await rizqSupportImageUrls(m.attachment_paths?.length?m.attachment_paths:m.image_path);
-   rizqAppendSupportImages(row,urls);
+   const attachmentPaths=m.attachment_paths?.length?m.attachment_paths:m.image_path;
+   const urls=await rizqSupportImageUrls(attachmentPaths);
+   rizqAppendSupportImages(row,urls,Array.isArray(attachmentPaths)?attachmentPaths.length>0:!!attachmentPaths);
   }
   if(!messages?.length)messageBox.innerHTML='<div class="support-chat-empty">لا توجد رسائل بعد. ابدأ الرد على العميل.</div>';
   messageBox.scrollTop=messageBox.scrollHeight;
