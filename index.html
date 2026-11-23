@@ -1750,14 +1750,14 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
     const userIds=[...new Set(data.map(x=>x.user_id).filter(Boolean))];
     const [{data:tasks,error:taskError},{data:profiles,error:profilesError}]=await Promise.all([
       db.from('tasks').select('id,title').in('id',taskIds),
-      db.from('profiles').select('id,full_name').in('id',userIds)
+      db.from('profiles').select('id,full_name,customer_code').in('id',userIds)
     ]);
 
     if(taskError){box.textContent=taskError.message;return;}
     if(profilesError){box.textContent='تعذر تحميل أسماء العملاء: '+profilesError.message;return;}
 
     const customerNames={};
-    (profiles||[]).forEach(p=>{customerNames[p.id]=p.full_name||''});
+    (profiles||[]).forEach(p=>{customerNames[p.id]=p.full_name||'';customerCodes[p.id]=p.customer_code||''});
 
     const cards=await Promise.all(data.map(async s=>{
       const t=tasks.find(x=>x.id===s.task_id);
@@ -3417,7 +3417,7 @@ async function loadSupportAdmin(){
   if(error)throw error;
   const ids=(data||[]).map(c=>c.id);
   const userIds=[...new Set((data||[]).map(c=>c.user_id).filter(Boolean))];
-  let customerNames={};
+  let customerNames={},customerCodes={};
   if(userIds.length){
    const {data:profiles,error:profilesError}=await db.from('profiles').select('id,full_name').in('id',userIds);
    if(profilesError)throw profilesError;
@@ -3447,13 +3447,14 @@ async function loadSupportAdmin(){
    const open=document.createElement('button');
    open.type='button';open.className='secondary';open.style.cssText='width:100%;text-align:right;display:block';
    const name=document.createElement('b');name.textContent=customerNames[c.user_id]||'عميل';
+   const code=document.createElement('div');code.className='muted small';code.style.marginTop='3px';code.textContent=customerCodes[c.user_id]||'بدون كود عميل';
    const status=document.createElement('span');status.className='tag';status.style.cssText='float:left';status.textContent=({open:'مفتوحة',replied:'تم الرد',closed:'مغلقة'}[c.status]||c.status);
    const preview=document.createElement('div');preview.className='muted';preview.style.cssText='margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
    preview.textContent=last?((last.sender||last.sender_role)==='admin'?'الإدارة: ':'العميل: ')+(last.message||last.body||'📷 صورة مرفقة'):'لا توجد رسائل';
    const time=document.createElement('div');time.className='muted small';time.style.marginTop='5px';
    const stamp=last?.created_at||c.updated_at||c.created_at;
    time.textContent=stamp?new Date(stamp).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}):'';
-   open.append(name,status,preview,time);
+   open.append(name,code,status,preview,time);
    if((last?.sender||last?.sender_role)==='customer'){
     const unreadMark=document.createElement('div');unreadMark.style.cssText='color:#b45309;font-weight:bold;margin-top:6px';unreadMark.textContent='● رسالة جديدة من العميل';open.appendChild(unreadMark);
    }
@@ -3473,8 +3474,11 @@ async function openSupportAdminThread(id,status){
  try{
   const {data:messages,error}=await db.from('support_messages').select('*').eq('conversation_id',id).order('created_at',{ascending:true});
   if(error)throw error;
-  thread.innerHTML='<button type="button" class="secondary" id="supportAdminBack">← قائمة المحادثات</button><div class="support-chat-head"><div><h3 style="margin:0">محادثة مباشرة مع العميل</h3><div class="muted small">الردود تظهر للعميل داخل حسابه</div></div><span class="tag">محادثة خاصة</span></div><div id="supportAdminMessages" class="support-chat-messages" aria-live="polite"></div><div class="support-chat-compose"><textarea id="supportAdminReply" placeholder="اكتب ردك للعميل..." rows="2"></textarea><div class="support-compose-actions"><label class="support-attach" for="supportAdminFiles">＋ إرفاق صورة</label><input id="supportAdminFiles" type="file" accept="image/jpeg,image/png,image/webp"><span class="muted small">حتى 5 ميجابايت</span><button type="button" id="supportAdminSend">إرسال الرد</button><button type="button" class="secondary" id="supportAdminClose">'+(status==='closed'?'إعادة فتح المحادثة':'إغلاق المحادثة')+'</button></div>';
+  thread.innerHTML='<button type="button" class="secondary" id="supportAdminBack">← قائمة المحادثات</button><div class="support-chat-head"><div><h3 id="supportAdminCustomerName" style="margin:0">محادثة مباشرة مع العميل</h3><div class="muted small">الردود تظهر للعميل داخل حسابه</div></div><span class="tag">محادثة خاصة</span></div><div id="supportAdminMessages" class="support-chat-messages" aria-live="polite"></div><div class="support-chat-compose"><textarea id="supportAdminReply" placeholder="اكتب ردك للعميل..." rows="2"></textarea><div class="support-compose-actions"><label class="support-attach" for="supportAdminFiles">＋ إرفاق صورة</label><input id="supportAdminFiles" type="file" accept="image/jpeg,image/png,image/webp"><span class="muted small">حتى 5 ميجابايت</span><button type="button" id="supportAdminSend">إرسال الرد</button><button type="button" class="secondary" id="supportAdminClose">'+(status==='closed'?'إعادة فتح المحادثة':'إغلاق المحادثة')+'</button></div>';
   document.getElementById('supportAdminBack').onclick=()=>loadSupportAdmin();
+  const {data:conversation,error:conversationError}=await db.from('support_conversations').select('user_id').eq('id',id).maybeSingle();
+  if(conversationError)throw conversationError;
+  if(conversation?.user_id){const {data:profile,error:profileError}=await db.from('profiles').select('full_name,customer_code').eq('id',conversation.user_id).maybeSingle();if(profileError)throw profileError;const head=document.getElementById('supportAdminCustomerName');if(head)head.textContent=(profile?.full_name||'عميل')+(profile?.customer_code?' — '+profile.customer_code:'');}
   const messageBox=document.getElementById('supportAdminMessages');
   for(const m of (messages||[])){
    const row=document.createElement('div');const role=m.sender||m.sender_role;
