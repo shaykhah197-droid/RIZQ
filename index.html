@@ -3228,7 +3228,7 @@ function rizqSupportIsAdmin(){return !!(isAdmin && currentUser)}
 async function loadSupportAdminBadge(){
  if(!rizqSupportIsAdmin())return;
  try{
-  const {data:conversations,error}=await db.from('support_conversations').select('id').limit(200);
+  const {data:conversations,error}=await db.from('support_conversations').select('id,admin_last_read_at').limit(200);
   if(error)throw error;
   const ids=(conversations||[]).map(c=>c.id);
   let count=0;
@@ -3237,7 +3237,7 @@ async function loadSupportAdminBadge(){
    if(messageError)throw messageError;
    const latest={};
    (messages||[]).forEach(m=>{if(!latest[m.conversation_id])latest[m.conversation_id]=m});
-   count=Object.values(latest).filter(m=>(m.sender||m.sender_role)==='customer').length;
+   count=Object.values(latest).filter(m=>{const c=(conversations||[]).find(x=>x.id===m.conversation_id);return (m.sender||m.sender_role)==='customer'&&m.created_at&&(!c?.admin_last_read_at||new Date(m.created_at)>new Date(c.admin_last_read_at));}).length;
   }
   document.querySelectorAll('.rizq-tile').forEach(button=>{
    if(button.textContent.includes('خدمة العملاء')){
@@ -3521,6 +3521,7 @@ async function openSupportAdminThread(id,status){
   if(latestCustomerMessage?.created_at){
    const {error:readError}=await db.from('support_conversations').update({admin_last_read_at:latestCustomerMessage.created_at}).eq('id',id);
    if(readError)throw readError;
+   await loadSupportAdminBadge();
   }
   thread.innerHTML='<button type="button" class="secondary" id="supportAdminBack">← قائمة المحادثات</button><div class="support-chat-head"><div><h3 id="supportAdminCustomerName" style="margin:0">محادثة مباشرة مع العميل</h3><div class="muted small">الردود تظهر للعميل داخل حسابه</div></div><span class="tag">محادثة خاصة</span></div><div id="supportAdminMessages" class="support-chat-messages" aria-live="polite"></div><div class="support-chat-compose"><textarea id="supportAdminReply" placeholder="اكتب ردك للعميل..." rows="2"></textarea><div class="support-compose-actions"><label class="support-attach" for="supportAdminFiles">＋ إرفاق صورة</label><input id="supportAdminFiles" type="file" accept="image/jpeg,image/png,image/webp"><span class="muted small">حتى 5 ميجابايت</span><button type="button" id="supportAdminSend">إرسال الرد</button><button type="button" class="secondary" id="supportAdminClose">'+(status==='closed'?'إعادة فتح المحادثة':'إغلاق المحادثة')+'</button></div>';
   document.getElementById('supportAdminBack').onclick=()=>loadSupportAdmin();
