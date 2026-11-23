@@ -1,0 +1,2 @@
+[functions.rizq-push]
+verify_jwt = false
