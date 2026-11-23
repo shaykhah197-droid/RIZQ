@@ -3552,12 +3552,15 @@ async function openSupportAdminThread(id,status){
  }catch(e){thread.textContent='تعذر عرض المحادثة: '+(e.message||e)}
 }
 async function sendSupportAdminReply(id){
- const body=document.getElementById('supportAdminReply').value.trim();
+ const replyInput=document.getElementById('supportAdminReply');
+ const body=replyInput.value.trim();
  const input=document.getElementById('supportAdminFiles');
  const files=[...(input.files||[])];
  if(!body&&!files.length)return msg('اكتب الرد أو اختر صورة',true);
  if(files.some(f=>!['image/jpeg','image/png','image/webp'].includes(f.type)||f.size>5*1024*1024))return msg('صيغة أو حجم إحدى الصور غير مسموح',true);
  const uploaded=[];
+ const sendButton=document.getElementById('supportAdminSend');
+ if(sendButton)sendButton.disabled=true;
  try{
   if(files.length>1)throw Error('يمكن إرفاق صورة واحدة فقط في الرد');
   for(const file of files){
@@ -3566,13 +3569,30 @@ async function sendSupportAdminReply(id){
    const {error}=await db.storage.from('support-attachments').upload(path,file,{contentType:file.type,upsert:false});
    if(error)throw error;uploaded.push(path);
   }
-  const {error}=await db.from('support_messages').insert({conversation_id:id,sender_id:currentUser.id,sender_role:'admin',body,attachment_paths:uploaded,sender:'admin',message:body,image_path:uploaded[0]||null});
+  const {data:inserted,error}=await db.from('support_messages').insert({conversation_id:id,sender_id:currentUser.id,sender_role:'admin',body,attachment_paths:uploaded,sender:'admin',message:body,image_path:uploaded[0]||null}).select('*').single();
   if(error)throw error;
+  replyInput.value='';
+  input.value='';
+  const messageBox=document.getElementById('supportAdminMessages');
+  if(messageBox){
+   const row=document.createElement('div');
+   row.className='support-message mine';
+   const who=document.createElement('b');who.textContent='أنت — الإدارة';
+   const message=document.createElement('div');message.textContent=inserted.message||inserted.body||body;
+   row.append(who,message);
+   messageBox.appendChild(row);
+   const attachmentPaths=inserted.attachment_paths?.length?inserted.attachment_paths:inserted.image_path;
+   const urls=await rizqSupportImageUrls(attachmentPaths);
+   rizqAppendSupportImages(row,urls,Array.isArray(attachmentPaths)?attachmentPaths.length>0:!!attachmentPaths);
+   messageBox.scrollTop=messageBox.scrollHeight;
+  }
   msg('تم إرسال الرد للعميل');
-  await openSupportAdminThread(id,'replied');
+  await loadSupportAdminBadge();
  }catch(e){
   if(uploaded.length)await db.storage.from('support-attachments').remove(uploaded);
   msg('تعذر إرسال الرد: '+(e.message||e),true);
+ }finally{
+  if(sendButton)sendButton.disabled=false;
  }
 }
 const rizqOriginalShowTab=window.showTab;
