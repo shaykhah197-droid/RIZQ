@@ -505,7 +505,7 @@ async function loadProfile(){
  if(error)throw error;
  profile=data;
  document.getElementById('userName').textContent=profile?.full_name||currentUser.email;
- document.getElementById('customerCode').textContent='رقم العميل: RZQ-'+currentUser.id.replace(/-/g,'').slice(0,8).toUpperCase();
+ document.getElementById('customerCode').textContent='رقم العميل: RZQ-'+currentUser.id.replace(/-/g,'').slice(0,12).toUpperCase();
  document.getElementById('myReferral').value=profile?.referral_code||'';
 }
 async function loadWallet(){
