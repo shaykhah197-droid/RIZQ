@@ -118,6 +118,8 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <button id="authBtn" onclick="authenticate()">دخول</button>
 <button class="secondary" onclick="toggleAuth()" id="toggleBtn">إنشاء حساب جديد</button>
 <button type="button" class="secondary" onclick="sendPasswordReset()">نسيت كلمة المرور؟</button>
+<button type="button" id="resendConfirmationBtn" class="secondary hidden" onclick="resendConfirmation()" disabled>إعادة إرسال رسالة التأكيد</button>
+<p id="resendCountdown" class="muted hidden"></p>
 <p class="muted">التسجيل والدخول بالبريد الإلكتروني.</p>
 </section>
 
@@ -355,6 +357,7 @@ function toggleAuth(){
  document.getElementById('toggleBtn').textContent=signupMode?'لديك حساب؟ تسجيل الدخول':'إنشاء حساب جديد';
  document.getElementById('nameWrap').classList.toggle('hidden',!signupMode);
  document.getElementById('refWrap').classList.toggle('hidden',!signupMode);
+ if(!signupMode){document.getElementById('resendConfirmationBtn').classList.add('hidden');document.getElementById('resendCountdown').classList.add('hidden');}
 }
 
 async function sendPasswordReset(){
@@ -368,6 +371,48 @@ async function sendPasswordReset(){
   msg('لو البريد مسجل عندنا، هيوصلك رابط لاستعادة كلمة المرور. راجع الوارد والرسائل غير المرغوب فيها.');
  }catch(e){msg('تعذر إرسال رابط الاستعادة: '+e.message,true)}
  finally{if(button)button.disabled=false}
+}
+
+let resendCountdownTimer=null;
+function showResendConfirmation(){
+ const button=document.getElementById('resendConfirmationBtn');
+ const note=document.getElementById('resendCountdown');
+ button.classList.remove('hidden');
+ note.classList.remove('hidden');
+ startResendCountdown(60);
+}
+function startResendCountdown(seconds){
+ const button=document.getElementById('resendConfirmationBtn');
+ const note=document.getElementById('resendCountdown');
+ if(resendCountdownTimer)clearInterval(resendCountdownTimer);
+ let remaining=seconds;
+ button.disabled=true;
+ button.textContent='إعادة إرسال رسالة التأكيد';
+ note.textContent='يمكنك إعادة الإرسال بعد '+remaining+' ثانية';
+ resendCountdownTimer=setInterval(()=>{
+  remaining--;
+  if(remaining>0){note.textContent='يمكنك إعادة الإرسال بعد '+remaining+' ثانية';return;}
+  clearInterval(resendCountdownTimer);
+  resendCountdownTimer=null;
+  button.disabled=false;
+  note.textContent='لم تصلك الرسالة؟ اضغط لإعادة إرسالها.';
+ },1000);
+}
+async function resendConfirmation(){
+ const email=document.getElementById('email').value.trim();
+ if(!email)return msg('اكتب بريدك الإلكتروني أولاً',true);
+ const button=document.getElementById('resendConfirmationBtn');
+ if(button.disabled)return;
+ button.disabled=true;
+ try{
+  const {error}=await db.auth.resend({type:'signup',email});
+  if(error)throw error;
+  msg('تم طلب إعادة إرسال رسالة التأكيد. راجع البريد الوارد والرسائل غير المرغوب فيها.');
+  startResendCountdown(60);
+ }catch(e){
+  button.disabled=false;
+  msg('تعذر إعادة إرسال رسالة التأكيد: '+e.message,true);
+ }
 }
 
 async function saveRecoveredPassword(){
@@ -421,7 +466,7 @@ async function authenticate(){
    const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name,referral_code}}});
    if(error)throw error;
    if(data.session){currentUser=data.user;await loadApp()}
-   else msg('تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيد التسجيل إذا طُلب منك.');
+   else {msg('تم إنشاء الحساب. راجع بريدك الإلكتروني، ولو الرسالة موصلتش تقدر تعيد إرسالها بعد 60 ثانية.');showResendConfirmation();}
   }else{
    const {data,error}=await db.auth.signInWithPassword({email,password});
    if(error)throw error;
