@@ -193,6 +193,22 @@ begin
         limit 100
       ) x
     ), '[]'::jsonb),
+    'audit_logs', coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'entity', a.entity,
+          'entity_id', a.entity_id,
+          'action', a.action,
+          'before_data', a.before_data,
+          'after_data', a.after_data,
+          'created_at', a.created_at,
+          'admin_id', a.admin_id
+        )
+        order by a.created_at desc
+      )
+      from public.admin_customer_audit_logs a
+      where a.customer_id = p_user_id
+    ), '[]'::jsonb),
     'notes', coalesce((
       select jsonb_agg(
         jsonb_build_object(
@@ -214,6 +230,112 @@ $$;
 
 revoke all on function public.admin_get_customer_details(uuid) from public;
 grant execute on function public.admin_get_customer_details(uuid) to authenticated;
+
+ 
+-- Immutable audit trail for administrative changes to customer financial/package records.
+create table if not exists public.admin_customer_audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid not null references auth.users(id) on delete cascade,
+  admin_id uuid references auth.users(id) on delete set null,
+  entity text not null,
+  entity_id text,
+  action text not null,
+  before_data jsonb not null default '{}'::jsonb,
+  after_data jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists admin_customer_audit_logs_customer_created_idx
+  on public.admin_customer_audit_logs(customer_id, created_at desc);
+
+alter table public.admin_customer_audit_logs enable row level security;
+revoke all on public.admin_customer_audit_logs from anon, authenticated;
+grant select on public.admin_customer_audit_logs to authenticated;
+
+drop policy if exists admin_customer_audit_logs_admin_select on public.admin_customer_audit_logs;
+create policy admin_customer_audit_logs_admin_select
+  on public.admin_customer_audit_logs
+  for select to authenticated
+  using ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create or replace function public.rizq_log_admin_customer_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  old_data jsonb := case when tg_op in ('UPDATE','DELETE') then to_jsonb(old) else '{}'::jsonb end;
+  new_data jsonb := case when tg_op in ('INSERT','UPDATE') then to_jsonb(new) else '{}'::jsonb end;
+  target_user_id uuid;
+  target_entity_id text;
+  before_snapshot jsonb := '{}'::jsonb;
+  after_snapshot jsonb := '{}'::jsonb;
+begin
+  if coalesce((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin', false) is not true
+     or auth.uid() is null then
+    if tg_op = 'DELETE' then return old; else return new; end if;
+  end if;
+
+  target_user_id := coalesce(
+    nullif(new_data ->> 'user_id','')::uuid,
+    nullif(old_data ->> 'user_id','')::uuid
+  );
+  if target_user_id is null then
+    if tg_op = 'DELETE' then return old; else return new; end if;
+  end if;
+
+  target_entity_id := coalesce(new_data ->> 'id', old_data ->> 'id', new_data ->> 'user_id', old_data ->> 'user_id');
+
+  if tg_table_name = 'wallets' then
+    before_snapshot := jsonb_build_object('balance', old_data -> 'balance');
+    after_snapshot := jsonb_build_object('balance', new_data -> 'balance');
+  elsif tg_table_name in ('deposit_requests','withdrawal_requests') then
+    before_snapshot := jsonb_build_object(
+      'status', old_data -> 'status',
+      'amount', old_data -> 'amount',
+      'transaction_reference', old_data -> 'transaction_reference'
+    );
+    after_snapshot := jsonb_build_object(
+      'status', new_data -> 'status',
+      'amount', new_data -> 'amount',
+      'transaction_reference', new_data -> 'transaction_reference'
+    );
+  elsif tg_table_name = 'user_packages' then
+    before_snapshot := jsonb_build_object('package_id', old_data -> 'package_id');
+    after_snapshot := jsonb_build_object('package_id', new_data -> 'package_id');
+  end if;
+
+  insert into public.admin_customer_audit_logs(
+    customer_id, admin_id, entity, entity_id, action, before_data, after_data
+  ) values (
+    target_user_id, auth.uid(), tg_table_name, target_entity_id, tg_op,
+    before_snapshot, after_snapshot
+  );
+
+  if tg_op = 'DELETE' then return old; else return new; end if;
+end;
+$$;
+
+drop trigger if exists rizq_admin_audit_wallet_balance on public.wallets;
+create trigger rizq_admin_audit_wallet_balance
+after update of balance on public.wallets
+for each row execute function public.rizq_log_admin_customer_change();
+
+drop trigger if exists rizq_admin_audit_deposit_status on public.deposit_requests;
+create trigger rizq_admin_audit_deposit_status
+after update of status on public.deposit_requests
+for each row execute function public.rizq_log_admin_customer_change();
+
+drop trigger if exists rizq_admin_audit_withdrawal_status on public.withdrawal_requests;
+create trigger rizq_admin_audit_withdrawal_status
+after update of status on public.withdrawal_requests
+for each row execute function public.rizq_log_admin_customer_change();
+
+drop trigger if exists rizq_admin_audit_user_packages on public.user_packages;
+create trigger rizq_admin_audit_user_packages
+after insert or update or delete on public.user_packages
+for each row execute function public.rizq_log_admin_customer_change();
 
 create or replace function public.admin_add_customer_note(p_user_id uuid, p_note text)
 returns uuid
