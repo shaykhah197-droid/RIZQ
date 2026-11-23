@@ -97,6 +97,15 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 .support-chat-empty{margin:auto;text-align:center;color:#63736b;padding:24px 10px}
 .support-chat-empty p{margin-bottom:0}
 
+/* تصغير مساحة محادثة العميل وإبقاء تأكيد الإرسال داخلها */
+#supportCustomerMessages{height:min(36vh,330px);min-height:150px;padding:9px;gap:8px;margin:9px 0}
+#supportCustomerText{min-height:58px}
+#supportCustomerConversation .support-chat-head{padding:9px;margin-top:9px}
+#supportCustomerConversation .support-chat-compose{padding:8px}
+@media(max-width:600px){
+ #supportCustomerMessages{height:34vh;min-height:145px}
+ #supportCustomerText{min-height:54px}
+}
 @media(max-width:600px){
  .support-chat-messages{height:42vh;min-height:180px;padding:9px}
  #supportCustomerConversation .support-message,#supportAdminThread .support-message{max-width:90%}
@@ -3310,6 +3319,16 @@ async function loadSupportConversation(){
   box.scrollTop=box.scrollHeight;
  }catch(e){box.textContent='تعذر تحميل المحادثة: '+(e.message||e)}
 }
+function appendSupportCustomerNotice(text){
+ const box=document.getElementById('supportCustomerMessages');
+ if(!box)return;
+ const row=document.createElement('div');
+ row.className='support-message mine';
+ const who=document.createElement('b');who.textContent='النظام';
+ const body=document.createElement('div');body.textContent=text;
+ row.append(who,body);box.appendChild(row);
+ box.scrollTop=box.scrollHeight;
+}
 async function sendSupportCustomerMessage(){
  const text=document.getElementById('supportCustomerText').value.trim();
  const input=document.getElementById('supportCustomerFiles');
@@ -3334,7 +3353,7 @@ async function sendSupportCustomerMessage(){
   if(error)throw error;
   document.getElementById('supportCustomerText').value='';
   input.value='';
-  msg('تم استلام رسالتك، وسيتم الرد من أحد ممثلي خدمة العملاء');
+  appendSupportCustomerNotice('تم استلام رسالتك، وسيتم الرد من أحد ممثلي خدمة العملاء');
   await loadSupportConversation();
  }catch(e){
   if(uploaded.length)await db.storage.from('support-attachments').remove(uploaded);
