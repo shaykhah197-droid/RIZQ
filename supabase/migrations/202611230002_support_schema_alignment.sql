@@ -1,5 +1,5 @@
 -- Align legacy support_messages columns with the secure RIZQ support schema.
--- Safe to run more than once. Keeps legacy columns nullable for old deployments.
+-- Safe to run more than once. Backfill legacy rows before applying NOT NULL.
 alter table public.support_messages
   add column if not exists sender_id uuid references auth.users(id) on delete cascade,
   add column if not exists sender_role text,
@@ -9,9 +9,7 @@ alter table public.support_messages
 alter table public.support_messages
   alter column sender_id set default auth.uid(),
   alter column body set default '',
-  alter column body set not null,
-  alter column attachment_paths set default '{}',
-  alter column attachment_paths set not null;
+  alter column attachment_paths set default '{}';
 
 do $$
 begin
@@ -20,19 +18,24 @@ begin
     execute 'alter table public.support_messages alter column sender drop not null';
   end if;
   if exists (select 1 from information_schema.columns where table_schema='public' and table_name='support_messages' and column_name='message') then
-    execute $q$update public.support_messages set body=coalesce(message,'') where body is null or body=''$q$;
+    execute $q$update public.support_messages set body=coalesce(nullif(body,''), nullif(message,''), '[رسالة سابقة]') where body is null or body=''$q$;
     execute 'alter table public.support_messages alter column message drop not null';
   end if;
   if exists (select 1 from information_schema.columns where table_schema='public' and table_name='support_messages' and column_name='image_path') then
-    execute $q$update public.support_messages set attachment_paths=array[image_path] where image_path is not null and cardinality(attachment_paths)=0$q$;
+    execute $q$update public.support_messages set attachment_paths=array[image_path] where image_path is not null and coalesce(cardinality(attachment_paths),0)=0$q$;
     execute 'alter table public.support_messages alter column image_path drop not null';
   end if;
 end $$;
 
 update public.support_messages
-set body=coalesce(body,''), attachment_paths=coalesce(attachment_paths,'{}'), sender_role=coalesce(sender_role,'customer')
-where sender_role is null;
+set body=coalesce(nullif(body,''), '[رسالة سابقة]'),
+    attachment_paths=coalesce(attachment_paths,'{}'),
+    sender_role=coalesce(sender_role,'customer')
+where body is null or body='' or attachment_paths is null or sender_role is null;
+
 alter table public.support_messages
+  alter column body set not null,
+  alter column attachment_paths set not null,
   alter column sender_role set default 'customer',
   alter column sender_role set not null;
 
