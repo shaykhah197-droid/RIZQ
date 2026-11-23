@@ -1,0 +1,17 @@
+{
+  "name": "RIZQ - رزق",
+  "short_name": "RIZQ",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f3f6f4",
+  "theme_color": "#075b3e",
+  "icons": [
+    {
+      "src": "/rizq-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
