@@ -75,7 +75,7 @@ begin
       or lower(coalesce(u.email, '')) like '%' || q || '%'
       or lower(coalesce(p.referral_code, '')) like '%' || q || '%'
       or lower(p.id::text) = q
-      or lower('RZQ-' || substr(replace(p.id::text, '-', ''), 1, 8)) = q
+      or lower('RZQ-' || substr(replace(p.id::text, '-', ''), 1, 8)) like '%' || q || '%'
     )
   order by p.created_at desc
   limit 50;
