@@ -3209,11 +3209,11 @@ async function loadSupportAdminBadge(){
   const ids=(conversations||[]).map(c=>c.id);
   let count=0;
   if(ids.length){
-   const {data:messages,error:messageError}=await db.from('support_messages').select('conversation_id,sender,created_at').in('conversation_id',ids).order('created_at',{ascending:false});
+   const {data:messages,error:messageError}=await db.from('support_messages').select('conversation_id,sender,sender_role,created_at').in('conversation_id',ids).order('created_at',{ascending:false});
    if(messageError)throw messageError;
    const latest={};
    (messages||[]).forEach(m=>{if(!latest[m.conversation_id])latest[m.conversation_id]=m});
-   count=Object.values(latest).filter(m=>m.sender==='customer').length;
+   count=Object.values(latest).filter(m=>(m.sender||m.sender_role)==='customer').length;
   }
   document.querySelectorAll('.rizq-tile').forEach(button=>{
    if(button.textContent.includes('خدمة العملاء')){
@@ -3279,14 +3279,15 @@ async function loadSupportConversation(){
   box.innerHTML='';
   for(const m of (messages||[])){
    const row=document.createElement('div');
-   row.className='support-message '+(m.sender==='customer'?'mine':'theirs');
+   const role=m.sender||m.sender_role;
+   row.className='support-message '+(role==='customer'?'mine':'theirs');
    const who=document.createElement('b');
-   who.textContent=m.sender==='admin'?'فريق RIZQ':'أنت';
+   who.textContent=role==='admin'?'فريق RIZQ':'أنت';
    const body=document.createElement('div');
-   body.textContent=m.message||'';
+   body.textContent=m.message||m.body||'';
    row.append(who,body);
    box.appendChild(row);
-   const urls=await rizqSupportImageUrls(m.image_path);
+   const urls=await rizqSupportImageUrls(m.attachment_paths?.length?m.attachment_paths:m.image_path);
    rizqAppendSupportImages(row,urls);
   }
   if(!messages?.length)box.innerHTML='<div class="support-chat-empty"><b>أهلاً بك في خدمة عملاء RIZQ</b><p>ابدأ المحادثة بإرسال رسالتك، وسنكون معك هنا.</p></div>';
@@ -3314,7 +3315,7 @@ async function sendSupportCustomerMessage(){
    if(error)throw error;
    uploaded.push(path);
   }
-  const {error}=await db.from('support_messages').insert({conversation_id:rizqSupportConversationId,sender:'customer',message:text,image_path:uploaded[0]||null});
+  const {error}=await db.from('support_messages').insert({conversation_id:rizqSupportConversationId,sender_id:currentUser.id,sender_role:'customer',body:text,attachment_paths:uploaded,sender:'customer',message:text,image_path:uploaded[0]||null});
   if(error)throw error;
   document.getElementById('supportCustomerText').value='';
   input.value='';
@@ -3420,7 +3421,7 @@ async function loadSupportAdmin(){
   }
   let latestByConversation={};
   if(ids.length){
-   const {data:allMessages,error:messagesError}=await db.from('support_messages').select('conversation_id,sender,message,created_at').in('conversation_id',ids).order('created_at',{ascending:false});
+   const {data:allMessages,error:messagesError}=await db.from('support_messages').select('conversation_id,sender,sender_role,message,body,created_at').in('conversation_id',ids).order('created_at',{ascending:false});
    if(messagesError)throw messagesError;
    (allMessages||[]).forEach(m=>{if(!latestByConversation[m.conversation_id])latestByConversation[m.conversation_id]=m});
   }
@@ -3429,7 +3430,7 @@ async function loadSupportAdmin(){
    const tb=latestByConversation[b.id]?.created_at||b.updated_at||b.created_at;
    return new Date(tb)-new Date(ta);
   });
-  const unread=ordered.filter(c=>latestByConversation[c.id]?.sender==='customer').length;
+  const unread=ordered.filter(c=>(latestByConversation[c.id]?.sender||latestByConversation[c.id]?.sender_role)==='customer').length;
   box.innerHTML='<div class="card" style="margin-bottom:12px"><h3>البحث عن عميل بكود العميل</h3><input id="supportCustomerCodeSearch" placeholder="مثال: RZQ-XXXXXXXXXX" autocomplete="off"><button type="button" id="supportCustomerCodeSearchBtn">بحث عن العميل</button><div id="supportCustomerLookupResult" style="margin-top:12px"></div></div><div class="notice" style="font-size:16px;font-weight:bold">'+(unread?'لديك '+unread+' محادثة بها رسالة أخيرة من العميل':'لا توجد رسائل جديدة من العملاء')+'</div><h3>صندوق رسائل العملاء</h3><div id="supportAdminList"></div><div id="supportAdminThread" style="margin-top:14px"><p class="muted">اختر اسم العميل لفتح المحادثة.</p></div>';
   document.getElementById('supportCustomerCodeSearchBtn').onclick=searchSupportCustomerByCode;
   document.getElementById('supportCustomerCodeSearch').addEventListener('keydown',e=>{if(e.key==='Enter')searchSupportCustomerByCode()});
@@ -3444,12 +3445,12 @@ async function loadSupportAdmin(){
    const name=document.createElement('b');name.textContent=customerNames[c.user_id]||'عميل';
    const status=document.createElement('span');status.className='tag';status.style.cssText='float:left';status.textContent=({open:'مفتوحة',replied:'تم الرد',closed:'مغلقة'}[c.status]||c.status);
    const preview=document.createElement('div');preview.className='muted';preview.style.cssText='margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
-   preview.textContent=last?(last.sender==='admin'?'الإدارة: ':'العميل: ')+(last.message||'📷 صورة مرفقة'):'لا توجد رسائل';
+   preview.textContent=last?((last.sender||last.sender_role)==='admin'?'الإدارة: ':'العميل: ')+(last.message||last.body||'📷 صورة مرفقة'):'لا توجد رسائل';
    const time=document.createElement('div');time.className='muted small';time.style.marginTop='5px';
    const stamp=last?.created_at||c.updated_at||c.created_at;
    time.textContent=stamp?new Date(stamp).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}):'';
    open.append(name,status,preview,time);
-   if(last?.sender==='customer'){
+   if((last?.sender||last?.sender_role)==='customer'){
     const unreadMark=document.createElement('div');unreadMark.style.cssText='color:#b45309;font-weight:bold;margin-top:6px';unreadMark.textContent='● رسالة جديدة من العميل';open.appendChild(unreadMark);
    }
    open.onclick=()=>openSupportAdminThread(c.id,c.status);
@@ -3472,11 +3473,12 @@ async function openSupportAdminThread(id,status){
   document.getElementById('supportAdminBack').onclick=()=>loadSupportAdmin();
   const messageBox=document.getElementById('supportAdminMessages');
   for(const m of (messages||[])){
-   const row=document.createElement('div');row.className='support-message '+(m.sender==='admin'?'mine':'theirs');
-   const who=document.createElement('b');who.textContent=m.sender==='admin'?'أنت — الإدارة':'العميل';
-   const body=document.createElement('div');body.textContent=m.message||'';
+   const row=document.createElement('div');const role=m.sender||m.sender_role;
+   row.className='support-message '+(role==='admin'?'mine':'theirs');
+   const who=document.createElement('b');who.textContent=role==='admin'?'أنت — الإدارة':'العميل';
+   const body=document.createElement('div');body.textContent=m.message||m.body||'';
    row.append(who,body);messageBox.appendChild(row);
-   const urls=await rizqSupportImageUrls(m.image_path);
+   const urls=await rizqSupportImageUrls(m.attachment_paths?.length?m.attachment_paths:m.image_path);
    rizqAppendSupportImages(row,urls);
   }
   if(!messages?.length)messageBox.innerHTML='<div class="support-chat-empty">لا توجد رسائل بعد. ابدأ الرد على العميل.</div>';
@@ -3505,7 +3507,7 @@ async function sendSupportAdminReply(id){
    const {error}=await db.storage.from('support-attachments').upload(path,file,{contentType:file.type,upsert:false});
    if(error)throw error;uploaded.push(path);
   }
-  const {error}=await db.from('support_messages').insert({conversation_id:id,sender:'admin',message:body,image_path:uploaded[0]||null});
+  const {error}=await db.from('support_messages').insert({conversation_id:id,sender_id:currentUser.id,sender_role:'admin',body,attachment_paths:uploaded,sender:'admin',message:body,image_path:uploaded[0]||null});
   if(error)throw error;
   msg('تم إرسال الرد للعميل');
   await openSupportAdminThread(id,'replied');
