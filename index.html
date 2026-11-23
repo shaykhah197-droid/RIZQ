@@ -152,6 +152,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <button class="secondary" onclick="showTab('withdraw')">سحب</button>
 <button class="secondary" onclick="showTab('history')">السجل</button>
 <button class="secondary" onclick="showTab('account')">الحساب</button>
+<button class="secondary" onclick="showTab('mydata')">بياناتي</button>
 <button id="adminNav" class="hidden" onclick="showTab('admin')">لوحة المدير</button>
 </nav>
 
@@ -245,6 +246,18 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <label>تأكيد كلمة المرور الجديدة</label>
 <input id="confirmAccountPassword" type="password" minlength="8" autocomplete="new-password" placeholder="أعد كتابة كلمة المرور الجديدة">
 <button type="button" id="changeAccountPasswordBtn" onclick="changeAccountPassword()">تغيير كلمة المرور</button>
+</div>
+</section>
+
+<section id="tab-mydata" class="tab hidden">
+<div class="card">
+<h2>بياناتي</h2>
+<p class="muted">بيانات حسابك وأكوادك الخاصة على منصة RIZQ.</p>
+<div class="item"><b>الاسم الكامل</b><div id="myDataName">جارٍ التحميل...</div></div>
+<div class="item"><b>البريد الإلكتروني</b><div id="myDataEmail"></div></div>
+<div class="item"><b>كود العميل</b><div class="row"><input id="myCustomerCode" readonly placeholder="جارٍ تحميل كود العميل..."><button type="button" onclick="copyCustomerCode()">نسخ الكود</button></div></div>
+<div class="item"><b>كود الإحالة</b><div class="row"><input id="myDataReferral" readonly><button type="button" class="secondary" onclick="copyMyDataReferral()">نسخ كود الإحالة</button></div></div>
+<div class="item"><b>تاريخ إنشاء الحساب</b><div id="myDataCreatedAt">—</div></div>
 </div>
 </section>
 
@@ -506,6 +519,24 @@ async function loadProfile(){
  document.getElementById('userName').textContent=profile?.full_name||currentUser.email;
  document.getElementById('myReferral').value=profile?.referral_code||'';
 }
+
+function loadMyData(){
+ document.getElementById('myDataName').textContent=profile?.full_name||'غير مسجل';
+ document.getElementById('myDataEmail').textContent=currentUser?.email||'غير متاح';
+ document.getElementById('myCustomerCode').value=profile?.customer_code||'لم يتم إنشاء كود العميل بعد';
+ document.getElementById('myDataReferral').value=profile?.referral_code||'غير متاح';
+ document.getElementById('myDataCreatedAt').textContent=profile?.created_at?new Date(profile.created_at).toLocaleString('ar-EG'):'غير متاح';
+}
+function copyCustomerCode(){
+ const v=document.getElementById('myCustomerCode').value;
+ if(!v||v==='لم يتم إنشاء كود العميل بعد')return msg('كود العميل غير متاح حالياً',true);
+ navigator.clipboard.writeText(v).then(()=>msg('تم نسخ كود العميل')).catch(()=>msg('انسخ كود العميل يدوياً',true));
+}
+function copyMyDataReferral(){
+ const v=document.getElementById('myDataReferral').value;
+ if(!v||v==='غير متاح')return msg('لا يوجد كود إحالة',true);
+ navigator.clipboard.writeText(v).then(()=>msg('تم نسخ كود الإحالة')).catch(()=>msg('انسخ كود الإحالة يدوياً',true));
+}
 async function loadWallet(){
  const {data,error}=await db.from('wallets').select('balance').eq('user_id',currentUser.id).maybeSingle();
  if(error)throw error;
@@ -613,6 +644,7 @@ function showTab(name){
  document.querySelectorAll('.tab').forEach(x=>x.classList.add('hidden'));
  document.getElementById('tab-'+name).classList.remove('hidden');
  if(name==='admin'&&isAdmin)loadAdmin();
+ if(name==='mydata')loadMyData();
  window.scrollTo({top:0,behavior:'smooth'});
 }
 
