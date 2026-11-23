@@ -144,15 +144,15 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 </div>
 </div>
 
-<nav>
-<button onclick="showTab('home')">الرئيسية</button>
-<button class="secondary" onclick="showTab('tasks')">المهام</button>
-<button class="secondary" onclick="showTab('packages')">الباقات</button>
-<button class="secondary" onclick="showTab('deposit')">إيداع</button>
-<button class="secondary" onclick="showTab('withdraw')">سحب</button>
-<button class="secondary" onclick="showTab('history')">السجل</button>
-<button class="secondary" onclick="showTab('account')">الحساب</button>
-<button class="secondary" onclick="showTab('mydata')">بياناتي</button>
+<nav id="mainNav">
+<button class="customer-only-nav" onclick="showTab('home')">الرئيسية</button>
+<button class="secondary customer-only-nav" onclick="showTab('tasks')">المهام</button>
+<button class="secondary customer-only-nav" onclick="showTab('packages')">الباقات</button>
+<button class="secondary customer-only-nav" onclick="showTab('deposit')">إيداع</button>
+<button class="secondary customer-only-nav" onclick="showTab('withdraw')">سحب</button>
+<button class="secondary customer-only-nav" onclick="showTab('history')">السجل</button>
+<button class="secondary customer-only-nav" onclick="showTab('account')">الحساب</button>
+<button class="secondary customer-only-nav" onclick="showTab('mydata')">بياناتي</button>
 <button id="adminNav" class="hidden" onclick="showTab('admin')">لوحة المدير</button>
 </nav>
 
@@ -503,6 +503,7 @@ async function loadApp(){
  document.getElementById('app').classList.remove('hidden');
  document.getElementById('userEmail').textContent=currentUser.email||'';
  document.getElementById('adminNav').classList.toggle('hidden',!isAdmin);
+ document.querySelectorAll('.customer-only-nav').forEach(button=>button.classList.toggle('hidden',isAdmin));
  document.getElementById('roleLabel').classList.toggle('hidden',!isAdmin);
  await loadProfile();
  await Promise.all([
