@@ -258,7 +258,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 </section>
 
 <section id="tab-admin" class="tab hidden">
-<div class="admin-head">
+<div class="card" style="margin:12px 0;border:2px solid #d8a83e"><h3 style="margin-top:0">🔔 إشعارات المدير <span id="rizqAdminNotificationTotal">0</span></h3><div id="rizqAdminNotificationCounts">جارٍ تحميل الإشعارات...</div><button type="button" class="secondary" onclick="enableRizqAdminNotifications()">تفعيل إشعارات الهاتف</button><p class="muted small">العداد يتحدث تلقائيًا كل 20 ثانية. يمكن أن يظهر على أيقونة التطبيق إذا كان مثبتًا والمتصفح يدعم شارة التطبيق.</p></div><div class="admin-head">
 <h2 style="margin:0">لوحة إدارة RIZQ</h2>
 <p class="small">إدارة طلبات الدفع وبيانات الاستلام والإثباتات</p>
 </div>
@@ -496,7 +496,7 @@ async function loadApp(){
   loadWallet(),loadReferral(),
   loadMethods(),loadDepositHistory(),loadWithdrawalHistory(),loadTransactions()
  ]);
- if(isAdmin){await loadAdmin();await loadSupportAdminBadge();}
+ if(isAdmin){await loadAdmin();await loadSupportAdminBadge();startRizqAdminNotifications();}
 }
 
 async function loadProfile(){
@@ -3168,7 +3168,12 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
 
 <script>
 let rizqSupportConversationId=null;
+let rizqAdminNoticeTimer=null;
+let rizqLastNoticeSnapshot=null;
 function rizqSupportIsAdmin(){return !!(isAdmin && currentUser)}
+function rizqMessageRole(m){return m.sender_role||m.sender||''}
+function rizqMessageBody(m){return m.body||m.message||''}
+function rizqMessagePaths(m){return m.attachment_paths||(m.image_path?[m.image_path]:[])}
 async function loadSupportAdminBadge(){
  if(!rizqSupportIsAdmin())return;
  try{
@@ -3177,11 +3182,11 @@ async function loadSupportAdminBadge(){
   const ids=(conversations||[]).map(c=>c.id);
   let count=0;
   if(ids.length){
-   const {data:messages,error:messageError}=await db.from('support_messages').select('conversation_id,sender,created_at').in('conversation_id',ids).order('created_at',{ascending:false});
+   const {data:messages,error:messageError}=await db.from('support_messages').select('conversation_id,sender_role,created_at').in('conversation_id',ids).order('created_at',{ascending:false});
    if(messageError)throw messageError;
    const latest={};
    (messages||[]).forEach(m=>{if(!latest[m.conversation_id])latest[m.conversation_id]=m});
-   count=Object.values(latest).filter(m=>m.sender==='customer').length;
+   count=Object.values(latest).filter(m=>rizqMessageRole(m)==='customer').length;
   }
   document.querySelectorAll('.rizq-tile').forEach(button=>{
    if(button.textContent.includes('خدمة العملاء')){
@@ -3190,17 +3195,7 @@ async function loadSupportAdminBadge(){
     button.style.color=count?'#805b00':'';
    }
   });
- }catch(e){
-  console.error('Support badge:',e);
-  document.querySelectorAll('.rizq-tile').forEach(button=>{
-   if(button.textContent.includes('خدمة العملاء')){
-    button.textContent='💬 خدمة العملاء — تعذر تحميل التنبيه';
-    button.title='تعذر تحميل إشعارات خدمة العملاء: '+(e.message||e);
-    button.style.background='#fee2e2';
-    button.style.color='#991b1b';
-   }
-  });
- }
+ }catch(e){console.error('Support badge:',e)}
 }
 async function rizqSupportImageUrls(paths){
  const out=[];
@@ -3246,20 +3241,15 @@ async function loadSupportConversation(){
   if(messagesError)throw messagesError;
   box.innerHTML='';
   for(const m of (messages||[])){
-   const row=document.createElement('div');
-   row.className='support-message '+(m.sender==='customer'?'mine':'theirs');
-   const who=document.createElement('b');
-   who.textContent=m.sender==='admin'?'فريق RIZQ':'أنت';
-   const body=document.createElement('div');
-   body.textContent=m.message||'';
-   row.append(who,body);
-   box.appendChild(row);
-   const urls=await rizqSupportImageUrls(m.image_path);
-   rizqAppendSupportImages(row,urls);
+   const role=rizqMessageRole(m);
+   const row=document.createElement('div');row.className='support-message '+(role==='customer'?'mine':'theirs');
+   const who=document.createElement('b');who.textContent=role==='admin'?'فريق RIZQ':'أنت';
+   const body=document.createElement('div');body.textContent=rizqMessageBody(m);
+   row.append(who,body);box.appendChild(row);
+   const urls=await rizqSupportImageUrls(rizqMessagePaths(m));rizqAppendSupportImages(row,urls);
   }
   if(!messages?.length)box.innerHTML='<div class="support-chat-empty"><b>أهلاً بك في خدمة عملاء RIZQ</b><p>ابدأ المحادثة بإرسال رسالتك، وسنكون معك هنا.</p></div>';
-  box.classList.remove('hidden');
-  box.scrollTop=box.scrollHeight;
+  box.classList.remove('hidden');box.scrollTop=box.scrollHeight;
  }catch(e){box.textContent='تعذر تحميل المحادثة: '+(e.message||e)}
 }
 async function sendSupportCustomerMessage(){
@@ -3269,8 +3259,7 @@ async function sendSupportCustomerMessage(){
  const button=document.getElementById('supportCustomerSend');
  if(!text&&!files.length)return msg('اكتب رسالة أو اختر صورة',true);
  if(files.some(f=>!['image/jpeg','image/png','image/webp'].includes(f.type)||f.size>5*1024*1024))return msg('كل صورة يجب أن تكون JPG أو PNG أو WEBP وبحجم لا يتجاوز 5 ميجابايت',true);
- button.disabled=true;
- const uploaded=[];
+ button.disabled=true;const uploaded=[];
  try{
   if(!rizqSupportConversationId)await loadSupportConversation();
   if(!rizqSupportConversationId)throw Error('تعذر فتح المحادثة');
@@ -3279,15 +3268,12 @@ async function sendSupportCustomerMessage(){
    const ext=file.type==='image/jpeg'?'jpg':file.type==='image/png'?'png':'webp';
    const path=currentUser.id+'/'+crypto.randomUUID()+'.'+ext;
    const {error}=await db.storage.from('support-attachments').upload(path,file,{contentType:file.type,upsert:false});
-   if(error)throw error;
-   uploaded.push(path);
+   if(error)throw error;uploaded.push(path);
   }
-  const {error}=await db.from('support_messages').insert({conversation_id:rizqSupportConversationId,sender:'customer',message:text,image_path:uploaded[0]||null});
+  const {error}=await db.from('support_messages').insert({conversation_id:rizqSupportConversationId,sender_id:currentUser.id,sender_role:'customer',body:text,attachment_paths:uploaded});
   if(error)throw error;
-  document.getElementById('supportCustomerText').value='';
-  input.value='';
-  msg('تم استلام رسالتك، وسيتم الرد من أحد ممثلي خدمة العملاء');
-  await loadSupportConversation();
+  document.getElementById('supportCustomerText').value='';input.value='';
+  msg('تم استلام رسالتك، وسيتم الرد من أحد ممثلي خدمة العملاء');await loadSupportConversation();
  }catch(e){
   if(uploaded.length)await db.storage.from('support-attachments').remove(uploaded);
   msg('تعذر إرسال الرسالة: '+(e.message||e),true);
@@ -3300,58 +3286,38 @@ async function loadSupportAdmin(){
  try{
   const {data,error}=await db.from('support_conversations').select('*').order('updated_at',{ascending:false}).limit(100);
   if(error)throw error;
-  const ids=(data||[]).map(c=>c.id);
-  const userIds=[...new Set((data||[]).map(c=>c.user_id).filter(Boolean))];
+  const ids=(data||[]).map(c=>c.id),userIds=[...new Set((data||[]).map(c=>c.user_id).filter(Boolean))];
   let customerNames={};
   if(userIds.length){
    const {data:profiles,error:profilesError}=await db.from('profiles').select('id,full_name').in('id',userIds);
-   if(profilesError)throw profilesError;
-   (profiles||[]).forEach(p=>{customerNames[p.id]=p.full_name||''});
+   if(profilesError)throw profilesError;(profiles||[]).forEach(p=>{customerNames[p.id]=p.full_name||''});
   }
   let latestByConversation={};
   if(ids.length){
-   const {data:allMessages,error:messagesError}=await db.from('support_messages').select('conversation_id,sender,message,created_at').in('conversation_id',ids).order('created_at',{ascending:false});
-   if(messagesError)throw messagesError;
-   (allMessages||[]).forEach(m=>{if(!latestByConversation[m.conversation_id])latestByConversation[m.conversation_id]=m});
+   const {data:allMessages,error:messagesError}=await db.from('support_messages').select('conversation_id,sender_role,body,attachment_paths,created_at').in('conversation_id',ids).order('created_at',{ascending:false});
+   if(messagesError)throw messagesError;(allMessages||[]).forEach(m=>{if(!latestByConversation[m.conversation_id])latestByConversation[m.conversation_id]=m});
   }
-  const ordered=[...(data||[])].sort((a,b)=>{
-   const ta=latestByConversation[a.id]?.created_at||a.updated_at||a.created_at;
-   const tb=latestByConversation[b.id]?.created_at||b.updated_at||b.created_at;
-   return new Date(tb)-new Date(ta);
-  });
-  const unread=ordered.filter(c=>latestByConversation[c.id]?.sender==='customer').length;
+  const ordered=[...(data||[])].sort((a,b)=>new Date(latestByConversation[b.id]?.created_at||b.updated_at||b.created_at)-new Date(latestByConversation[a.id]?.created_at||a.updated_at||a.created_at));
+  const unread=ordered.filter(c=>rizqMessageRole(latestByConversation[c.id]||{})==='customer').length;
   box.innerHTML='<div class="notice" style="font-size:16px;font-weight:bold">'+(unread?'لديك '+unread+' محادثة بها رسالة أخيرة من العميل':'لا توجد رسائل جديدة من العملاء')+'</div><h3>صندوق رسائل العملاء</h3><div id="supportAdminList"></div><div id="supportAdminThread" style="margin-top:14px"><p class="muted">اختر اسم العميل لفتح المحادثة.</p></div>';
   const list=document.getElementById('supportAdminList');
   ordered.forEach(c=>{
-   const last=latestByConversation[c.id];
-   const item=document.createElement('div');
-   item.className='item';
-   item.style.cssText='padding:13px;margin:8px 0;border:1px solid var(--border);border-radius:12px;background:var(--card,#fff)';
-   const open=document.createElement('button');
-   open.type='button';open.className='secondary';open.style.cssText='width:100%;text-align:right;display:block';
+   const last=latestByConversation[c.id],item=document.createElement('div');item.className='item';item.style.cssText='padding:13px;margin:8px 0;border:1px solid var(--border);border-radius:12px;background:var(--card,#fff)';
+   const open=document.createElement('button');open.type='button';open.className='secondary';open.style.cssText='width:100%;text-align:right;display:block';
    const name=document.createElement('b');name.textContent=customerNames[c.user_id]||'عميل';
    const status=document.createElement('span');status.className='tag';status.style.cssText='float:left';status.textContent=({open:'مفتوحة',replied:'تم الرد',closed:'مغلقة'}[c.status]||c.status);
-   const preview=document.createElement('div');preview.className='muted';preview.style.cssText='margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
-   preview.textContent=last?(last.sender==='admin'?'الإدارة: ':'العميل: ')+(last.message||'📷 صورة مرفقة'):'لا توجد رسائل';
-   const time=document.createElement('div');time.className='muted small';time.style.marginTop='5px';
-   const stamp=last?.created_at||c.updated_at||c.created_at;
-   time.textContent=stamp?new Date(stamp).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}):'';
+   const preview=document.createElement('div');preview.className='muted';preview.style.cssText='margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';preview.textContent=last?(rizqMessageRole(last)==='admin'?'الإدارة: ':'العميل: ')+(rizqMessageBody(last)||'📷 صورة مرفقة'):'لا توجد رسائل';
+   const time=document.createElement('div');time.className='muted small';time.style.marginTop='5px';const stamp=last?.created_at||c.updated_at||c.created_at;time.textContent=stamp?new Date(stamp).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}):'';
    open.append(name,status,preview,time);
-   if(last?.sender==='customer'){
-    const unreadMark=document.createElement('div');unreadMark.style.cssText='color:#b45309;font-weight:bold;margin-top:6px';unreadMark.textContent='● رسالة جديدة من العميل';open.appendChild(unreadMark);
-   }
-   open.onclick=()=>openSupportAdminThread(c.id,c.status);
-   item.appendChild(open);list.appendChild(item);
+   if(rizqMessageRole(last||{})==='customer'){const mark=document.createElement('div');mark.style.cssText='color:#b45309;font-weight:bold;margin-top:6px';mark.textContent='● رسالة جديدة من العميل';open.appendChild(mark)}
+   open.onclick=()=>openSupportAdminThread(c.id,c.status);item.appendChild(open);list.appendChild(item);
   });
   if(!ordered.length)list.textContent='لا توجد محادثات حتى الآن';
  }catch(e){box.innerHTML='<div class="notice error" style="white-space:pre-wrap">تعذر تحميل محادثات العملاء. تفاصيل الخطأ: '+safe(e.message||e)+'</div><button type="button" class="secondary" onclick="loadSupportAdmin()">إعادة المحاولة</button>'}
 }
 async function openSupportAdminThread(id,status){
- const thread=document.getElementById('supportAdminThread');
- const list=document.getElementById('supportAdminList');
- if(list)list.style.display='none';
- const listTitle=thread.parentElement?.querySelector('h3');
- if(listTitle)listTitle.style.display='none';
+ const thread=document.getElementById('supportAdminThread'),list=document.getElementById('supportAdminList');
+ if(list)list.style.display='none';const listTitle=thread.parentElement?.querySelector('h3');if(listTitle)listTitle.style.display='none';
  thread.textContent='جارٍ تحميل الرسائل...';
  try{
   const {data:messages,error}=await db.from('support_messages').select('*').eq('conversation_id',id).order('created_at',{ascending:true});
@@ -3360,47 +3326,75 @@ async function openSupportAdminThread(id,status){
   document.getElementById('supportAdminBack').onclick=()=>loadSupportAdmin();
   const messageBox=document.getElementById('supportAdminMessages');
   for(const m of (messages||[])){
-   const row=document.createElement('div');row.className='support-message '+(m.sender==='admin'?'mine':'theirs');
-   const who=document.createElement('b');who.textContent=m.sender==='admin'?'أنت — الإدارة':'العميل';
-   const body=document.createElement('div');body.textContent=m.message||'';
-   row.append(who,body);messageBox.appendChild(row);
-   const urls=await rizqSupportImageUrls(m.image_path);
-   rizqAppendSupportImages(row,urls);
+   const role=rizqMessageRole(m),row=document.createElement('div');row.className='support-message '+(role==='admin'?'mine':'theirs');
+   const who=document.createElement('b');who.textContent=role==='admin'?'أنت — الإدارة':'العميل';
+   const body=document.createElement('div');body.textContent=rizqMessageBody(m);row.append(who,body);messageBox.appendChild(row);
+   const urls=await rizqSupportImageUrls(rizqMessagePaths(m));rizqAppendSupportImages(row,urls);
   }
   if(!messages?.length)messageBox.innerHTML='<div class="support-chat-empty">لا توجد رسائل بعد. ابدأ الرد على العميل.</div>';
   messageBox.scrollTop=messageBox.scrollHeight;
   document.getElementById('supportAdminSend').onclick=()=>sendSupportAdminReply(id);
   document.getElementById('supportAdminClose').onclick=async()=>{
-   const next=status==='closed'?'open':'closed';
-   const {error}=await db.from('support_conversations').update({status:next}).eq('id',id);
-   if(error)msg('تعذر تحديث الحالة: '+error.message,true);
-   else{msg(next==='closed'?'تم إغلاق المحادثة':'تمت إعادة فتح المحادثة');await loadSupportAdmin()}
+   const next=status==='closed'?'open':'closed';const {error}=await db.from('support_conversations').update({status:next}).eq('id',id);
+   if(error)msg('تعذر تحديث الحالة: '+error.message,true);else{msg(next==='closed'?'تم إغلاق المحادثة':'تمت إعادة فتح المحادثة');await loadSupportAdmin()}
   };
  }catch(e){thread.textContent='تعذر عرض المحادثة: '+(e.message||e)}
 }
 async function sendSupportAdminReply(id){
- const body=document.getElementById('supportAdminReply').value.trim();
- const input=document.getElementById('supportAdminFiles');
- const files=[...(input.files||[])];
+ const body=document.getElementById('supportAdminReply').value.trim(),input=document.getElementById('supportAdminFiles'),files=[...(input.files||[])];
  if(!body&&!files.length)return msg('اكتب الرد أو اختر صورة',true);
  if(files.some(f=>!['image/jpeg','image/png','image/webp'].includes(f.type)||f.size>5*1024*1024))return msg('صيغة أو حجم إحدى الصور غير مسموح',true);
  const uploaded=[];
  try{
   if(files.length>1)throw Error('يمكن إرفاق صورة واحدة فقط في الرد');
   for(const file of files){
-   const ext=file.type==='image/jpeg'?'jpg':file.type==='image/png'?'png':'webp';
-   const path=currentUser.id+'/'+crypto.randomUUID()+'.'+ext;
+   const ext=file.type==='image/jpeg'?'jpg':file.type==='image/png'?'png':'webp',path=currentUser.id+'/'+crypto.randomUUID()+'.'+ext;
    const {error}=await db.storage.from('support-attachments').upload(path,file,{contentType:file.type,upsert:false});
    if(error)throw error;uploaded.push(path);
   }
-  const {error}=await db.from('support_messages').insert({conversation_id:id,sender:'admin',message:body,image_path:uploaded[0]||null});
+  const {error}=await db.from('support_messages').insert({conversation_id:id,sender_id:currentUser.id,sender_role:'admin',body,attachment_paths:uploaded});
   if(error)throw error;
-  msg('تم إرسال الرد للعميل');
-  await openSupportAdminThread(id,'replied');
- }catch(e){
-  if(uploaded.length)await db.storage.from('support-attachments').remove(uploaded);
-  msg('تعذر إرسال الرد: '+(e.message||e),true);
- }
+  msg('تم إرسال الرد للعميل');await openSupportAdminThread(id,'replied');
+ }catch(e){if(uploaded.length)await db.storage.from('support-attachments').remove(uploaded);msg('تعذر إرسال الرد: '+(e.message||e),true)}
+}
+async function refreshRizqAdminNotifications(showNew=false){
+ if(!rizqSupportIsAdmin())return;
+ try{
+  const [d,w,c]=await Promise.all([
+   db.from('deposit_requests').select('id',{count:'exact',head:true}).eq('status','pending'),
+   db.from('withdrawal_requests').select('id',{count:'exact',head:true}).eq('status','pending'),
+   db.from('support_conversations').select('id').limit(300)
+  ]);
+  if(d.error)throw d.error;if(w.error)throw w.error;if(c.error)throw c.error;
+  const ids=(c.data||[]).map(x=>x.id);let unread=0;
+  if(ids.length){
+   const {data,error}=await db.from('support_messages').select('conversation_id,sender_role,created_at').in('conversation_id',ids).order('created_at',{ascending:false});
+   if(error)throw error;const latest={};(data||[]).forEach(m=>{if(!latest[m.conversation_id])latest[m.conversation_id]=m});
+   unread=Object.values(latest).filter(m=>m.sender_role==='customer').length;
+  }
+  const counts={messages:unread,deposits:d.count||0,withdrawals:w.count||0},total=counts.messages+counts.deposits+counts.withdrawals;
+  const el=document.getElementById('rizqAdminNotificationCounts');
+  if(el)el.textContent='رسائل جديدة: '+counts.messages+'  |  إيداعات معلقة: '+counts.deposits+'  |  سحوبات معلقة: '+counts.withdrawals;
+  const badge=document.getElementById('rizqAdminNotificationTotal');if(badge)badge.textContent=total;
+  try{if('setAppBadge' in navigator){if(total)await navigator.setAppBadge(total);else await navigator.clearAppBadge()}}catch(_){}
+  if(showNew&&rizqLastNoticeSnapshot){
+   const deltaMessages=counts.messages>rizqLastNoticeSnapshot.messages,deltaDeposits=counts.deposits>rizqLastNoticeSnapshot.deposits,deltaWithdrawals=counts.withdrawals>rizqLastNoticeSnapshot.withdrawals;
+   const titles=[];if(deltaMessages)titles.push('رسالة عميل جديدة');if(deltaDeposits)titles.push('طلب إيداع جديد');if(deltaWithdrawals)titles.push('طلب سحب جديد');
+   if(titles.length&&document.hidden&&'Notification' in window&&Notification.permission==='granted')new Notification('تنبيه RIZQ',{body:titles.join(' • '),icon:'/favicon.ico',tag:'rizq-admin-'+Date.now()});
+  }
+  rizqLastNoticeSnapshot=counts;
+ }catch(e){console.error('RIZQ notifications:',e);const el=document.getElementById('rizqAdminNotificationCounts');if(el)el.textContent='تعذر تحديث الإشعارات: '+(e.message||e)}
+}
+async function enableRizqAdminNotifications(){
+ if(!('Notification' in window))return msg('المتصفح لا يدعم إشعارات النظام',true);
+ const permission=await Notification.requestPermission();
+ if(permission==='granted'){msg('تم تفعيل إشعارات RIZQ على هذا الجهاز');await refreshRizqAdminNotifications(false)}
+ else msg('لم يتم السماح بإشعارات RIZQ. فعّلها من إعدادات المتصفح.',true);
+}
+function startRizqAdminNotifications(){
+ if(!rizqSupportIsAdmin()||rizqAdminNoticeTimer)return;
+ refreshRizqAdminNotifications(false);
+ rizqAdminNoticeTimer=setInterval(()=>refreshRizqAdminNotifications(true),20000);
 }
 const rizqOriginalShowTab=window.showTab;
 window.showTab=function(name){
