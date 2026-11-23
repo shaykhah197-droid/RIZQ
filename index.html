@@ -405,7 +405,7 @@ async function resendConfirmation(){
  if(button.disabled)return;
  button.disabled=true;
  try{
-  const {error}=await db.auth.resend({type:'signup',email});
+  const {error}=await db.auth.resend({type:'signup',email,options:{emailRedirectTo:window.location.origin+'/?confirmed=1'}});
   if(error)throw error;
   msg('تم طلب إعادة إرسال رسالة التأكيد. راجع البريد الوارد والرسائل غير المرغوب فيها.');
   startResendCountdown(60);
@@ -463,7 +463,7 @@ async function authenticate(){
    const full_name=document.getElementById('fullName').value.trim();
    const referral_code=document.getElementById('refCode').value.trim();
    if(!full_name)throw Error('اكتب اسمك');
-   const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name,referral_code}}});
+   const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name,referral_code},emailRedirectTo:window.location.origin+'/?confirmed=1'}});
    if(error)throw error;
    if(data.session){currentUser=data.user;await loadApp()}
    else {msg('تم إنشاء الحساب. راجع بريدك الإلكتروني، ولو الرسالة موصلتش تقدر تعيد إرسالها بعد 60 ثانية.');showResendConfirmation();}
@@ -932,7 +932,17 @@ async function sendTransactionEvidence(){
 }
 
 async function start(){
+ const confirmed=new URLSearchParams(window.location.search).get('confirmed')==='1';
  const {data:{session}}=await db.auth.getSession();
+ if(confirmed){
+  if(session) await db.auth.signOut({scope:'local'});
+  currentUser=null;
+  history.replaceState({},document.title,window.location.pathname);
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('auth').classList.remove('hidden');
+  msg('تم تأكيد بريدك الإلكتروني بنجاح. يمكنك الآن تسجيل الدخول.');
+  return;
+ }
  if(session){
   currentUser=session.user;
   try{await loadApp()}catch(e){msg(e.message,true)}
