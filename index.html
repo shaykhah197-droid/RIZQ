@@ -3473,7 +3473,10 @@ async function loadSupportAdmin(){
    const tb=latestByConversation[b.id]?.created_at||b.updated_at||b.created_at;
    return new Date(tb)-new Date(ta);
   });
-  const unread=ordered.filter(c=>(latestByConversation[c.id]?.sender||latestByConversation[c.id]?.sender_role)==='customer').length;
+  const unread=ordered.filter(c=>{
+   const last=latestByConversation[c.id];
+   return (last?.sender||last?.sender_role)==='customer' && last?.created_at && (!c.admin_last_read_at || new Date(last.created_at)>new Date(c.admin_last_read_at));
+  }).length;
   box.innerHTML='<div class="card" style="margin-bottom:12px"><h3>البحث عن عميل بكود العميل</h3><input id="supportCustomerCodeSearch" placeholder="مثال: RZQ-XXXXXXXXXX" autocomplete="off"><button type="button" id="supportCustomerCodeSearchBtn">بحث عن العميل</button><div id="supportCustomerLookupResult" style="margin-top:12px"></div></div><div class="notice" style="font-size:16px;font-weight:bold">'+(unread?'لديك '+unread+' محادثة بها رسالة أخيرة من العميل':'لا توجد رسائل جديدة من العملاء')+'</div><h3>صندوق رسائل العملاء</h3><div id="supportAdminList"></div><div id="supportAdminThread" style="margin-top:14px"><p class="muted">اختر اسم العميل لفتح المحادثة.</p></div>';
   document.getElementById('supportCustomerCodeSearchBtn').onclick=searchSupportCustomerByCode;
   document.getElementById('supportCustomerCodeSearch').addEventListener('keydown',e=>{if(e.key==='Enter')searchSupportCustomerByCode()});
@@ -3495,7 +3498,7 @@ async function loadSupportAdmin(){
    time.textContent=stamp?new Date(stamp).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}):'';
    foot.append(status,time);
    open.append(name,code,preview,foot);
-   if((last?.sender||last?.sender_role)==='customer'){
+   if((last?.sender||last?.sender_role)==='customer' && last?.created_at && (!c.admin_last_read_at || new Date(last.created_at)>new Date(c.admin_last_read_at))){
     const unreadMark=document.createElement('div');unreadMark.className='support-admin-unread';unreadMark.textContent='● رسالة جديدة من العميل';open.appendChild(unreadMark);
    }
    open.onclick=()=>openSupportAdminThread(c.id,c.status);
@@ -3514,6 +3517,11 @@ async function openSupportAdminThread(id,status){
  try{
   const {data:messages,error}=await db.from('support_messages').select('*').eq('conversation_id',id).order('created_at',{ascending:true});
   if(error)throw error;
+  const latestCustomerMessage=[...(messages||[])].reverse().find(m=>(m.sender||m.sender_role)==='customer');
+  if(latestCustomerMessage?.created_at){
+   const {error:readError}=await db.from('support_conversations').update({admin_last_read_at:latestCustomerMessage.created_at}).eq('id',id);
+   if(readError)throw readError;
+  }
   thread.innerHTML='<button type="button" class="secondary" id="supportAdminBack">← قائمة المحادثات</button><div class="support-chat-head"><div><h3 id="supportAdminCustomerName" style="margin:0">محادثة مباشرة مع العميل</h3><div class="muted small">الردود تظهر للعميل داخل حسابه</div></div><span class="tag">محادثة خاصة</span></div><div id="supportAdminMessages" class="support-chat-messages" aria-live="polite"></div><div class="support-chat-compose"><textarea id="supportAdminReply" placeholder="اكتب ردك للعميل..." rows="2"></textarea><div class="support-compose-actions"><label class="support-attach" for="supportAdminFiles">＋ إرفاق صورة</label><input id="supportAdminFiles" type="file" accept="image/jpeg,image/png,image/webp"><span class="muted small">حتى 5 ميجابايت</span><button type="button" id="supportAdminSend">إرسال الرد</button><button type="button" class="secondary" id="supportAdminClose">'+(status==='closed'?'إعادة فتح المحادثة':'إغلاق المحادثة')+'</button></div>';
   document.getElementById('supportAdminBack').onclick=()=>loadSupportAdmin();
   const {data:conversation,error:conversationError}=await db.from('support_conversations').select('user_id').eq('id',id).maybeSingle();
