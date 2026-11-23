@@ -30,7 +30,7 @@ begin
 end $$;
 
 update public.support_messages
-set sender_role=coalesce(sender_role,'customer')
+set body=coalesce(body,''), attachment_paths=coalesce(attachment_paths,'{}'), sender_role=coalesce(sender_role,'customer')
 where sender_role is null;
 alter table public.support_messages
   alter column sender_role set default 'customer',
