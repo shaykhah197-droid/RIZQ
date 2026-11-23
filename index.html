@@ -3,7 +3,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#075b3e"><link rel="manifest" href="/manifest.webmanifest">
 <title>رزق RIZQ</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -3385,11 +3385,29 @@ async function refreshRizqAdminNotifications(showNew=false){
   rizqLastNoticeSnapshot=counts;
  }catch(e){console.error('RIZQ notifications:',e);const el=document.getElementById('rizqAdminNotificationCounts');if(el)el.textContent='تعذر تحديث الإشعارات: '+(e.message||e)}
 }
+const RIZQ_PUSH_PUBLIC_KEY='BHB_DCZzMGPBakI7ngTPMRYZKSz9rUiNlr2exPJ5AD3DNdgjub5rSW7aFP-5KiUcDaHTbpNnhHHr7xPq1Ke3xyE';
+function rizqUrlBase64ToUint8Array(value){
+ const padding='='.repeat((4-value.length%4)%4);
+ const raw=atob((value+padding).replace(/-/g,'+').replace(/_/g,'/'));
+ return Uint8Array.from([...raw].map(ch=>ch.charCodeAt(0)));
+}
 async function enableRizqAdminNotifications(){
- if(!('Notification' in window))return msg('المتصفح لا يدعم إشعارات النظام',true);
- const permission=await Notification.requestPermission();
- if(permission==='granted'){msg('تم تفعيل إشعارات RIZQ على هذا الجهاز');await refreshRizqAdminNotifications(false)}
- else msg('لم يتم السماح بإشعارات RIZQ. فعّلها من إعدادات المتصفح.',true);
+ try{
+  if(!rizqSupportIsAdmin())return msg('يجب تسجيل الدخول بحساب المدير أولاً',true);
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))return msg('المتصفح لا يدعم إشعارات الهاتف. افتح RIZQ في Chrome على Android.',true);
+  const permission=await Notification.requestPermission();
+  if(permission!=='granted')return msg('لم يتم السماح بالإشعارات. فعّلها من إعدادات الموقع.',true);
+  const registration=await navigator.serviceWorker.register('/sw.js');
+  await navigator.serviceWorker.ready;
+  let subscription=await registration.pushManager.getSubscription();
+  if(!subscription)subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:rizqUrlBase64ToUint8Array(RIZQ_PUSH_PUBLIC_KEY)});
+  const {data:{session}}=await db.auth.getSession();
+  if(!session?.access_token)throw new Error('انتهت جلسة المدير، سجّل الدخول مرة أخرى');
+  const {data,error}=await db.functions.invoke('rizq-push',{body:{action:'subscribe',subscription:subscription.toJSON()}});
+  if(error)throw error;
+  msg('تم تفعيل إشعارات الهاتف حتى عند إغلاق الموقع');
+  await refreshRizqAdminNotifications(false);
+ }catch(e){console.error('RIZQ push setup:',e);msg('تعذر تفعيل إشعارات الهاتف: '+(e.message||e),true)}
 }
 function startRizqAdminNotifications(){
  if(!rizqSupportIsAdmin()||rizqAdminNoticeTimer)return;
