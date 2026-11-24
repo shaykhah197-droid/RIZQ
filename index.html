@@ -1869,6 +1869,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
     if(profilesError){box.textContent='تعذر تحميل أسماء العملاء: '+profilesError.message;return;}
 
     const customerNames={};
+    const customerCodes={};
     (profiles||[]).forEach(p=>{customerNames[p.id]=p.full_name||'';customerCodes[p.id]=p.customer_code||''});
 
     const cards=await Promise.all(data.map(async s=>{
