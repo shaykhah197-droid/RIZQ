@@ -1812,6 +1812,8 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   }
   }
 
+  window.rizqEnsureTaskManager = initRizqTaskManager;
+
   if(document.readyState==='loading'){
     document.addEventListener('DOMContentLoaded',initRizqTaskManager,{once:true});
   }else{
@@ -3575,6 +3577,14 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   let previous=null;
 
   function show(def){
+   // أعد البحث عن إدارة المهام وقت الضغط؛ قد تكون القائمة سبقت إنشاء القسم.
+   if(def.name==='إدارة المهام' && !def.target){
+    if(typeof window.rizqEnsureTaskManager==='function'){
+     try{window.rizqEnsureTaskManager()}catch(error){console.error('RIZQ task manager init:',error)}
+    }
+    const taskElement=document.getElementById('rizqTaskManager');
+    def.target=taskElement?.closest('.card')||taskElement||null;
+   }
    if(!def.target){
     alert('القسم غير موجود في النسخة الحالية: '+def.name);
     return;
