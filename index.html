@@ -1750,15 +1750,15 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
     if(!isAdmin) return msg('غير مصرح لك',true);
     const task=(window.rizqTaskCache||[]).find(t=>t.id===taskId);
     if(!task) return msg('لم يتم العثور على المهمة',true);
-    const urls=String(task.description||'').match(/https?:\\/\\/[^\\s<>"']+/i)||[];
+    const urls=String(task.description||'').match(/https?:\/\/[^\s<>"']+/i)||[];
     const currentUrl=urls[0]||'';
     const newUrl=prompt(currentUrl?'اكتب الرابط الجديد بدل الرابط الحالي:':'لا يوجد رابط في وصف المهمة. اكتب الرابط الذي تريد إضافته:',currentUrl);
     if(newUrl===null) return;
     const cleanUrl=newUrl.trim();
-    if(!/^https?:\\/\\//i.test(cleanUrl)) return msg('اكتب رابطًا يبدأ بـ https:// أو http://',true);
+    if(!/^https?:\/\//i.test(cleanUrl)) return msg('اكتب رابطًا يبدأ بـ https:// أو http://',true);
     const description=currentUrl
       ? String(task.description||'').replace(currentUrl,cleanUrl)
-      : [String(task.description||'').trim(),cleanUrl].filter(Boolean).join('\\n');
+      : [String(task.description||'').trim(),cleanUrl].filter(Boolean).join('\n');
     try{
       const {error}=await db.from('tasks').update({description}).eq('id',taskId);
       if(error) throw error;
