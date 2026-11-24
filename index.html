@@ -3130,14 +3130,44 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
    if(screen._restore)screen._restore();
   };
 
+  let withdrawalBadge=null;
   definitions.forEach(def=>{
    const button=document.createElement('button');
    button.type='button';
    button.className='rizq-tile';
    button.textContent=def.icon+' '+def.name;
+   if(def.name==='طلبات السحب'){
+    withdrawalBadge=document.createElement('span');
+    withdrawalBadge.className='rizq-withdrawal-badge';
+    withdrawalBadge.textContent='0';
+    withdrawalBadge.hidden=true;
+    withdrawalBadge.style.cssText='display:inline-block;min-width:23px;padding:3px 7px;margin-right:8px;border-radius:20px;background:#c0392b;color:#fff;font-size:12px;font-weight:bold;vertical-align:middle';
+    button.appendChild(withdrawalBadge);
+   }
    button.onclick=()=>show(def);
    grid.appendChild(button);
   });
+
+  let withdrawalBadgeBusy=false;
+  async function refreshWithdrawalBadge(){
+   if(withdrawalBadgeBusy||!withdrawalBadge||!allowed())return;
+   withdrawalBadgeBusy=true;
+   try{
+    const {count,error}=await db.from('withdrawal_requests')
+     .select('id',{count:'exact',head:true}).eq('status','pending');
+    if(error)throw error;
+    const pending=Number(count)||0;
+    withdrawalBadge.textContent=String(pending);
+    withdrawalBadge.hidden=pending===0;
+    withdrawalBadge.style.display=pending===0?'none':'inline-block';
+   }catch(error){
+    console.error('RIZQ withdrawal notification:',error);
+   }finally{
+    withdrawalBadgeBusy=false;
+   }
+  }
+  refreshWithdrawalBadge();
+  setInterval(refreshWithdrawalBadge,30000);
 
   // صلاحيات الإدارة
   function allowed(){
