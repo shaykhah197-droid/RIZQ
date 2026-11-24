@@ -1524,29 +1524,55 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   const admin = document.getElementById('tab-admin');
   if(!admin || document.getElementById('rizqTaskManager')) return;
 
+  const taskStyle=document.createElement('style');
+  taskStyle.textContent=`
+    #rizqTaskManager{direction:rtl;text-align:right;border:1px solid #e2e9e5;border-radius:18px;padding:16px;background:var(--card,#fff)}
+    #rizqTaskManager .task-hero{padding:15px;border-radius:15px;background:linear-gradient(135deg,#123f32,#23765d);color:#fff;margin-bottom:16px}
+    #rizqTaskManager .task-hero h2{margin:0 0 6px;font-size:21px}
+    #rizqTaskManager .task-hero p{margin:0;color:#e1eee8;font-size:13px}
+    #rizqTaskManager .task-form{padding:15px;border:1px solid #e5ece8;border-radius:15px;background:#f8fbf9}
+    #rizqTaskManager label{display:block;font-weight:700;margin:12px 0 6px}
+    #rizqTaskManager input,#rizqTaskManager select,#rizqTaskManager textarea{width:100%;box-sizing:border-box;border:1px solid #d5e1da;border-radius:11px;padding:12px;background:#fff;font:inherit}
+    #rizqTaskManager textarea{min-height:95px;resize:vertical}
+    #rizqTaskRewardInfo{margin:12px 0;padding:10px 12px;border-radius:10px;font-size:13px}
+    #rizqAddTaskButton{width:100%;margin-top:4px;border-radius:11px;padding:13px;font-weight:800;background:#176b55}
+    #rizqTaskManager .task-list-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:20px 0 10px}
+    #rizqTaskManager .task-list-head h3{margin:0}
+    #rizqTaskCount{font-size:12px;background:#e8f2ed;color:#176047;padding:5px 10px;border-radius:20px}
+    #rizqTaskList{display:grid;gap:10px}
+    #rizqTaskList .task-admin-card{padding:14px;border:1px solid #e3eae6;border-radius:14px;background:#fff;box-shadow:0 2px 8px #102f2010}
+    #rizqTaskList .task-admin-title{font-size:16px;font-weight:800;margin-bottom:7px}
+    #rizqTaskList .task-admin-meta{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+    #rizqTaskList .task-chip{font-size:12px;padding:5px 9px;border-radius:20px;background:#eef4f0;color:#36584a}
+    #rizqTaskList .task-chip.off{background:#fff0ed;color:#a33c2e}
+    #rizqTaskList .task-admin-desc{font-size:13px;line-height:1.7;color:#53645b;white-space:pre-wrap}
+    #rizqTaskList .task-admin-actions{display:flex;gap:8px;margin-top:12px}
+    #rizqTaskList .task-admin-actions button{flex:1;min-height:42px;border-radius:10px;font-size:13px}
+    @media(max-width:480px){#rizqTaskManager{padding:12px}#rizqTaskList .task-admin-actions{flex-direction:column}}
+  `;
+  document.head.appendChild(taskStyle);
+
   admin.insertAdjacentHTML('beforeend', `
     <div class="card" id="rizqTaskManager">
-      <h2>إدارة مهام الباقات</h2>
-      <p>أضف مهمة لباقة محددة أو اجعلها عامة لكل الباقات النشطة.</p>
-
-      <label>نطاق المهمة</label>
-      <select id="rizqTaskPackage"></select>
-
-      <label>عنوان المهمة</label>
-      <input id="rizqTaskTitle" placeholder="مثال: مراجعة محتوى تعليمي">
-
-      <label>وصف المهمة وطريقة تنفيذها</label>
-      <textarea id="rizqTaskDescription"
-        placeholder="اكتب المطلوب من العميل وطريقة تقديم الإثبات"></textarea>
-
-      <p id="rizqTaskRewardInfo" class="notice">
-        مكافأة المهمة تُحدد تلقائياً حسب الباقة.
-      </p>
-
-      <button id="rizqAddTaskButton"
-        onclick="window.rizqAddTask()">إضافة المهمة</button>
-
-      <h3>المهام المضافة</h3>
+      <div class="task-hero">
+        <h2>📋 إدارة المهام</h2>
+        <p>أنشئ المهام، حدّد الباقة المستهدفة، وتابع حالة كل مهمة من مكان واحد.</p>
+      </div>
+      <div class="task-form">
+        <h3 style="margin:0 0 8px">➕ إضافة مهمة جديدة</h3>
+        <label>الباقة المستهدفة</label>
+        <select id="rizqTaskPackage"></select>
+        <label>عنوان المهمة</label>
+        <input id="rizqTaskTitle" placeholder="مثال: مراجعة محتوى تعليمي">
+        <label>التعليمات وطريقة التنفيذ</label>
+        <textarea id="rizqTaskDescription" placeholder="اكتب المطلوب من العميل وطريقة تقديم الإثبات"></textarea>
+        <p id="rizqTaskRewardInfo" class="notice">مكافأة المهمة تُحدد تلقائياً حسب الباقة.</p>
+        <button id="rizqAddTaskButton" onclick="window.rizqAddTask()">إضافة المهمة</button>
+      </div>
+      <div class="task-list-head">
+        <h3>المهام المضافة</h3>
+        <span id="rizqTaskCount">جارٍ التحميل</span>
+      </div>
       <div id="rizqTaskList">جارٍ تحميل المهام...</div>
     </div>
   `);
@@ -1603,20 +1629,24 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
       return;
     }
 
+    const taskCount=document.getElementById('rizqTaskCount');
+    if(taskCount) taskCount.textContent=(tasks||[]).length+' مهمة';
     box.innerHTML = tasks?.length ? tasks.map(t => {
       const p = (packages || []).find(x => x.id === t.package_id);
-      return `<div class="item">
-        <b>${safe(t.title)}</b>
-        <div>${safe(p?.name || (t.package_id ? 'باقة غير محددة' : 'كل الباقات النشطة'))}</div>
-        <div>${safe(t.description)}</div>
-        <div>المكافأة: ${t.package_id ? money(t.reward) : 'حسب باقة العميل'}</div>
-        <div>الحالة: ${t.active ? 'نشطة' : 'متوقفة'}</div>
-        <div class="row">
+      return `<div class="task-admin-card">
+        <div class="task-admin-title">${safe(t.title)}</div>
+        <div class="task-admin-meta">
+          <span class="task-chip">${safe(p?.name || (t.package_id ? 'باقة غير محددة' : 'كل الباقات النشطة'))}</span>
+          <span class="task-chip">${t.package_id ? 'المكافأة: '+money(t.reward) : 'المكافأة حسب باقة العميل'}</span>
+          <span class="task-chip ${t.active?'':'off'}">${t.active?'● نشطة':'● متوقفة'}</span>
+        </div>
+        <div class="task-admin-desc">${safe(t.description)}</div>
+        <div class="task-admin-actions">
           <button class="${t.active?'danger':'secondary'}" onclick="window.rizqToggleTask('${t.id}',${!t.active})">${t.active?'إيقاف المهمة':'إعادة تفعيل المهمة'}</button>
-          <button class="danger" onclick="window.rizqDeleteTask('${t.id}')">مسح المهمة</button>
+          <button class="danger" onclick="window.rizqDeleteTask('${t.id}')">حذف نهائي</button>
         </div>
       </div>`;
-    }).join('') : 'لم تتم إضافة مهام بعد';
+    }).join('') : '<div class="task-admin-card" style="text-align:center;color:#748279;padding:24px">لا توجد مهام مضافة حتى الآن</div>';
   };
 
   window.rizqAddTask = async function(){
