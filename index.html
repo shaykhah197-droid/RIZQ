@@ -3441,7 +3441,7 @@ async function loadSupportConversation(){
    const role=m.sender||m.sender_role;
    row.className='support-message '+(role==='customer'?'mine':'theirs');
    const who=document.createElement('b');
-   who.textContent=role==='admin'?'فريق RIZQ':'أنت';
+   who.textContent=role==='admin'?'فريق RIZQ':role==='system'?'النظام':'أنت';
    const body=document.createElement('div');
    body.textContent=m.message||m.body||'';
    row.append(who,body);
@@ -3662,7 +3662,7 @@ async function openSupportAdminThread(id,status){
   for(const m of (messages||[])){
    const row=document.createElement('div');const role=m.sender||m.sender_role;
    row.className='support-message '+(role==='admin'?'mine':'theirs');
-   const who=document.createElement('b');who.textContent=role==='admin'?'أنت — الإدارة':'العميل';
+   const who=document.createElement('b');who.textContent=role==='admin'?'أنت — الإدارة':role==='system'?'النظام':'العميل';
    const body=document.createElement('div');body.textContent=m.message||m.body||'';
    row.append(who,body);messageBox.appendChild(row);
    const attachmentPaths=m.attachment_paths?.length?m.attachment_paths:m.image_path;
