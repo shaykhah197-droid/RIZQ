@@ -2099,18 +2099,28 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
       if(error) throw error;
       if(!data?.success) throw Error('لم يتم تأكيد عملية الشراء');
 
+      // نجاح RPC يعني أن الشراء والخصم تمّا؛ لا نعرض فشل الاشتراك بسبب تحديث واجهة لاحق.
       msg(data.already_processed
         ? 'عملية الشراء مسجلة بالفعل'
-        : 'تم الاشتراك وتحديث رصيد محفظتك بنجاح');
+        : 'تم الاشتراك وخصم قيمة الباقة بنجاح');
 
-      await Promise.all([
+      button.disabled = true;
+      button.textContent = 'تم الاشتراك';
+
+      const refreshResults = await Promise.allSettled([
         loadWallet(),
         loadTransactions(),
         window.rizqLoadPackages()
       ]);
+      const refreshFailed = refreshResults.some(x => x.status === 'rejected');
+      if(refreshFailed){
+        console.warn('RIZQ purchase succeeded; one or more screen refreshes failed:', refreshResults);
+        msg('تم الاشتراك والخصم بنجاح. قد تحتاج لتحديث الصفحة لإظهار الرصيد والباقات.');
+      }
 
     }catch(e){
-      msg('تعذر الاشتراك: '+e.message,true);
+      // هذا المسار خاص بفشل عملية الشراء نفسها قبل تأكيد نجاح RPC.
+      msg('تعذر تأكيد الاشتراك: '+(e.message||'خطأ غير معروف'),true);
       button.disabled = false;
       button.textContent = oldText;
     }
