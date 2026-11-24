@@ -3297,34 +3297,113 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   async function loadCustomers(){
    const box=document.getElementById('rizqAdminCustomersContent');
    if(!allowed())return notice(box,'غير مصرح لك');
-   box.textContent='جارٍ تحميل العملاء...';
+   box.innerHTML='<p>جارٍ تحميل العملاء...</p>';
 
-   // القائمة تأتي من دالة آمنة على الخادم وتستبعد الحسابات غير المؤكدة.
+   // القائمة تأتي من الدالة الآمنة نفسها، وتستبعد الحسابات غير المؤكدة.
    const {data,error}=await db.rpc('admin_list_confirmed_customers');
-
    if(error)return notice(box,'تعذر التحميل: '+error.message);
 
+   const customers=data||[];
    box.innerHTML='';
-   (data||[]).forEach(user=>{
-    const row=document.createElement('div');
-    row.className='rizq-row';
+   const toolbar=document.createElement('div');
+   toolbar.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0';
+   const search=document.createElement('input');
+   search.type='search';search.placeholder='ابحث بالاسم أو كود العميل...';
+   search.setAttribute('aria-label','البحث عن عميل');
+   search.style.cssText='flex:1;min-width:190px;padding:11px;border:1px solid #dce8df;border-radius:10px';
+   const count=document.createElement('span');
+   count.className='muted';
+   toolbar.append(search,count);
+   box.appendChild(toolbar);
 
-    const name=document.createElement('b');
-    name.textContent=user.full_name||'عميل بدون اسم';
+   const tableWrap=document.createElement('div');
+   tableWrap.style.cssText='overflow-x:auto;width:100%';
+   const table=document.createElement('table');
+   table.style.cssText='width:100%;border-collapse:collapse;min-width:420px;text-align:right';
+   table.innerHTML='<thead><tr><th style="padding:10px;border-bottom:1px solid #ddd">اسم العميل</th><th style="padding:10px;border-bottom:1px solid #ddd">كود العميل</th><th style="padding:10px;border-bottom:1px solid #ddd">رصيد المحفظة</th><th style="padding:10px;border-bottom:1px solid #ddd">التفاصيل</th></tr></thead>';
+   const tbody=document.createElement('tbody');
+   table.appendChild(tbody);tableWrap.appendChild(table);box.appendChild(tableWrap);
+   const details=document.createElement('section');
+   details.style.cssText='display:none;margin-top:14px;padding:14px;border:1px solid #dce8df;border-radius:14px;background:#fff';
+   box.appendChild(details);
 
-    const id=document.createElement('small');
-    id.textContent='معرف العميل: '+user.id;
-
-    const balance=document.createElement('p');
-    balance.textContent='رصيد المحفظة: '+Number(user.balance||0).toLocaleString('ar-EG')+' جنيه';
-
-    const code=document.createElement('small');
-    code.textContent='كود الإحالة: '+(user.referral_code||'غير موجود');
-
-    row.append(name,id,balance,code);
-    box.appendChild(row);
-   });
-   if(!data?.length)notice(box,'لا يوجد عملاء مؤكَّدون');
+   function renderRows(){
+    const term=search.value.trim().toLocaleLowerCase();
+    const filtered=customers.filter(u=>
+     String(u.full_name||'').toLocaleLowerCase().includes(term)||
+     String(u.customer_code||'').toLocaleLowerCase().includes(term)||
+     String(u.referral_code||'').toLocaleLowerCase().includes(term)
+    );
+    count.textContent='عدد العملاء: '+filtered.length;
+    tbody.innerHTML='';
+    filtered.forEach(user=>{
+     const tr=document.createElement('tr');
+     const name=document.createElement('td');name.textContent=user.full_name||'عميل بدون اسم';
+     const code=document.createElement('td');code.textContent=user.customer_code||'—';
+     const balance=document.createElement('td');balance.textContent=Number(user.balance||0).toLocaleString('ar-EG')+' جنيه';
+     const action=document.createElement('td');
+     const button=document.createElement('button');button.type='button';button.textContent='عرض التفاصيل';
+     button.style.cssText='padding:8px 12px;margin:4px';
+     button.onclick=()=>showCustomerDetails(user,details);
+     action.appendChild(button);
+     [name,code,balance,action].forEach(td=>{td.style.cssText='padding:10px;border-bottom:1px solid #edf0ed';tr.appendChild(td)});
+     tbody.appendChild(tr);
+    });
+    if(!filtered.length){
+     const tr=document.createElement('tr'),td=document.createElement('td');
+     td.colSpan=4;td.textContent=customers.length?'لا توجد نتائج مطابقة للبحث':'لا يوجد عملاء مؤكَّدون';
+     td.style.padding='14px';tr.appendChild(td);tbody.appendChild(tr);
+    }
+   }
+   async function showCustomerDetails(user,panel){
+    panel.style.display='block';panel.innerHTML='<p>جارٍ تحميل تفاصيل العميل...</p>';
+    try{
+     const [profileResult,walletResult,transactionsResult,ownedResult]=await Promise.all([
+      db.from('profiles').select('id,full_name,customer_code,referral_code,created_at').eq('id',user.id).maybeSingle(),
+      db.from('wallets').select('balance').eq('user_id',user.id).maybeSingle(),
+      db.from('wallet_transactions').select('transaction_type,amount,description,created_at').eq('user_id',user.id).order('created_at',{ascending:false}).limit(50),
+      db.from('user_packages').select('id,package_id').eq('user_id',user.id)
+     ]);
+     for(const result of [profileResult,walletResult,transactionsResult,ownedResult])if(result.error)throw result.error;
+     const profile=profileResult.data||user;
+     const owned=ownedResult.data||[];
+     let packages=[];
+     const packageIds=[...new Set(owned.map(x=>x.package_id).filter(Boolean))];
+     if(packageIds.length){
+      const result=await db.from('packages').select('id,name,price').in('id',packageIds);
+      if(result.error)throw result.error;
+      packages=result.data||[];
+     }
+     panel.innerHTML='';
+     const back=document.createElement('button');back.type='button';back.textContent='إغلاق التفاصيل';
+     back.className='secondary';back.onclick=()=>{panel.style.display='none';panel.innerHTML=''};
+     const heading=document.createElement('h3');heading.textContent=profile.full_name||'عميل بدون اسم';
+     panel.append(back,heading);
+     const info=document.createElement('div');info.className='rizq-row';
+     const addInfo=(label,value)=>{const p=document.createElement('p');p.textContent=label+': '+value;info.appendChild(p)};
+     addInfo('كود العميل',profile.customer_code||'غير متاح');
+     addInfo('كود الإحالة',profile.referral_code||'غير موجود');
+     addInfo('تاريخ التسجيل',profile.created_at?new Date(profile.created_at).toLocaleString('ar-EG'):'غير متاح');
+     addInfo('رصيد المحفظة',Number(walletResult.data?.balance??user.balance??0).toLocaleString('ar-EG')+' جنيه');
+     panel.appendChild(info);
+     const packageHeading=document.createElement('h4');packageHeading.textContent='الباقات المسجلة';
+     panel.appendChild(packageHeading);
+     if(!packages.length){const p=document.createElement('p');p.textContent='لا توجد باقات مسجلة';panel.appendChild(p)}
+     packages.forEach(pkg=>{const p=document.createElement('p');p.className='rizq-row';p.textContent=pkg.name+' — '+Number(pkg.price||0).toLocaleString('ar-EG')+' جنيه';panel.appendChild(p)});
+     const txHeading=document.createElement('h4');txHeading.textContent='سجل معاملات المحفظة (آخر 50 معاملة)';
+     panel.appendChild(txHeading);
+     const txs=transactionsResult.data||[];
+     if(!txs.length){const p=document.createElement('p');p.textContent='لا توجد معاملات مسجلة';panel.appendChild(p)}
+     txs.forEach(tx=>{
+      const row=document.createElement('div');row.className='rizq-row';
+      const strong=document.createElement('b');strong.textContent=(tx.transaction_type||'معاملة')+' — '+Number(tx.amount||0).toLocaleString('ar-EG')+' جنيه';
+      const meta=document.createElement('small');meta.textContent=(tx.description||'')+' · '+(tx.created_at?new Date(tx.created_at).toLocaleString('ar-EG'):'');
+      row.append(strong,meta);panel.appendChild(row);
+     });
+    }catch(e){panel.innerHTML='';const error=document.createElement('p');error.className='notice error';error.textContent='تعذر تحميل التفاصيل: '+(e.message||e);panel.appendChild(error)}
+   }
+   search.addEventListener('input',renderRows);
+   renderRows();
   }
 
   async function loadReferrals(){
