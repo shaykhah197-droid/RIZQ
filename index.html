@@ -1521,8 +1521,22 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
 
 <script>
 (function(){
-  const admin = document.getElementById('tab-admin');
-  if(!admin || document.getElementById('rizqTaskManager')) return;
+  function initRizqTaskManager(){
+    const admin = document.getElementById('tab-admin');
+    if(!admin){
+      if(!window.__rizqTaskAdminWaiter){
+        window.__rizqTaskAdminWaiter=new MutationObserver(()=>{
+          if(document.getElementById('tab-admin')){
+            window.__rizqTaskAdminWaiter.disconnect();
+            window.__rizqTaskAdminWaiter=null;
+            initRizqTaskManager();
+          }
+        });
+        window.__rizqTaskAdminWaiter.observe(document.body,{childList:true,subtree:true});
+      }
+      return;
+    }
+    if(document.getElementById('rizqTaskManager')) return;
 
   const taskStyle=document.createElement('style');
   taskStyle.textContent=`
@@ -1796,7 +1810,14 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   if(!admin.classList.contains('hidden')){
     window.rizqLoadTaskManager();
   }
-})();
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',initRizqTaskManager,{once:true});
+  }else{
+    initRizqTaskManager();
+  }
+})();;
 </script>
 
 <script>
