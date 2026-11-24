@@ -3311,10 +3311,10 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
      <p class="muted small">عدد الإيداعات المعتمدة: ${deposits.length.toLocaleString('ar-EG')} · عدد التحويلات المدفوعة للعملاء: ${withdrawals.length.toLocaleString('ar-EG')}</p>
      <button type="button" class="secondary" id="rizqFinanceRefresh">تحديث الحسابات</button>
     `;
-    document.getElementById('rizqFinanceRefresh').onclick=loadFinance;
+    document.getElementById('rizqFinanceRefresh').onclick=loadFinanceForAdmin;
    }catch(error){
     box.innerHTML='<p class="notice error">تعذر تحميل الحسابات: '+String(error.message||error).replace(/[<>&"]/g,char=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[char]))+'</p><button type="button" class="secondary" id="rizqFinanceRetry">إعادة المحاولة</button>';
-    document.getElementById('rizqFinanceRetry').onclick=loadFinance;
+    document.getElementById('rizqFinanceRetry').onclick=loadFinanceForAdmin;
    }
   }
 
