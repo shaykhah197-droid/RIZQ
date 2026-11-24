@@ -3290,14 +3290,14 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
      return {label:period.label,incoming,outgoing,net:incoming-outgoing};
     });
     box.innerHTML=`
-     <p class="muted">الوارد = الإيداعات المعتمدة فقط. الصادر = طلبات السحب التي تم تأكيد دفعها فقط. الحساب حسب تاريخ إنشاء الطلب وتوقيت القاهرة.</p>
+     <p class="muted">داخل = الإيداعات المعتمدة فقط. خارج = طلبات السحب التي تم تأكيد دفعها فقط. الحساب حسب تاريخ إنشاء الطلب وتوقيت القاهرة.</p>
      <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;min-width:440px">
        <thead><tr>
         <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">الفترة</th>
-        <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">الوارد</th>
-        <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">الصادر</th>
-        <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">الصافي</th>
+        <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">داخل</th>
+        <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">خارج</th>
+        <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">متبقي</th>
        </tr></thead>
        <tbody>${rows.map(row=>`
         <tr>
