@@ -2511,7 +2511,17 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
 
 
   async function loadFinance(){
-   const box=document.getElementById('rizqAdminFinanceContent');
+   const panel=document.getElementById('rizqAdminFinance');
+   let box=document.getElementById('rizqAdminFinanceContent');
+   if(!box && panel){
+    box=document.createElement('div');
+    box.id='rizqAdminFinanceContent';
+    panel.appendChild(box);
+   }
+   if(!box){
+    console.error('RIZQ finance panel/content not found');
+    return;
+   }
    if(!allowed())return notice(box,'غير مصرح لك بعرض الحسابات');
    box.innerHTML='<p class="muted">جارٍ تحميل الحسابات...</p>';
    try{
@@ -3229,7 +3239,11 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
    {name:'العملاء والمحافظ',icon:'👥',target:customers,load:loadCustomers},
    {name:'الإحالات',icon:'🔗',target:referrals,load:loadReferrals},
    {name:'سجل المعاملات',icon:'📚',target:transactions,load:loadTransactions},
-   {name:'الحسابات والإيرادات',icon:'📊',target:financePanel,load:()=>window.rizqLoadFinance?.()},
+   {name:'الحسابات والإيرادات',icon:'📊',target:financePanel,load:()=>{
+    if(typeof window.rizqLoadFinance==='function') return window.rizqLoadFinance();
+    const panel=document.getElementById('rizqAdminFinance');
+    if(panel) panel.innerHTML='<h2>الحسابات والإيرادات</h2><p class="notice error">تعذر تشغيل وظيفة الحسابات. حدّث الصفحة وحاول مرة أخرى.</p>';
+   }},
    {name:'خدمة العملاء',icon:'💬',target:supportPanel,load:loadSupportAdmin},
    {name:'إدارة المديرين',icon:'👤',target:managersPanel,load:loadManagers}
   ];
