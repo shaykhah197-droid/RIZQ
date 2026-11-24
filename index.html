@@ -1633,6 +1633,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
         </div>
         <div class="task-admin-desc">${safe(t.description)}</div>
         <div class="task-admin-actions">
+          <button type="button" class="secondary" onclick="window.rizqEditTaskLink('${t.id}')">تعديل الرابط</button>
           <button class="${t.active?'danger':'secondary'}" onclick="window.rizqToggleTask('${t.id}',${!t.active})">${t.active?'إيقاف المهمة':'إعادة تفعيل المهمة'}</button>
           <button class="danger" onclick="window.rizqDeleteTask('${t.id}')">حذف نهائي</button>
         </div>
@@ -1729,6 +1730,27 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
     }finally{
       button.disabled = false;
     }
+  };
+
+  window.rizqEditTaskLink = async function(taskId){
+    if(!isAdmin) return msg('غير مصرح لك',true);
+    const task=(window.rizqTaskCache||[]).find(t=>t.id===taskId);
+    if(!task) return msg('لم يتم العثور على المهمة',true);
+    const urls=String(task.description||'').match(/https?:\\/\\/[^\\s<>"']+/i)||[];
+    const currentUrl=urls[0]||'';
+    const newUrl=prompt(currentUrl?'اكتب الرابط الجديد بدل الرابط الحالي:':'لا يوجد رابط في وصف المهمة. اكتب الرابط الذي تريد إضافته:',currentUrl);
+    if(newUrl===null) return;
+    const cleanUrl=newUrl.trim();
+    if(!/^https?:\\/\\//i.test(cleanUrl)) return msg('اكتب رابطًا يبدأ بـ https:// أو http://',true);
+    const description=currentUrl
+      ? String(task.description||'').replace(currentUrl,cleanUrl)
+      : [String(task.description||'').trim(),cleanUrl].filter(Boolean).join('\\n');
+    try{
+      const {error}=await db.from('tasks').update({description}).eq('id',taskId);
+      if(error) throw error;
+      msg('تم تحديث رابط المهمة. يمكنك الآن إعادة تفعيلها.');
+      await window.rizqLoadTaskManager();
+    }catch(e){msg('تعذر تحديث الرابط: '+e.message,true);}
   };
 
   window.rizqToggleTask = async function(taskId, active){
