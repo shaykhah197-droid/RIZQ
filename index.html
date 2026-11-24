@@ -184,6 +184,16 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 }
 
 </style>
+
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#075b3e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RIZQ">
+<link rel="icon" type="image/svg+xml" href="/icons/rizq.svg">
+<link rel="apple-touch-icon" href="/icons/rizq.svg">
+
 </head>
 <body>
 <header>
@@ -3935,6 +3945,16 @@ window.showTab=function(name){
  if(name==='admin')window.rizqRefreshAdminBadges?.();
 };
 </script>
+
+<script>
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js', {scope: '/'})
+      .catch(error => console.warn('RIZQ app setup:', error));
+  });
+}
+</script>
+
 </body>
 </html>
 
