@@ -1570,8 +1570,12 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
         <button id="rizqAddTaskButton" onclick="window.rizqAddTask()">إضافة المهمة</button>
       </div>
       <div class="task-list-head">
-        <h3>المهام المضافة</h3>
+        <h3>إدارة المهام</h3>
         <span id="rizqTaskCount">جارٍ التحميل</span>
+      </div>
+      <div class="row" style="gap:8px;margin:10px 0">
+        <button type="button" id="rizqActiveTasksTab" onclick="window.rizqShowTaskGroup('active')" style="flex:1">المهام النشطة (0)</button>
+        <button type="button" class="secondary" id="rizqInactiveTasksTab" onclick="window.rizqShowTaskGroup('inactive')" style="flex:1">المهام غير النشطة (0)</button>
       </div>
       <div id="rizqTaskList">جارٍ تحميل المهام...</div>
     </div>
@@ -1593,6 +1597,48 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
         ? 'مهمة عامة: المكافأة حسب باقة كل عميل (20 أو 60 أو 120 أو 200 جنيه).'
         : 'مكافأة المهمة: ' + (rewardText[option?.dataset.price] || 'حسب إعداد الباقة');
   });
+
+  let rizqTaskGroup = 'active';
+
+  window.rizqShowTaskGroup = function(group){
+    rizqTaskGroup = group === 'inactive' ? 'inactive' : 'active';
+    const activeButton = document.getElementById('rizqActiveTasksTab');
+    const inactiveButton = document.getElementById('rizqInactiveTasksTab');
+    if(activeButton){
+      activeButton.className = rizqTaskGroup === 'active' ? '' : 'secondary';
+      activeButton.setAttribute('aria-pressed',String(rizqTaskGroup === 'active'));
+    }
+    if(inactiveButton){
+      inactiveButton.className = rizqTaskGroup === 'inactive' ? '' : 'secondary';
+      inactiveButton.setAttribute('aria-pressed',String(rizqTaskGroup === 'inactive'));
+    }
+    if(window.rizqTaskCache) renderRizqTaskGroup();
+  };
+
+  function renderRizqTaskGroup(){
+    const tasks = window.rizqTaskCache || [];
+    const visibleTasks = tasks.filter(t => rizqTaskGroup === 'active' ? !!t.active : !t.active);
+    const box = document.getElementById('rizqTaskList');
+    const count = document.getElementById('rizqTaskCount');
+    if(count) count.textContent = visibleTasks.length + ' مهمة';
+    if(!box) return;
+    box.innerHTML = visibleTasks.length ? visibleTasks.map(t => {
+      const p = (window.rizqPackageCache || []).find(x => x.id === t.package_id);
+      return `<div class="task-admin-card">
+        <div class="task-admin-title">${safe(t.title)}</div>
+        <div class="task-admin-meta">
+          <span class="task-chip">${safe(p?.name || (t.package_id ? 'باقة غير محددة' : 'كل الباقات النشطة'))}</span>
+          <span class="task-chip">${t.package_id ? 'المكافأة: '+money(t.reward) : 'المكافأة حسب باقة العميل'}</span>
+          <span class="task-chip ${t.active?'':'off'}">${t.active?'● نشطة':'● متوقفة'}</span>
+        </div>
+        <div class="task-admin-desc">${safe(t.description)}</div>
+        <div class="task-admin-actions">
+          <button class="${t.active?'danger':'secondary'}" onclick="window.rizqToggleTask('${t.id}',${!t.active})">${t.active?'إيقاف المهمة':'إعادة تفعيل المهمة'}</button>
+          <button class="danger" onclick="window.rizqDeleteTask('${t.id}')">حذف نهائي</button>
+        </div>
+      </div>`;
+    }).join('') : '<div class="task-admin-card" style="text-align:center;color:#748279;padding:24px">لا توجد مهام ' + (rizqTaskGroup === 'active' ? 'نشطة' : 'غير نشطة') + ' حاليًا</div>';
+  }
 
   window.rizqLoadTaskManager = async function(){
     if(!isAdmin || !currentUser) return;
@@ -1622,31 +1668,21 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
       .select('id,title,description,reward,active,package_id')
       .order('created_at',{ascending:false});
 
-    const box = document.getElementById('rizqTaskList');
-
     if(error){
-      box.textContent = error.message;
+      document.getElementById('rizqTaskList').textContent = error.message;
       return;
     }
 
-    const taskCount=document.getElementById('rizqTaskCount');
-    if(taskCount) taskCount.textContent=(tasks||[]).length+' مهمة';
-    box.innerHTML = tasks?.length ? tasks.map(t => {
-      const p = (packages || []).find(x => x.id === t.package_id);
-      return `<div class="task-admin-card">
-        <div class="task-admin-title">${safe(t.title)}</div>
-        <div class="task-admin-meta">
-          <span class="task-chip">${safe(p?.name || (t.package_id ? 'باقة غير محددة' : 'كل الباقات النشطة'))}</span>
-          <span class="task-chip">${t.package_id ? 'المكافأة: '+money(t.reward) : 'المكافأة حسب باقة العميل'}</span>
-          <span class="task-chip ${t.active?'':'off'}">${t.active?'● نشطة':'● متوقفة'}</span>
-        </div>
-        <div class="task-admin-desc">${safe(t.description)}</div>
-        <div class="task-admin-actions">
-          <button class="${t.active?'danger':'secondary'}" onclick="window.rizqToggleTask('${t.id}',${!t.active})">${t.active?'إيقاف المهمة':'إعادة تفعيل المهمة'}</button>
-          <button class="danger" onclick="window.rizqDeleteTask('${t.id}')">حذف نهائي</button>
-        </div>
-      </div>`;
-    }).join('') : '<div class="task-admin-card" style="text-align:center;color:#748279;padding:24px">لا توجد مهام مضافة حتى الآن</div>';
+    window.rizqTaskCache = tasks || [];
+    window.rizqPackageCache = packages || [];
+    const activeCount = window.rizqTaskCache.filter(t => !!t.active).length;
+    const inactiveCount = window.rizqTaskCache.length - activeCount;
+    const activeTab = document.getElementById('rizqActiveTasksTab');
+    const inactiveTab = document.getElementById('rizqInactiveTasksTab');
+    if(activeTab) activeTab.textContent = 'المهام النشطة (' + activeCount + ')';
+    if(inactiveTab) inactiveTab.textContent = 'المهام غير النشطة (' + inactiveCount + ')';
+    renderRizqTaskGroup();
+    window.rizqShowTaskGroup(rizqTaskGroup);
   };
 
   window.rizqAddTask = async function(){
