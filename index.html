@@ -3648,8 +3648,9 @@ async function openSupportAdminThread(id,status){
   if(latestCustomerMessage?.created_at){
    // احفظ وقت القراءة الحالي حتى لا تعود علامة "رسالة جديدة" بعد تحديث الصفحة
    const readAt=new Date().toISOString();
-   const {error:readError}=await db.from('support_conversations').update({admin_last_read_at:readAt}).eq('id',id);
+   const {data:readRow,error:readError}=await db.from('support_conversations').update({admin_last_read_at:readAt}).eq('id',id).select('id,admin_last_read_at').maybeSingle();
    if(readError)throw readError;
+   if(!readRow?.admin_last_read_at)throw new Error('لم يتم حفظ وقت قراءة المحادثة في قاعدة البيانات؛ راجع صلاحيات تحديث support_conversations');
    await loadSupportAdminBadge();
   }
   thread.innerHTML='<button type="button" class="secondary" id="supportAdminBack">← قائمة المحادثات</button><div class="support-chat-head"><div><h3 id="supportAdminCustomerName" style="margin:0">محادثة مباشرة مع العميل</h3><div class="muted small">الردود تظهر للعميل داخل حسابه</div></div><span class="tag">محادثة خاصة</span></div><div id="supportAdminMessages" class="support-chat-messages" aria-live="polite"></div><div class="support-chat-compose"><textarea id="supportAdminReply" placeholder="اكتب ردك للعميل..." rows="2"></textarea><div class="support-compose-actions"><label class="support-attach" for="supportAdminFiles">＋ إرفاق صورة</label><input id="supportAdminFiles" type="file" accept="image/jpeg,image/png,image/webp"><span class="muted small">حتى 5 ميجابايت</span><button type="button" id="supportAdminSend">إرسال الرد</button><button type="button" class="secondary" id="supportAdminClose">'+(status==='closed'?'إعادة فتح المحادثة':'إغلاق المحادثة')+'</button></div>';
