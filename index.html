@@ -1844,6 +1844,16 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
     const box=document.getElementById('rizqPendingTaskReviews');
     if(!isAdmin)return;
 
+    if(!document.getElementById('rizqBulkApproveBtn')){
+      const bulk=document.createElement('button');
+      bulk.id='rizqBulkApproveBtn';
+      bulk.className='primary';
+      bulk.textContent='اعتماد كل المهام المعلقة المرفق معها صورة';
+      bulk.style.marginBottom='12px';
+      bulk.onclick=window.rizqApproveAllWithProof;
+      box.parentNode.insertBefore(bulk,box);
+    }
+
     box.textContent='جارٍ تحميل الإثباتات...';
 
     const {data,error}=await db.from('task_submissions')
@@ -1904,6 +1914,29 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
     }));
 
     box.innerHTML=cards.join('');
+  };
+
+  window.rizqApproveAllWithProof = async function(){
+    if(!isAdmin)return msg('غير مصرح',true);
+    if(!confirm('سيتم اعتماد كل الإثباتات المعلقة التي لها صورة مرفوعة بالفعل، واستبعاد أي إثبات بلا صورة. هل تريد المتابعة؟'))return;
+    const btn=document.getElementById('rizqBulkApproveBtn');
+    if(btn){btn.disabled=true;btn.textContent='جارٍ اعتماد المهام...';}
+    try{
+      const {data,error}=await db.rpc('admin_approve_all_rizq_tasks_with_proof');
+      if(error)throw error;
+      const result=Array.isArray(data)?data[0]:data;
+      const count=Number(result?.approved_count||0);
+      const total=Number(result?.total_amount||0);
+      const skipped=Number(result?.skipped_count||0);
+      msg('تم اعتماد '+count+' مهمة، بإجمالي '+money(total)+'، وتم استبعاد '+skipped+' إثبات بدون صورة.');
+      await window.rizqLoadTaskReviews();
+      await loadWallet();
+      await loadTransactions();
+    }catch(e){
+      msg('تعذر الاعتماد الجماعي: '+e.message,true);
+    }finally{
+      if(btn){btn.disabled=false;btn.textContent='اعتماد كل المهام المعلقة المرفق معها صورة';}
+    }
   };
 
   window.rizqReviewTask = async function(id,approve){
