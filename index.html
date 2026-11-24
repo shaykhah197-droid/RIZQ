@@ -3151,6 +3151,14 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   async function refreshAdminBadges(){
    if(adminBadgesBusy||!allowed())return;
    adminBadgesBusy=true;
+   const updateBadge=(name,count)=>{
+    const badge=adminBadges[name];
+    if(!badge)return;
+    const n=Number(count)||0;
+    badge.textContent=String(n);
+    badge.hidden=n===0;
+    badge.style.setProperty('display',n===0?'none':'inline-block','important');
+   };
    try{
     const checks=[
      ['طلبات الإيداع','deposit_requests'],
@@ -3158,13 +3166,17 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
      ['مراجعة المهام','task_submissions']
     ];
     await Promise.all(checks.map(async ([name,table])=>{
-     const {count,error}=await db.from(table).select('id',{count:'exact',head:true}).eq('status','pending');
-     if(error)throw error;
-     const badge=adminBadges[name],n=Number(count)||0;
-     if(badge){badge.textContent=String(n);badge.hidden=n===0;badge.style.display=n===0?'none':'inline-block';}
+     try{
+      const {count,error}=await db.from(table).select('id',{count:'exact',head:true}).eq('status','pending');
+      if(error)throw error;
+      updateBadge(name,count);
+     }catch(error){
+      console.error('RIZQ badge '+name+':',error);
+     }
     }));
-   }catch(error){
-    console.error('RIZQ admin notifications:',error);
+    if(typeof loadSupportAdminBadge==='function'){
+     try{await loadSupportAdminBadge()}catch(error){console.error('RIZQ support badge:',error)}
+    }
    }finally{
     adminBadgesBusy=false;
    }
