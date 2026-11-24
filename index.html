@@ -2509,6 +2509,79 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   if(window.rizqAdminSectionsInstalled) return;
   window.rizqAdminSectionsInstalled=true;
 
+
+  async function loadFinance(){
+   const box=document.getElementById('rizqAdminFinanceContent');
+   if(!allowed())return notice(box,'غير مصرح لك بعرض الحسابات');
+   box.innerHTML='<p class="muted">جارٍ حساب الوارد والصادر من السجلات المعتمدة والمنفذة...</p>';
+   try{
+    async function readAll(table,status){
+     let offset=0,all=[],page=[];
+     do{
+      const result=await db.from(table).select('amount,created_at')
+       .eq('status',status).order('created_at',{ascending:true})
+       .range(offset,offset+999);
+      if(result.error)throw result.error;
+      page=result.data||[];
+      all=all.concat(page);
+      offset+=page.length;
+     }while(page.length===1000);
+     return all;
+    }
+    const [deposits,withdrawals]=await Promise.all([
+     readAll('deposit_requests','approved'),
+     readAll('withdrawal_requests','paid')
+    ]);
+    const dateKey=value=>new Intl.DateTimeFormat('en-CA',{
+     timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'
+    }).format(new Date(value));
+    const nowKey=dateKey(new Date());
+    const monthKey=nowKey.slice(0,7);
+    const yearKey=nowKey.slice(0,4);
+    const sumFor=(rows,predicate)=>rows.reduce((sum,row)=>{
+     const amount=Number(row.amount);
+     return sum+(Number.isFinite(amount)&&predicate(dateKey(row.created_at))?amount:0);
+    },0);
+    const periods=[
+     {label:'اليوم',match:key=>key===nowKey},
+     {label:'الشهر الحالي',match:key=>key.slice(0,7)===monthKey},
+     {label:'السنة الحالية',match:key=>key.slice(0,4)===yearKey},
+     {label:'منذ بداية المنصة',match:()=>true}
+    ];
+    const rows=periods.map(period=>{
+     const incoming=sumFor(deposits,period.match);
+     const outgoing=sumFor(withdrawals,period.match);
+     return {label:period.label,incoming,outgoing,net:incoming-outgoing};
+    });
+    box.innerHTML=`
+     <p class="muted">الوارد = الإيداعات المعتمدة فقط. الصادر = طلبات السحب التي تم تأكيد دفعها فقط. الحساب حسب تاريخ إنشاء الطلب وتوقيت القاهرة.</p>
+     <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;min-width:440px">
+       <thead><tr>
+        <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">الفترة</th>
+        <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">الوارد</th>
+        <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">الصادر</th>
+        <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">الصافي</th>
+       </tr></thead>
+       <tbody>${rows.map(row=>`
+        <tr>
+         <td style="padding:11px 8px;border-bottom:1px solid var(--border);font-weight:bold">${row.label}</td>
+         <td style="padding:11px 8px;border-bottom:1px solid var(--border);color:#087b50">${money(row.incoming)}</td>
+         <td style="padding:11px 8px;border-bottom:1px solid var(--border);color:#c0392b">${money(row.outgoing)}</td>
+         <td style="padding:11px 8px;border-bottom:1px solid var(--border);font-weight:bold">${money(row.net)}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+     </div>
+     <p class="muted small">عدد الإيداعات المعتمدة: ${deposits.length.toLocaleString('ar-EG')} · عدد التحويلات المدفوعة للعملاء: ${withdrawals.length.toLocaleString('ar-EG')}</p>
+     <button type="button" class="secondary" id="rizqFinanceRefresh">تحديث الحسابات</button>
+    `;
+    document.getElementById('rizqFinanceRefresh').onclick=loadFinance;
+   }catch(error){
+    box.innerHTML='<p class="notice error">تعذر حساب الإيرادات: '+String(error.message||error).replace(/[<>&"]/g,char=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[char]))+'</p><button type="button" class="secondary" id="rizqFinanceRetry">إعادة المحاولة</button>';
+    document.getElementById('rizqFinanceRetry').onclick=loadFinance;
+   }
+  }
+
   const definitions=[
     {title:'إدارة الباقات',words:['الباقات','الباقة','الاشتراكات','الاشتراك'],ids:['rizqPackageAdmin']},
     {title:'إدارة المهام',words:['إدارة المهام'],ids:['rizqTaskManager']},
@@ -3085,6 +3158,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   const customers=makePanel('rizqAdminCustomers','العملاء والمحافظ');
   const referrals=makePanel('rizqAdminReferrals','الإحالات');
   const transactions=makePanel('rizqAdminTransactions','سجل المعاملات');
+  const financePanel=makePanel('rizqAdminFinance','الحسابات والإيرادات');
   const supportPanel=makePanel('rizqAdminSupport','خدمة العملاء');
   const managersPanel=makePanel('rizqAdminManagers','إدارة المديرين');
 
@@ -3146,6 +3220,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
    {name:'العملاء والمحافظ',icon:'👥',target:customers,load:loadCustomers},
    {name:'الإحالات',icon:'🔗',target:referrals,load:loadReferrals},
    {name:'سجل المعاملات',icon:'📚',target:transactions,load:loadTransactions},
+   {name:'الحسابات والإيرادات',icon:'📊',target:financePanel,load:loadFinance},
    {name:'خدمة العملاء',icon:'💬',target:supportPanel,load:loadSupportAdmin},
    {name:'إدارة المديرين',icon:'👤',target:managersPanel,load:loadManagers}
   ];
