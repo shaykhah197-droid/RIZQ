@@ -2819,6 +2819,24 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   const admin=document.getElementById('tab-admin');
   if(!admin || document.getElementById('rizqAdminWorkspace')) return;
 
+  // انتظر إنشاء قسم إدارة المهام قبل بناء قائمة المدير
+  if(!document.getElementById('rizqTaskManager')){
+   if(!window.__rizqAdminWorkspaceObserver){
+    window.__rizqAdminWorkspaceObserver=new MutationObserver(()=>{
+     if(document.getElementById('rizqTaskManager')){
+      window.__rizqAdminWorkspaceObserver.disconnect();
+      window.__rizqAdminWorkspaceObserver=null;
+      initRizqAdminWorkspace();
+     }
+    });
+    window.__rizqAdminWorkspaceObserver.observe(admin,{
+     childList:true,
+     subtree:true
+    });
+   }
+   return;
+  }
+
   // إزالة القائمة القديمة فقط
   const oldNav=document.getElementById('rizqAdminNavigation');
   if(oldNav) oldNav.remove();
