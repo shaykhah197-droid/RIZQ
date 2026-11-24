@@ -3181,6 +3181,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
     adminBadgesBusy=false;
    }
   }
+  window.rizqRefreshAdminBadges=refreshAdminBadges;
   refreshAdminBadges();
   setInterval(refreshAdminBadges,30000);
 
@@ -3776,6 +3777,7 @@ const rizqOriginalShowTab=window.showTab;
 window.showTab=function(name){
  rizqOriginalShowTab(name);
  if(name==='support')loadSupportConversation();
+ if(name==='admin')window.rizqRefreshAdminBadges?.();
 };
 </script>
 </body>
