@@ -3304,6 +3304,16 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
    if(error)return notice(box,'تعذر التحميل: '+error.message);
 
    const customers=data||[];
+   // RPC returns the safe customer list; fetch customer codes from profiles for search/display.
+   if(customers.length){
+    const ids=customers.map(u=>u.id).filter(Boolean);
+    const {data:profiles,error:profilesError}=await db.from('profiles')
+     .select('id,customer_code,full_name,referral_code,created_at').in('id',ids);
+    if(profilesError)return notice(box,'تعذر تحميل أكواد العملاء: '+profilesError.message);
+    const profileById={};
+    (profiles||[]).forEach(p=>{profileById[p.id]=p});
+    customers.forEach(u=>{const p=profileById[u.id]||{};u.customer_code=p.customer_code||'';u.full_name=u.full_name||p.full_name||'';u.referral_code=u.referral_code||p.referral_code||'';u.created_at=p.created_at||null});
+   }
    box.innerHTML='';
    const toolbar=document.createElement('div');
    toolbar.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0';
