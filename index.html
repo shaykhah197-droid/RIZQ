@@ -3577,13 +3577,29 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   let previous=null;
 
   function show(def){
-   // أعد البحث عن إدارة المهام وقت الضغط؛ قد تكون القائمة سبقت إنشاء القسم.
-   if(def.name==='إدارة المهام' && !def.target){
-    if(typeof window.rizqEnsureTaskManager==='function'){
+   // إدارة المهام قد يُعاد إنشاؤها بعد بناء قائمة المدير؛ استخدم العنصر الحالي دائمًا.
+   if(def.name==='إدارة المهام'){
+    let taskElement=document.getElementById('rizqTaskManager');
+    if(!taskElement && typeof window.rizqEnsureTaskManager==='function'){
      try{window.rizqEnsureTaskManager()}catch(error){console.error('RIZQ task manager init:',error)}
+     taskElement=document.getElementById('rizqTaskManager');
     }
-    const taskElement=document.getElementById('rizqTaskManager');
     def.target=taskElement?.closest('.card')||taskElement||null;
+    if(!def.target){
+     if(!window.__rizqTaskManagerOpenWaiter){
+      window.__rizqTaskManagerOpenWaiter=new MutationObserver(()=>{
+       const ready=document.getElementById('rizqTaskManager');
+       if(ready){
+        window.__rizqTaskManagerOpenWaiter.disconnect();
+        window.__rizqTaskManagerOpenWaiter=null;
+        def.target=ready.closest('.card')||ready;
+        show(def);
+       }
+      });
+      window.__rizqTaskManagerOpenWaiter.observe(document.body,{childList:true,subtree:true});
+     }
+     return;
+    }
    }
    if(!def.target){
     alert('القسم غير موجود في النسخة الحالية: '+def.name);
