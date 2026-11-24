@@ -3646,7 +3646,7 @@ async function openSupportAdminThread(id,status){
   if(error)throw error;
   const latestCustomerMessage=[...(messages||[])].reverse().find(m=>(m.sender||m.sender_role)==='customer');
   if(latestCustomerMessage?.created_at){
-   const {error:readError}=await db.from('support_conversations').update({admin_last_read_at:new Date().toISOString()}).eq('id',id);
+   const {error:readError}=await db.from('support_conversations').update({admin_last_read_at:latestCustomerMessage.created_at}).eq('id',id);
    if(readError)throw readError;
    await loadSupportAdminBadge();
   }
