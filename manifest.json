@@ -1,0 +1,27 @@
+{
+  "id": "/",
+  "name": "رزق RIZQ",
+  "short_name": "RIZQ",
+  "description": "منصة رزق للمهام والمكافآت والإحالات",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f3f6f4",
+  "theme_color": "#075b3e",
+  "icons": [
+    {
+      "src": "/icons/rizq.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/rizq.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
