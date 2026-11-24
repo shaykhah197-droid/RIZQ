@@ -3180,6 +3180,98 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   const financePanel=makePanel('rizqAdminFinance','الحسابات والإيرادات');
   const supportPanel=makePanel('rizqAdminSupport','خدمة العملاء');
   const managersPanel=makePanel('rizqAdminManagers','إدارة المديرين');
+  const adminChatsPanel=makePanel('rizqAdminChats','محادثات المديرين');
+
+  async function loadAdminChats(){
+   if(!allowed()){adminChatsPanel.innerHTML='<h2>محادثات المديرين</h2><p>غير مصرح لك.</p>';return}
+   adminChatsPanel.innerHTML=`<h2>محادثات المديرين</h2><p class="muted">محادثات خاصة بين المديرين فقط.</p><div id="rizqChatDirectory">جارٍ تحميل المديرين...</div><div id="rizqChatList" style="margin-top:14px">جارٍ تحميل المحادثات...</div><div id="rizqChatRoom" style="margin-top:14px"></div>`;
+   const directoryBox=document.getElementById('rizqChatDirectory');
+   const listBox=document.getElementById('rizqChatList');
+   const roomBox=document.getElementById('rizqChatRoom');
+   let directory=[],activeId=null,poll=null,busy=false;
+   const esc=value=>safe(value);
+   const nameOf=id=>directory.find(x=>x.id===id)?.full_name||directory.find(x=>x.id===id)?.email||'مدير';
+   const {data:admins,error:dirError}=await db.rpc('rizq_admin_directory');
+   if(dirError){directoryBox.innerHTML='<p class="notice error">تعذر تحميل قائمة المديرين: '+esc(dirError.message)+'</p>';return}
+   directory=(admins||[]).filter(x=>x.id!==currentUser.id);
+   directoryBox.innerHTML='<label>ابدأ محادثة مع مدير</label><div style="display:flex;gap:8px;flex-wrap:wrap"><select id="rizqChatNewAdmin" style="flex:1;min-width:180px;padding:10px;border:1px solid var(--border);border-radius:8px"><option value="">اختر المدير</option>'+directory.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.full_name||x.email)+'</option>').join('')+'</select><button type="button" id="rizqChatStart">فتح محادثة</button></div>';
+   document.getElementById('rizqChatStart').onclick=async()=>{
+    const other=document.getElementById('rizqChatNewAdmin').value;
+    if(!other)return alert('اختر مديرًا أولًا.');
+    const a=[currentUser.id,other].sort();
+    const {data:existing,error:findError}=await db.from('rizq_admin_conversations').select('*').eq('participant_a',a[0]).eq('participant_b',a[1]).maybeSingle();
+    if(findError)return alert('تعذر البحث عن المحادثة: '+findError.message);
+    let conversation=existing;
+    if(!conversation){
+     const {data:created,error:createError}=await db.from('rizq_admin_conversations').insert({participant_a:a[0],participant_b:a[1]}).select('*').single();
+     if(createError){
+      const {data:retry}=await db.from('rizq_admin_conversations').select('*').eq('participant_a',a[0]).eq('participant_b',a[1]).maybeSingle();
+      if(!retry)return alert('تعذر إنشاء المحادثة: '+createError.message);
+      conversation=retry;
+     }else conversation=created;
+    }
+    await openConversation(conversation.id);
+    await refreshList();
+   };
+   async function refreshList(){
+    const {data:rows,error}=await db.from('rizq_admin_conversations').select('*').order('updated_at',{ascending:false});
+    if(error){listBox.innerHTML='<p class="notice error">تعذر تحميل المحادثات: '+esc(error.message)+'</p>';return}
+    if(!rows?.length){listBox.innerHTML='<p class="muted">لا توجد محادثات حتى الآن.</p>';return}
+    const ids=rows.map(x=>x.id);
+    const {data:messages}=await db.from('rizq_admin_messages').select('conversation_id,body,sender_id,created_at').in('conversation_id',ids).order('created_at',{ascending:false});
+    listBox.innerHTML='<h3>المحادثات</h3>'+rows.map(c=>{
+     const other=c.participant_a===currentUser.id?c.participant_b:c.participant_a;
+     const last=(messages||[]).find(m=>m.conversation_id===c.id);
+     const readAt=c.participant_a===currentUser.id?c.participant_a_last_read_at:c.participant_b_last_read_at;
+     const unread=last&&last.sender_id!==currentUser.id&&(!readAt||new Date(last.created_at)>new Date(readAt));
+     return '<button type="button" data-chat-id="'+esc(c.id)+'" class="secondary" style="display:block;width:100%;text-align:right;margin:7px 0;padding:12px">'+esc(nameOf(other))+(unread?' 🔴 رسالة جديدة':'')+'<small style="display:block;opacity:.75;margin-top:4px">'+(last?esc(last.body.slice(0,90)):'لا توجد رسائل بعد')+'</small></button>';
+    }).join('');
+    listBox.querySelectorAll('[data-chat-id]').forEach(button=>button.onclick=()=>openConversation(button.dataset.chatId));
+   }
+   async function openConversation(id){
+    activeId=id;
+    if(poll)clearInterval(poll);
+    await refreshRoom();
+    poll=setInterval(async()=>{if(activeId===id&&!busy){await refreshRoom();await refreshList()}},4000);
+   }
+   async function refreshRoom(){
+    if(!activeId||busy)return;
+    busy=true;
+    try{
+     const {data:conversation,error:cError}=await db.from('rizq_admin_conversations').select('*').eq('id',activeId).maybeSingle();
+     if(cError||!conversation){roomBox.innerHTML='<p class="notice error">تعذر فتح المحادثة أو تم حذفها.</p>';activeId=null;return}
+     const other=conversation.participant_a===currentUser.id?conversation.participant_b:conversation.participant_a;
+     const {data:messages,error:mError}=await db.from('rizq_admin_messages').select('*').eq('conversation_id',activeId).order('created_at',{ascending:true});
+     if(mError){roomBox.innerHTML='<p class="notice error">تعذر تحميل الرسائل: '+esc(mError.message)+'</p>';return}
+     const readField=conversation.participant_a===currentUser.id?'participant_a_last_read_at':'participant_b_last_read_at';
+     const {error:readError}=await db.from('rizq_admin_conversations').update({[readField]:new Date().toISOString(),updated_at:conversation.updated_at}).eq('id',activeId);
+     if(readError)console.warn('RIZQ chat read marker:',readError.message);
+     roomBox.innerHTML='<div class="card" style="margin:0"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h3>محادثة '+esc(nameOf(other))+'</h3><button type="button" class="secondary" id="rizqChatDelete">حذف المحادثة للطرفين</button></div><div id="rizqChatMessages" style="max-height:48vh;overflow:auto;padding:8px;background:var(--bg,#f6f8f7);border-radius:10px">'+(messages||[]).map(m=>'<div style="margin:8px 0;padding:10px;border-radius:10px;background:'+(m.sender_id===currentUser.id?'#e2f3e9':'#fff')+';max-width:90%;'+(m.sender_id===currentUser.id?'margin-right:auto':'margin-left:auto')+'"><b>'+esc(m.sender_id===currentUser.id?'أنت':nameOf(other))+'</b><p style="white-space:pre-wrap;margin:6px 0">'+esc(m.body)+'</p><small>'+new Date(m.created_at).toLocaleString('ar-EG')+'</small> <button type="button" data-delete-message="'+esc(m.id)+'" class="secondary" style="padding:3px 7px;font-size:11px">حذف للطرفين</button></div>').join('')+'</div><div style="display:flex;gap:8px;margin-top:10px"><textarea id="rizqChatText" rows="2" maxlength="5000" placeholder="اكتب رسالتك..." style="flex:1;min-width:0"></textarea><button type="button" id="rizqChatSend">إرسال</button></div><p class="muted" style="font-size:12px">حذف رسالة أو محادثة يزيلها من الطرفين نهائيًا.</p></div>';
+     const messageBox=document.getElementById('rizqChatMessages');if(messageBox)messageBox.scrollTop=messageBox.scrollHeight;
+     document.getElementById('rizqChatSend').onclick=async()=>{
+      const input=document.getElementById('rizqChatText');const body=input.value.trim();if(!body)return;
+      const send=document.getElementById('rizqChatSend');send.disabled=true;
+      const {error}=await db.from('rizq_admin_messages').insert({conversation_id:activeId,sender_id:currentUser.id,body});
+      send.disabled=false;if(error)return alert('تعذر إرسال الرسالة: '+error.message);
+      await db.from('rizq_admin_conversations').update({updated_at:new Date().toISOString()}).eq('id',activeId);
+      input.value='';await refreshRoom();await refreshList();
+     };
+     document.getElementById('rizqChatDelete').onclick=async()=>{
+      if(!confirm('هل أنت متأكد؟ سيتم حذف المحادثة وكل رسائلها نهائيًا من عندك وعند المدير الآخر.'))return;
+      const deleting=activeId;const {error}=await db.from('rizq_admin_conversations').delete().eq('id',deleting);
+      if(error)return alert('تعذر حذف المحادثة: '+error.message);
+      activeId=null;if(poll)clearInterval(poll);roomBox.innerHTML='<p class="muted">تم حذف المحادثة من الطرفين.</p>';await refreshList();
+     };
+     roomBox.querySelectorAll('[data-delete-message]').forEach(button=>button.onclick=async()=>{
+      if(!confirm('حذف هذه الرسالة نهائيًا من الطرفين؟'))return;
+      const {error}=await db.from('rizq_admin_messages').delete().eq('id',button.dataset.deleteMessage);
+      if(error)return alert('تعذر حذف الرسالة: '+error.message);await refreshRoom();await refreshList();
+     });
+    }finally{busy=false}
+   }
+   await refreshList();
+  }
+
 
   // إخفاء أقسام الإدارة القديمة من الصفحة الرئيسية؛ تظهر فقط عند فتح زر القسم الخاص بها.
   [...admin.children].filter(el=>el!==workspace).forEach(el=>{el.style.display='none'});
@@ -3338,7 +3430,8 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
    {name:'سجل المعاملات',icon:'📚',target:transactions,load:loadTransactions},
    {name:'الحسابات والإيرادات',icon:'📊',target:financePanel,load:loadFinanceForAdmin},
    {name:'خدمة العملاء',icon:'💬',target:supportPanel,load:loadSupportAdmin},
-   {name:'إدارة المديرين',icon:'👤',target:managersPanel,load:loadManagers}
+   {name:'إدارة المديرين',icon:'👤',target:managersPanel,load:loadManagers},
+   {name:'محادثات المديرين',icon:'💬',target:adminChatsPanel,load:loadAdminChats}
   ];
 
   let previous=null;
