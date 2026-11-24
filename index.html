@@ -275,7 +275,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <section id="tab-tasks" class="tab hidden">
 <div class="card">
 <h2>مهامك اليومية</h2>
-<p class="muted">تظهر حتى 10 مهام يوميًا لكل باقة نشطة. كل باقة لها تكليف ومكافأة مستقلة.</p>
+<p class="muted">تظهر 5 مهام يوميًا إجمالًا. يُرسل إثبات واحد لكل مهمة، وتُجمع مكافآت جميع باقاتك المستحقة.</p>
 <button class="secondary" onclick="window.rizqReloadCustomerTasks()">تحديث المهام</button>
 <div id="rizqDailyTasks">افتح صفحة المهام لعرض تكليفاتك.</div>
 </div>
@@ -1507,17 +1507,17 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   const packageSelect = document.getElementById('rizqTaskPackage');
 
   const rewardText = {
-    '3000':'10 جنيه للمهمة',
-    '9000':'30 جنيه للمهمة',
-    '18000':'60 جنيه للمهمة',
-    '30000':'100 جنيه للمهمة'
+    '3000':'20 جنيه للمهمة',
+    '9000':'60 جنيه للمهمة',
+    '18000':'120 جنيه للمهمة',
+    '30000':'200 جنيه للمهمة'
   };
 
   packageSelect.addEventListener('change', function(){
     const option = packageSelect.selectedOptions[0];
     document.getElementById('rizqTaskRewardInfo').textContent =
       packageSelect.value === 'all'
-        ? 'مهمة عامة: المكافأة حسب باقة كل عميل (10 أو 30 أو 60 أو 100 جنيه).'
+        ? 'مهمة عامة: المكافأة حسب باقة كل عميل (20 أو 60 أو 120 أو 200 جنيه).'
         : 'مكافأة المهمة: ' + (rewardText[option?.dataset.price] || 'حسب إعداد الباقة');
   });
 
@@ -1733,7 +1733,26 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
       const completed=[];
       const history=[];
 
-      assignments.forEach(a=>{
+      // اجمع تكليفات المهمة نفسها لليوم في بطاقة واحدة، مع الاحتفاظ بمعرّف تكليف صالح لإرسال إثبات واحد.
+      const todayGroups = new Map();
+      assignments.filter(a=>a.task_date===todayCairo).forEach(a=>{
+        const key=a.task_id;
+        if(!todayGroups.has(key)){
+          todayGroups.set(key,{...a,reward_amount:0,_groupAssignments:[]});
+        }
+        const group=todayGroups.get(key);
+        group.reward_amount=Number(group.reward_amount||0)+Number(a.reward_amount||0);
+        group._groupAssignments.push(a);
+        if(a.status==='approved') group.status='approved';
+        else if(group.status!=='approved' && (a.status==='submitted')) group.status='submitted';
+        else if(!['approved','submitted'].includes(group.status) && a.status==='rejected') group.status='rejected';
+      });
+      const displayAssignments=[
+        ...assignments.filter(a=>a.task_date!==todayCairo),
+        ...Array.from(todayGroups.values())
+      ];
+
+      displayAssignments.forEach(a=>{
         const t=tasks.find(x=>x.id===a.task_id);
         const s=submissions.find(x=>x.assignment_id===a.id);
         const up=userPackages.find(x=>x.id===a.user_package_id);
