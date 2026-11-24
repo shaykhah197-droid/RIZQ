@@ -3289,8 +3289,15 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
      const outgoing=sumFor(withdrawals,period.match);
      return {label:period.label,incoming,outgoing,net:incoming-outgoing};
     });
-    box.innerHTML=`
-     <p class="muted">داخل = الإيداعات المعتمدة فقط. خارج = طلبات السحب التي تم تأكيد دفعها فقط. الحساب حسب تاريخ إنشاء الطلب وتوقيت القاهرة.</p>
+    const lifetime=rows[3];
+    box.innerHTML=\`
+     <p class="muted">محفظة المدير هنا تمثل المتبقي في حساب المنصة: إجمالي الإيداعات المعتمدة ناقص إجمالي التحويلات المدفوعة للعملاء. هذا رصيد تشغيلي متبقٍ وليس صافي ربح.</p>
+     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0">
+      <div class="card" style="margin:0;border:1px solid var(--border)"><span class="muted">داخل — إجمالي المنصة</span><h2 style="color:#087b50;margin:8px 0">\${money(lifetime.incoming)}</h2></div>
+      <div class="card" style="margin:0;border:1px solid var(--border)"><span class="muted">خارج — إجمالي المنصة</span><h2 style="color:#c0392b;margin:8px 0">\${money(lifetime.outgoing)}</h2></div>
+      <div class="card" style="margin:0;border:2px solid var(--primary,#087b50)"><span class="muted">محفظة المدير — المتبقي</span><h2 style="margin:8px 0">\${money(lifetime.net)}</h2></div>
+     </div>
+     <h3>تفاصيل الحساب حسب الفترة</h3>
      <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;min-width:440px">
        <thead><tr>
