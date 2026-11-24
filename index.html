@@ -1823,7 +1823,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
           if(isToday){
             completed.push(`<div class="item"><h3>${taskTitle}</h3>${packageLabel}<p>${desc}</p>${reward}<p>الحالة: ${statusTag('approved')}</p></div>`);
           }else{
-            history.push(`<tr><td>${safe(a.task_date)}</td><td>${taskTitle}</td><td>${label}</td><td>${money(a.reward_amount)}</td></tr>`);
+            history.push({date:a.task_date,title:taskTitle,packageName:label,reward:money(a.reward_amount)});
           }
           return;
         }
@@ -1842,8 +1842,18 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
         </div>`);
       });
 
+      const historyGroups=new Map();
+      history.forEach(item=>{
+        if(!historyGroups.has(item.date))historyGroups.set(item.date,[]);
+        historyGroups.get(item.date).push(item);
+      });
       const historyTable=history.length
-        ? `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;text-align:right"><thead><tr><th style="padding:9px;border-bottom:1px solid var(--border)">التاريخ</th><th style="padding:9px;border-bottom:1px solid var(--border)">المهمة</th><th style="padding:9px;border-bottom:1px solid var(--border)">الباقة</th><th style="padding:9px;border-bottom:1px solid var(--border)">المكافأة</th></tr></thead><tbody>${history.map(row=>row.replace('<tr>','<tr style="border-bottom:1px solid var(--border)">').replaceAll('<td>','<td style="padding:9px">')).join('')}</tbody></table></div>`
+        ? Array.from(historyGroups.entries()).map(([date,items])=>{
+          const parts=date.split('-');
+          const day=Number(parts[2]);
+          const prettyDate=new Date(Number(parts[0]),Number(parts[1])-1,day).toLocaleDateString('ar-EG');
+          return `<details class="item"><summary style="cursor:pointer;font-weight:bold;padding:10px 0">اليوم ${day.toLocaleString('ar-EG')} — ${prettyDate} (${items.length.toLocaleString('ar-EG')} مهام)</summary><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;text-align:right"><thead><tr><th style="padding:9px;border-bottom:1px solid var(--border)">المهمة</th><th style="padding:9px;border-bottom:1px solid var(--border)">الباقة</th><th style="padding:9px;border-bottom:1px solid var(--border)">المكافأة</th></tr></thead><tbody>${items.map(item=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:9px">${item.title}</td><td style="padding:9px">${item.packageName}</td><td style="padding:9px">${item.reward}</td></tr>`).join('')}</tbody></table></div></details>`;
+        }).join('')
         : 'لا توجد مهام منجزة في الأيام السابقة';
 
       box.innerHTML=`<h3>مهام اليوم</h3>${available.length?available.join(''):'لا توجد مهام متاحة حالياً'}
