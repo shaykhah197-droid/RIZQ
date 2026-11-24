@@ -2923,10 +2923,14 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
       </button>
 
       <hr>
-      <h3>الباقات الحالية</h3>
+      <h3>إدارة حالة الباقات</h3>
       <button type="button" class="secondary" id="rizqRefreshPackages">
         تحديث القائمة
       </button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">
+        <button type="button" id="rizqActivePackagesTab">الباقات النشطة (0)</button>
+        <button type="button" class="secondary" id="rizqInactivePackagesTab">الباقات غير النشطة (0)</button>
+      </div>
       <div id="rizqPackageAdminList">جارٍ تحميل الباقات...</div>
     `;
 
@@ -3001,7 +3005,24 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
           return;
         }
 
-        box.innerHTML='';
+        const activePackages=data.filter(p=>p.active);
+        const inactivePackages=data.filter(p=>!p.active);
+        const activeTab=document.getElementById('rizqActivePackagesTab');
+        const inactiveTab=document.getElementById('rizqInactivePackagesTab');
+        box.innerHTML='<div id="rizqActivePackagesList"></div><div id="rizqInactivePackagesList" style="display:none"></div>';
+        const activeBox=document.getElementById('rizqActivePackagesList');
+        const inactiveBox=document.getElementById('rizqInactivePackagesList');
+        activeTab.textContent='الباقات النشطة ('+activePackages.length+')';
+        inactiveTab.textContent='الباقات غير النشطة ('+inactivePackages.length+')';
+        activeTab.onclick=()=>{
+          activeBox.style.display='block';inactiveBox.style.display='none';
+          activeTab.className='';inactiveTab.className='secondary';
+        };
+        inactiveTab.onclick=()=>{
+          activeBox.style.display='none';inactiveBox.style.display='block';
+          activeTab.className='secondary';inactiveTab.className='';
+        };
+        activeTab.className='';inactiveTab.className='secondary';
 
         data.forEach(p=>{
           const card=document.createElement('div');
@@ -3063,9 +3084,12 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
             }catch(e){notify('تعذر تحديث الحالة: '+e.message,true)}
           };
 
+          if(!p.active)toggle.textContent='إعادة تفعيل الباقة';
           card.append(name,price,status,edit,toggle);
-          box.appendChild(card);
+          (p.active?activeBox:inactiveBox).appendChild(card);
         });
+        if(!activePackages.length)activeBox.textContent='لا توجد باقات نشطة حالياً.';
+        if(!inactivePackages.length)inactiveBox.textContent='لا توجد باقات غير نشطة حالياً.';
 
       }catch(e){
         box.textContent='تعذر تحميل الباقات: '+e.message;
