@@ -568,7 +568,8 @@ async function authenticate(){
   if(signupMode){
    const full_name=document.getElementById('fullName').value.trim();
    const referral_code=document.getElementById('refCode').value.trim();
-   if(!full_name)throw Error('اكتب اسمك');
+   const nameParts=full_name.split(/\s+/).filter(Boolean);
+   if(nameParts.length<3)throw Error('اكتب اسمك ثلاثيًا على الأقل (الاسم الأول واسم الأب واسم العائلة)');
    const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name,referral_code},emailRedirectTo:window.location.origin+'/?confirmed=1'}});
    if(error)throw error;
    if(data.session){currentUser=data.user;await loadApp()}
