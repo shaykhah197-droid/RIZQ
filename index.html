@@ -2361,7 +2361,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
     const target=findSection(selected);
 
     if(!target){
-      msg('القسم لم يتم العثور عليه بعد: '+selected.name,true);
+      // قد لا يكون القسم قد أُنشئ بعد عند بدء لوحة المدير؛ لا تعرض رسالة خطأ ثابتة.
       return;
     }
 
