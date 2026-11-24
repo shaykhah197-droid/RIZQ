@@ -1564,7 +1564,10 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
         <div>${safe(t.description)}</div>
         <div>المكافأة: ${t.package_id ? money(t.reward) : 'حسب باقة العميل'}</div>
         <div>الحالة: ${t.active ? 'نشطة' : 'متوقفة'}</div>
-        <button class="${t.active?'danger':'secondary'}" onclick="window.rizqToggleTask('${t.id}',${!t.active})">${t.active?'إيقاف المهمة':'إعادة تفعيل المهمة'}</button>
+        <div class="row">
+          <button class="${t.active?'danger':'secondary'}" onclick="window.rizqToggleTask('${t.id}',${!t.active})">${t.active?'إيقاف المهمة':'إعادة تفعيل المهمة'}</button>
+          <button class="danger" onclick="window.rizqDeleteTask('${t.id}')">مسح المهمة</button>
+        </div>
       </div>`;
     }).join('') : 'لم تتم إضافة مهام بعد';
   };
@@ -1625,6 +1628,22 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
       msg(active?'تمت إعادة تفعيل المهمة':'تم إيقاف المهمة');
       await window.rizqLoadTaskManager();
     }catch(e){msg('تعذر تحديث المهمة: '+e.message,true);}
+  };
+
+  window.rizqDeleteTask = async function(taskId){
+    if(!isAdmin) return msg('غير مصرح لك',true);
+    if(!confirm('هل تريد مسح هذه المهمة نهائيًا؟ لن يتم حذف أي سجل إنجاز أو إثبات.')) return;
+    try{
+      const {count,error:checkError}=await db.from('daily_task_assignments')
+        .select('id',{count:'exact',head:true})
+        .eq('task_id',taskId);
+      if(checkError) throw checkError;
+      if(count>0) return msg('لا يمكن مسح هذه المهمة لأنها مرتبطة بسجل تكليفات أو إنجازات. يمكنك إيقافها بدلًا من ذلك.',true);
+      const {error}=await db.from('tasks').delete().eq('id',taskId);
+      if(error) throw error;
+      msg('تم مسح المهمة');
+      await window.rizqLoadTaskManager();
+    }catch(e){msg('تعذر مسح المهمة: '+e.message,true);}
   };
 
   const observer = new MutationObserver(function(){
