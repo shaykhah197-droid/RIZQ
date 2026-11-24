@@ -3228,6 +3228,96 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
    };
   }
 
+  async function loadFinanceForAdmin(){
+   const panel=document.getElementById('rizqAdminFinance');
+   let box=document.getElementById('rizqAdminFinanceContent');
+   if(!box && panel){
+    box=document.createElement('div');
+    box.id='rizqAdminFinanceContent';
+    panel.appendChild(box);
+   }
+   if(!box){
+    console.error('RIZQ finance panel/content not found');
+    return;
+   }
+   if(!allowed())return notice(box,'غير مصرح لك بعرض الحسابات');
+   box.innerHTML='<p class="muted">جارٍ تحميل الحسابات...</p>';
+   try{
+    async function readAll(table,status,label){
+     let offset=0,all=[];
+     while(true){
+      box.innerHTML='<p class="muted">جارٍ تحميل '+label+'... ('+(all.length)+' سجل)</p>';
+      const request=db.from(table).select('amount,created_at')
+       .eq('status',status).range(offset,offset+499);
+      const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('انتهت مهلة قراءة '+label+'؛ تحقق من اتصال قاعدة البيانات وصلاحيات القراءة.')),20000));
+      const result=await Promise.race([request,timeout]);
+      if(result.error)throw new Error(label+': '+result.error.message);
+      const page=result.data||[];
+      all=all.concat(page);
+      if(page.length<500)break;
+      offset+=page.length;
+      if(offset>200000)throw new Error('عدد السجلات أكبر من الحد الآمن للتحميل؛ نحتاج تجميعًا من قاعدة البيانات.');
+     }
+     return all;
+    }
+    const [deposits,withdrawals]=await Promise.all([
+     readAll('deposit_requests','approved','الإيداعات المعتمدة'),
+     readAll('withdrawal_requests','paid','التحويلات المدفوعة')
+    ]);
+    const dateKey=value=>{
+     const parts=new Intl.DateTimeFormat('en-GB',{
+      timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'
+     }).formatToParts(new Date(value));
+     const part=type=>parts.find(item=>item.type===type)?.value||'';
+     return part('year')+'-'+part('month')+'-'+part('day');
+    };
+    const nowKey=dateKey(new Date());
+    const monthKey=nowKey.slice(0,7);
+    const yearKey=nowKey.slice(0,4);
+    const sumFor=(rows,predicate)=>rows.reduce((sum,row)=>{
+     const amount=Number(row.amount);
+     return sum+(Number.isFinite(amount)&&predicate(dateKey(row.created_at))?amount:0);
+    },0);
+    const periods=[
+     {label:'اليوم',match:key=>key===nowKey},
+     {label:'الشهر الحالي',match:key=>key.slice(0,7)===monthKey},
+     {label:'السنة الحالية',match:key=>key.slice(0,4)===yearKey},
+     {label:'منذ بداية المنصة',match:()=>true}
+    ];
+    const rows=periods.map(period=>{
+     const incoming=sumFor(deposits,period.match);
+     const outgoing=sumFor(withdrawals,period.match);
+     return {label:period.label,incoming,outgoing,net:incoming-outgoing};
+    });
+    box.innerHTML=`
+     <p class="muted">الوارد = الإيداعات المعتمدة فقط. الصادر = طلبات السحب التي تم تأكيد دفعها فقط. الحساب حسب تاريخ إنشاء الطلب وتوقيت القاهرة.</p>
+     <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;min-width:440px">
+       <thead><tr>
+        <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">الفترة</th>
+        <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">الوارد</th>
+        <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">الصادر</th>
+        <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">الصافي</th>
+       </tr></thead>
+       <tbody>${rows.map(row=>`
+        <tr>
+         <td style="padding:11px 8px;border-bottom:1px solid var(--border);font-weight:bold">${row.label}</td>
+         <td style="padding:11px 8px;border-bottom:1px solid var(--border);color:#087b50">${money(row.incoming)}</td>
+         <td style="padding:11px 8px;border-bottom:1px solid var(--border);color:#c0392b">${money(row.outgoing)}</td>
+         <td style="padding:11px 8px;border-bottom:1px solid var(--border);font-weight:bold">${money(row.net)}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+     </div>
+     <p class="muted small">عدد الإيداعات المعتمدة: ${deposits.length.toLocaleString('ar-EG')} · عدد التحويلات المدفوعة للعملاء: ${withdrawals.length.toLocaleString('ar-EG')}</p>
+     <button type="button" class="secondary" id="rizqFinanceRefresh">تحديث الحسابات</button>
+    `;
+    document.getElementById('rizqFinanceRefresh').onclick=loadFinance;
+   }catch(error){
+    box.innerHTML='<p class="notice error">تعذر تحميل الحسابات: '+String(error.message||error).replace(/[<>&"]/g,char=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[char]))+'</p><button type="button" class="secondary" id="rizqFinanceRetry">إعادة المحاولة</button>';
+    document.getElementById('rizqFinanceRetry').onclick=loadFinance;
+   }
+  }
+
   const definitions=[
    {name:'إدارة الباقات',icon:'📦',target:packagePanel,load:loadPackages},
    {name:'إدارة المهام',icon:'📋',target:cardFor('rizqTaskManager'),load:()=>window.rizqLoadTaskManager?.()},
@@ -3239,11 +3329,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
    {name:'العملاء والمحافظ',icon:'👥',target:customers,load:loadCustomers},
    {name:'الإحالات',icon:'🔗',target:referrals,load:loadReferrals},
    {name:'سجل المعاملات',icon:'📚',target:transactions,load:loadTransactions},
-   {name:'الحسابات والإيرادات',icon:'📊',target:financePanel,load:()=>{
-    if(typeof window.rizqLoadFinance==='function') return window.rizqLoadFinance();
-    const panel=document.getElementById('rizqAdminFinance');
-    if(panel) panel.innerHTML='<h2>الحسابات والإيرادات</h2><p class="notice error">تعذر تشغيل وظيفة الحسابات. حدّث الصفحة وحاول مرة أخرى.</p>';
-   }},
+   {name:'الحسابات والإيرادات',icon:'📊',target:financePanel,load:loadFinanceForAdmin},
    {name:'خدمة العملاء',icon:'💬',target:supportPanel,load:loadSupportAdmin},
    {name:'إدارة المديرين',icon:'👤',target:managersPanel,load:loadManagers}
   ];
