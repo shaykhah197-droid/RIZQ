@@ -1739,6 +1739,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
       const {error}=await db.from('tasks').update({active}).eq('id',taskId);
       if(error) throw error;
       msg(active?'تمت إعادة تفعيل المهمة':'تم إيقاف المهمة');
+      window.rizqShowTaskGroup(active?'active':'inactive');
       await window.rizqLoadTaskManager();
     }catch(e){msg('تعذر تحديث المهمة: '+e.message,true);}
   };
