@@ -2581,6 +2581,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
     document.getElementById('rizqFinanceRetry').onclick=loadFinance;
    }
   }
+  window.rizqLoadFinance = loadFinance;
 
   const definitions=[
     {title:'إدارة الباقات',words:['الباقات','الباقة','الاشتراكات','الاشتراك'],ids:['rizqPackageAdmin']},
@@ -3220,7 +3221,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
    {name:'العملاء والمحافظ',icon:'👥',target:customers,load:loadCustomers},
    {name:'الإحالات',icon:'🔗',target:referrals,load:loadReferrals},
    {name:'سجل المعاملات',icon:'📚',target:transactions,load:loadTransactions},
-   {name:'الحسابات والإيرادات',icon:'📊',target:financePanel,load:loadFinance},
+   {name:'الحسابات والإيرادات',icon:'📊',target:financePanel,load:()=>window.rizqLoadFinance?.()},
    {name:'خدمة العملاء',icon:'💬',target:supportPanel,load:loadSupportAdmin},
    {name:'إدارة المديرين',icon:'👤',target:managersPanel,load:loadManagers}
   ];
