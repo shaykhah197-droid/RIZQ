@@ -2513,28 +2513,36 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
   async function loadFinance(){
    const box=document.getElementById('rizqAdminFinanceContent');
    if(!allowed())return notice(box,'غير مصرح لك بعرض الحسابات');
-   box.innerHTML='<p class="muted">جارٍ حساب الوارد والصادر من السجلات المعتمدة والمنفذة...</p>';
+   box.innerHTML='<p class="muted">جارٍ تحميل الحسابات...</p>';
    try{
-    async function readAll(table,status){
-     let offset=0,all=[],page=[];
-     do{
-      const result=await db.from(table).select('amount,created_at')
-       .eq('status',status).order('created_at',{ascending:true})
-       .range(offset,offset+999);
-      if(result.error)throw result.error;
-      page=result.data||[];
+    async function readAll(table,status,label){
+     let offset=0,all=[];
+     while(true){
+      box.innerHTML='<p class="muted">جارٍ تحميل '+label+'... ('+(all.length)+' سجل)</p>';
+      const request=db.from(table).select('amount,created_at')
+       .eq('status',status).range(offset,offset+499);
+      const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('انتهت مهلة قراءة '+label+'؛ تحقق من اتصال قاعدة البيانات وصلاحيات القراءة.')),20000));
+      const result=await Promise.race([request,timeout]);
+      if(result.error)throw new Error(label+': '+result.error.message);
+      const page=result.data||[];
       all=all.concat(page);
+      if(page.length<500)break;
       offset+=page.length;
-     }while(page.length===1000);
+      if(offset>200000)throw new Error('عدد السجلات أكبر من الحد الآمن للتحميل؛ نحتاج تجميعًا من قاعدة البيانات.');
+     }
      return all;
     }
     const [deposits,withdrawals]=await Promise.all([
-     readAll('deposit_requests','approved'),
-     readAll('withdrawal_requests','paid')
+     readAll('deposit_requests','approved','الإيداعات المعتمدة'),
+     readAll('withdrawal_requests','paid','التحويلات المدفوعة')
     ]);
-    const dateKey=value=>new Intl.DateTimeFormat('en-CA',{
-     timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'
-    }).format(new Date(value));
+    const dateKey=value=>{
+     const parts=new Intl.DateTimeFormat('en-GB',{
+      timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'
+     }).formatToParts(new Date(value));
+     const part=type=>parts.find(item=>item.type===type)?.value||'';
+     return part('year')+'-'+part('month')+'-'+part('day');
+    };
     const nowKey=dateKey(new Date());
     const monthKey=nowKey.slice(0,7);
     const yearKey=nowKey.slice(0,4);
@@ -2577,7 +2585,7 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
     `;
     document.getElementById('rizqFinanceRefresh').onclick=loadFinance;
    }catch(error){
-    box.innerHTML='<p class="notice error">تعذر حساب الإيرادات: '+String(error.message||error).replace(/[<>&"]/g,char=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[char]))+'</p><button type="button" class="secondary" id="rizqFinanceRetry">إعادة المحاولة</button>';
+    box.innerHTML='<p class="notice error">تعذر تحميل الحسابات: '+String(error.message||error).replace(/[<>&"]/g,char=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[char]))+'</p><button type="button" class="secondary" id="rizqFinanceRetry">إعادة المحاولة</button>';
     document.getElementById('rizqFinanceRetry').onclick=loadFinance;
    }
   }
