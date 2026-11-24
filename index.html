@@ -724,9 +724,45 @@ async function loadTransactions(){
  const box=document.getElementById('allTransactions');
  const {data,error}=await db.from('wallet_transactions').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(50);
  if(error){box.textContent=error.message;document.getElementById('recentTransactions').textContent=error.message;return}
- const html=data?.length?data.map(x=>`<div class="item"><b>${safe(x.transaction_type)}</b> — ${money(x.amount)}<div class="muted">${safe(x.description||'')} · ${new Date(x.created_at).toLocaleString('ar-EG')}</div></div>`).join(''):'لا توجد معاملات مسجلة';
- box.innerHTML=html;
- document.getElementById('recentTransactions').innerHTML=html;
+ const txs=data||[];
+ if(!txs.length){
+  box.textContent='لا توجد معاملات مسجلة';
+  document.getElementById('recentTransactions').textContent='لا توجد معاملات مسجلة';
+  return;
+ }
+ // Group wallet transactions by calendar day; each day stays collapsed until opened.
+ const groups=new Map();
+ txs.forEach(x=>{
+  const d=new Date(x.created_at);
+  const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  if(!groups.has(key))groups.set(key,[]);
+  groups.get(key).push(x);
+ });
+ box.innerHTML='';
+ groups.forEach((items,key)=>{
+  const [year,month,day]=key.split('-');
+  const section=document.createElement('details');
+  section.className='item';
+  const heading=document.createElement('summary');
+  heading.style.cursor='pointer';
+  heading.style.fontWeight='700';
+  heading.textContent='اليوم '+Number(day).toLocaleString('ar-EG')+' — '+new Date(Number(year),Number(month)-1,Number(day)).toLocaleDateString('ar-EG')+' ('+items.length.toLocaleString('ar-EG')+' معاملات)';
+  section.appendChild(heading);
+  items.forEach(x=>{
+   const row=document.createElement('div');
+   row.className='item';
+   const title=document.createElement('b');
+   title.textContent=(x.transaction_type||'معاملة')+' — '+money(x.amount);
+   const meta=document.createElement('div');
+   meta.className='muted';
+   meta.textContent=(x.description||'')+' · '+new Date(x.created_at).toLocaleTimeString('ar-EG');
+   row.append(title,meta);
+   section.appendChild(row);
+  });
+  box.appendChild(section);
+ });
+ const recentHtml=txs.slice(0,5).map(x=>`<div class="item"><b>${safe(x.transaction_type)}</b> — ${money(x.amount)}<div class="muted">${safe(x.description||'')} · ${new Date(x.created_at).toLocaleString('ar-EG')}</div></div>`).join('');
+ document.getElementById('recentTransactions').innerHTML=recentHtml;
 }
 
 function copyReferral(){
