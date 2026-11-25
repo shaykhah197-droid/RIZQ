@@ -1250,7 +1250,7 @@ start();
 
   window.rizqCancelPackage=async function(userPackageId,button){
     if(!currentUser||!userPackageId||button?.disabled)return;
-    const accepted=confirm('تأكيد إلغاء الباقة؟ سيتم خصم 15% من قيمتها وإضافة 85% إلى محفظتك فوراً، بحد أقصى 7 أيام عمل. ويمكنك سحب المبلغ من المحفظة بالطريقة المعتادة. لا يمكن التراجع بعد التأكيد.');
+    const accepted=confirm('تأكيد إلغاء الباقة؟ سيتم خصم 15% من قيمتها، وتسجيل 85% كمبلغ استرداد معلّق يُضاف إلى محفظتك بعد 7 أيام عمل. لن يكون المبلغ متاحاً للسحب قبل ذلك. لا يمكن التراجع بعد التأكيد.');
     if(!accepted)return;
     const oldText=button.textContent;
     button.disabled=true;
@@ -1261,7 +1261,7 @@ start();
       if(!data?.success)throw Error(data?.message||'لم يتم تأكيد الإلغاء');
       msg(data.already_processed
         ? 'طلب الإلغاء والاسترداد مسجل بالفعل.'
-        : 'تم إلغاء الباقة وإضافة '+money(data.refund_amount)+' إلى محفظتك.');
+        : 'تم إلغاء الباقة. مبلغ '+money(data.refund_amount)+' أصبح استرداداً معلّقاً وسيُضاف إلى محفظتك بعد 7 أيام عمل.');
       const jobs=[];
       if(typeof loadWallet==='function')jobs.push(loadWallet());
       if(typeof loadTransactions==='function')jobs.push(loadTransactions());
