@@ -1199,7 +1199,7 @@ start();
 
     try{
       const {data:owned,error:ownedError}=await db.from('user_packages')
-        .select('id,package_id').eq('user_id',currentUser.id);
+        .select('id,package_id,status,purchase_request_id').eq('user_id',currentUser.id).eq('status','active');
       if(ownedError) throw ownedError;
       const ownedIds=[...new Set((owned||[]).map(x=>x.package_id).filter(Boolean))];
       if(!ownedIds.length){
@@ -1208,13 +1208,18 @@ start();
         const {data:ownedPackages,error:ownedPackagesError}=await db.from('packages')
           .select('id,name,price').in('id',ownedIds);
         if(ownedPackagesError) throw ownedPackagesError;
-        activeList.innerHTML=(ownedPackages||[]).map(x=>`
+        const packageById=new Map((ownedPackages||[]).map(x=>[x.id,x]));
+        activeList.innerHTML=(owned||[]).map(up=>{
+          const x=packageById.get(up.package_id);
+          if(!x)return '';
+          return `
           <div class="package-card">
             <h3>${safe(x.name)}</h3>
             <div class="package-price">${money(x.price)}</div>
-            <span class="muted">باقة مرتبطة بحسابك</span>
-          </div>
-        `).join('')||'لا توجد باقات مفعّلة على حسابك حالياً.';
+            <span class="muted">باقة نشطة</span>
+            <button class="secondary" type="button" onclick="window.rizqCancelPackage('${up.id}',this)">إلغاء الباقة واسترداد الرصيد</button>
+          </div>`;
+        }).join('')||'لا توجد باقات مفعّلة على حسابك حالياً.';
       }
     }catch(activeError){
       activeList.textContent='تعذر تحميل باقاتك النشطة: '+activeError.message;
@@ -1241,6 +1246,32 @@ start();
         <div class="muted">${new Date(x.created_at).toLocaleString('ar-EG')}</div>
       </div>
     `).join(''):'لم ترسل طلبات اشتراك حتى الآن';
+  };
+
+  window.rizqCancelPackage=async function(userPackageId,button){
+    if(!currentUser||!userPackageId||button?.disabled)return;
+    const accepted=confirm('تأكيد إلغاء الباقة؟ سيتم خصم 15% من قيمتها وإضافة 85% إلى محفظتك فوراً، بحد أقصى 7 أيام عمل. ويمكنك سحب المبلغ من المحفظة بالطريقة المعتادة. لا يمكن التراجع بعد التأكيد.');
+    if(!accepted)return;
+    const oldText=button.textContent;
+    button.disabled=true;
+    button.textContent='جارٍ تنفيذ الإلغاء...';
+    try{
+      const {data,error}=await db.rpc('cancel_rizq_package_and_refund',{p_user_package_id:userPackageId});
+      if(error)throw error;
+      if(!data?.success)throw Error(data?.message||'لم يتم تأكيد الإلغاء');
+      msg(data.already_processed
+        ? 'طلب الإلغاء والاسترداد مسجل بالفعل.'
+        : 'تم إلغاء الباقة وإضافة '+money(data.refund_amount)+' إلى محفظتك.');
+      const jobs=[];
+      if(typeof loadWallet==='function')jobs.push(loadWallet());
+      if(typeof loadTransactions==='function')jobs.push(loadTransactions());
+      jobs.push(window.rizqLoadPackages());
+      await Promise.allSettled(jobs);
+    }catch(e){
+      msg('تعذر إلغاء الباقة: '+(e.message||'خطأ غير معروف'),true);
+      button.disabled=false;
+      button.textContent=oldText;
+    }
   };
 
   window.rizqSendPackageRequest=async function(){
