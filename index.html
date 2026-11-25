@@ -263,6 +263,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <div class="row">
 <div class="stat"><span class="muted">رصيد المحفظة</span><strong id="balance">0.00 ج.م</strong></div>
 <div class="stat"><span class="muted">عدد الإحالات</span><strong id="refCount">0</strong></div>
+<div class="stat"><span class="muted">المبلغ المعلق</span><strong id="pendingRefundAmount">0.00 ج.م</strong></div>
 </div>
 <div class="card" style="margin-top:14px">
 <h2>كود دعوتك</h2>
@@ -611,7 +612,7 @@ async function loadApp(){
  document.getElementById('roleLabel').classList.toggle('hidden',!isAdmin);
  await loadProfile();
  await Promise.all([
-  loadWallet(),loadReferral(),
+  loadWallet(),loadReferral(),loadPendingRefund(),
   loadMethods(),loadDepositHistory(),loadWithdrawalHistory(),loadTransactions()
  ]);
  if(isAdmin){await loadAdmin();await loadSupportAdminBadge();}
@@ -651,6 +652,12 @@ async function loadReferral(){
  const {count,error}=await db.from('referrals').select('*',{count:'exact',head:true}).eq('referrer_id',currentUser.id);
  if(error)throw error;
  document.getElementById('refCount').textContent=count||0;
+}
+async function loadPendingRefund(){
+ const {data,error}=await db.from('rizq_pending_refunds').select('amount').eq('user_id',currentUser.id).eq('status','pending');
+ if(error)throw error;
+ const total=(data||[]).reduce((sum,item)=>sum+Number(item.amount||0),0);
+ document.getElementById('pendingRefundAmount').textContent=money(total);
 }
 async function loadMethods(){
  const box=document.getElementById('paymentMethods');
