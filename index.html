@@ -4147,7 +4147,10 @@ async function sendSupportCustomerMessage(){
    if(error)throw error;
    uploaded.push(path);
   }
-  const {error}=await db.from('support_messages').insert({conversation_id:rizqSupportConversationId,sender_id:currentUser.id,sender_role:'customer',body:text,attachment_paths:uploaded,sender:'customer',message:text,image_path:uploaded[0]||null});
+  const messageBody=String(text||'').trim();
+  const messageAttachments=uploaded.filter(path=>typeof path==='string'&&path.trim());
+  if(!messageBody&&!messageAttachments.length)throw Error('اكتب رسالة أو اختر صورة قبل الإرسال');
+  const {error}=await db.from('support_messages').insert({conversation_id:rizqSupportConversationId,sender_id:currentUser.id,sender_role:'customer',body:messageBody||(messageAttachments.length?'مرفق صورة':''),attachment_paths:messageAttachments,sender:'customer',message:messageBody,image_path:messageAttachments[0]||null});
   if(error)throw error;
   document.getElementById('supportCustomerText').value='';
   input.value='';
