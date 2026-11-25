@@ -3739,6 +3739,14 @@ document.querySelectorAll('#rizqPackageList .package-card p').forEach(function(p
       console.error('RIZQ badge '+name+':',error);
      }
     }));
+    // نفس مصدر قائمة العملاء والمحافظ: العملاء المؤكدون فقط.
+    try{
+     const {data:confirmedCustomers,error}=await db.rpc('admin_list_confirmed_customers');
+     if(error)throw error;
+     updateBadge('العملاء والمحافظ',(confirmedCustomers||[]).length);
+    }catch(error){
+     console.error('RIZQ badge العملاء والمحافظ:',error);
+    }
     if(typeof loadSupportAdminBadge==='function'){
      try{await loadSupportAdminBadge()}catch(error){console.error('RIZQ support badge:',error)}
     }
