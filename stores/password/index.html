@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>password - باسوورد | المتجر</title>
+<style>
+:root{--green:#075b3e;--mint:#e8f4ed;--ink:#17251e;--muted:#65756c;--line:#dfe9e2;--bg:#f5f8f6;--white:#fff;--gold:#fff4d6}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Tahoma,Arial,sans-serif;line-height:1.65}
+header{background:linear-gradient(120deg,#06452f,#0b7950);color:white;padding:28px 16px}
+.wrap{max-width:1050px;margin:auto;padding:0 15px}.top{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
+h1{margin:0;font-size:30px}header p{margin:5px 0;color:#d7eee2}.tagline{font-size:13px;opacity:.9}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}button,a.btn{border:0;border-radius:10px;padding:11px 15px;background:var(--green);color:white;font-weight:bold;text-decoration:none;cursor:pointer;font-size:14px}
+button.light,a.light{background:white;color:var(--green);border:1px solid var(--line)}button.soft{background:var(--mint);color:var(--green)}button.danger{background:#a52d2d}
+main{padding:22px 0}.hero,.panel,.product,.service{background:white;border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}
+.hero{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;align-items:center}.hero h2{font-size:25px;margin:0 0 8px}.muted{color:var(--muted)}.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.chip{background:var(--mint);color:var(--green);border-radius:30px;padding:5px 10px;font-size:12px}
+h2{margin:0 0 12px;font-size:20px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.product{margin:0;padding:0;overflow:hidden}.pic{height:145px;background:linear-gradient(135deg,#eaf4ee,#dcebe2);display:grid;place-items:center;font-size:48px}.product-body{padding:14px}.product h3{margin:0 0 6px}.price{font-size:19px;font-weight:bold;color:var(--green)}.demo{display:inline-block;background:var(--gold);color:#755300;border-radius:6px;padding:2px 7px;font-size:11px;margin:5px 0}
+.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.actions button{flex:1}
+form{display:grid;gap:8px}label{font-weight:bold;font-size:13px}input,textarea,select{width:100%;padding:12px;border:1px solid var(--line);border-radius:9px;font:inherit;background:white}textarea{min-height:90px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hidden{display:none!important}.notice{background:#f0f7f2;border:1px solid var(--line);padding:12px;border-radius:10px;font-size:13px}
+footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
+.admin-product{border:1px solid var(--line);border-radius:10px;padding:12px;margin:8px 0;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+@media(max-width:650px){.hero{grid-template-columns:1fr}.two{grid-template-columns:1fr}h1{font-size:25px}}
+</style></head>
+<body>
+<header><div class="wrap">
+<div class="top"><div><h1>password - باسوورد</h1><p>كمبيوتر • لابتوب • إلكترونيات • صيانة منزلية</p><div class="tagline">متجر تجريبي مستقل — قطور، محافظة الغربية</div></div>
+<a class="btn light" href="https://www.facebook.com/share/19pNFknDWo/" target="_blank" rel="noopener">صفحة فيسبوك</a></div>
+<nav><a class="btn light" href="#products">المنتجات</a><a class="btn light" href="#repair">طلب صيانة منزلية</a><a class="btn light" href="https://wa.me/201004575343" target="_blank">واتساب 01004575343</a><button class="light" onclick="toggleAdmin()">إدارة تجريبية</button></nav>
+</div></header>
+<main class="wrap">
+<section class="hero"><div><h2>كل احتياجات الكمبيوتر في مكان واحد</h2><p class="muted">تصفح المنتجات التجريبية أو اطلب صيانة منزلية. خدمة الصيانة متاحة داخل مركز ومدينة قطور فقط.</p><div class="chips"><span class="chip">صيانة كمبيوتر ولابتوب</span><span class="chip">ويندوز وبرامج</span><span class="chip">طابعات وشبكات وراوترات</span><span class="chip">تركيب وترقية أجهزة</span></div></div>
+<div class="notice"><b>مهم قبل الطلب</b><br>الأسعار المعروضة حاليًا افتراضية للتجربة وليست عروض بيع مؤكدة. يتم تأكيد السعر والتوفر وموعد الصيانة بالتواصل المباشر.</div></section>
+<section id="products" class="panel"><h2>🛒 المنتجات</h2><div id="productsGrid" class="grid"></div></section>
+<section id="repair" class="service"><h2>🧰 طلب صيانة منزلية</h2><p class="muted">داخل مركز ومدينة قطور فقط — اكتب بياناتك ووصف المشكلة، وسيتم فتح واتساب برسالة جاهزة لإرسال الطلب.</p>
+<form id="repairForm"><div class="two"><div><label>الاسم</label><input id="customerName" required placeholder="اسمك"></div><div><label>رقم الهاتف</label><input id="customerPhone" required inputmode="tel" placeholder="رقم للتواصل"></div></div>
+<div><label>نوع الخدمة</label><select id="repairType"><option>صيانة كمبيوتر</option><option>صيانة لابتوب</option><option>ويندوز وبرامج</option><option>طابعة</option><option>شبكة أو راوتر</option><option>تركيب أو ترقية جهاز</option><option>أخرى</option></select></div>
+<div><label>العنوان داخل قطور</label><input id="repairAddress" required placeholder="القرية أو الشارع والعنوان"></div>
+<div><label>وصف العطل</label><textarea id="repairDescription" required placeholder="اشرح المشكلة بالتفصيل"></textarea></div>
+<button type="submit">إرسال طلب الصيانة عبر واتساب</button></form></section>
+<section id="admin" class="panel hidden"><h2>⚙️ إدارة المنتجات (وضع تجريبي)</h2><div class="notice">التعديلات هنا محفوظة في متصفح هذا الجهاز فقط. هذه ليست لوحة إدارة آمنة ولا تحفظ البيانات على الإنترنت. لا تضع بيانات حساسة. سنربطها لاحقًا بقاعدة بيانات مستقلة للمتجر.</div>
+<form id="productForm"><input type="hidden" id="editId"><div class="two"><div><label>اسم المنتج</label><input id="pName" required placeholder="اسم المنتج"></div><div><label>السعر بالجنيه المصري</label><input id="pPrice" type="number" min="0" step="1" required placeholder="مثال: 15000"></div></div>
+<div class="two"><div><label>وصف المنتج</label><input id="pDesc" placeholder="وصف مختصر"></div><div><label>رمز/إيموجي للصورة مؤقتًا</label><input id="pIcon" value="💻" maxlength="5"></div></div>
+<label><input id="pAvailable" type="checkbox" checked style="width:auto"> متوفر</label><button type="submit">حفظ المنتج</button><button type="button" class="soft" onclick="resetProductForm()">إلغاء التعديل</button></form>
+<h3>المنتجات الحالية</h3><div id="adminProducts"></div></section>
+</main><footer>password - باسوورد · قطور، الغربية · اتصال وواتساب: 01004575343</footer>
+<script>
+const KEY='password_store_demo_products_v1';
+const defaults=[
+{id:'demo-laptop',name:'لابتوب تجريبي',price:15000,description:'عينة توضيحية — عدّل المواصفات والسعر قبل استقبال طلبات حقيقية.',icon:'💻',available:true,demo:true},
+{id:'demo-screen',name:'شاشة كمبيوتر تجريبية',price:3500,description:'عينة توضيحية — السعر افتراضي وغير مؤكد.',icon:'🖥️',available:true,demo:true},
+{id:'demo-keyboard',name:'طقم ماوس وكيبورد تجريبي',price:500,description:'عينة توضيحية — السعر افتراضي وغير مؤكد.',icon:'⌨️',available:true,demo:true}
+];
+let products=loadProducts();
+function loadProducts(){try{const v=JSON.parse(localStorage.getItem(KEY));return Array.isArray(v)?v:defaults.map(x=>({...x}))}catch(e){return defaults.map(x=>({...x}))}}
+function save(){localStorage.setItem(KEY,JSON.stringify(products));render()}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function render(){
+const grid=document.getElementById('productsGrid');
+grid.innerHTML=products.filter(p=>p.available).map(p=>'<article class="product"><div class="pic">'+esc(p.icon||'📦')+'</div><div class="product-body"><h3>'+esc(p.name)+'</h3><div class="price">'+Number(p.price||0).toLocaleString('en-US')+' جنيه</div>'+(p.demo?'<span class="demo">منتج تجريبي — سعر افتراضي</span>':'')+'<p class="muted">'+esc(p.description)+'</p><div class="actions"><button onclick="orderProduct(\''+esc(p.id)+'\')">استفسار / طلب عبر واتساب</button></div></div></article>').join('')||'<p class="muted">لا توجد منتجات متاحة حاليًا.</p>';
+const box=document.getElementById('adminProducts');
+box.innerHTML=products.map(p=>'<div class="admin-product"><div><b>'+esc(p.name)+'</b><div class="muted">'+Number(p.price||0).toLocaleString('en-US')+' جنيه · '+(p.available?'متوفر':'غير متوفر')+(p.demo?' · تجريبي':'')+'</div></div><div class="actions"><button class="soft" onclick="editProduct(\''+esc(p.id)+'\')">تعديل</button><button class="danger" onclick="deleteProduct(\''+esc(p.id)+'\')">حذف</button></div></div>').join('')||'لا توجد منتجات.';
+}
+function orderProduct(id){const p=products.find(x=>x.id===id);if(!p)return;const t='مرحبًا، أريد الاستفسار عن المنتج: '+p.name+' — السعر المعروض '+p.price+' جنيه. هل المنتج متوفر وما السعر النهائي؟';window.open('https://wa.me/201004575343?text='+encodeURIComponent(t),'_blank')}
+function toggleAdmin(){document.getElementById('admin').classList.toggle('hidden');document.getElementById('admin').scrollIntoView({behavior:'smooth',block:'start'})}
+function resetProductForm(){document.getElementById('productForm').reset();document.getElementById('editId').value='';document.getElementById('pIcon').value='💻';document.getElementById('pAvailable').checked=true}
+function editProduct(id){const p=products.find(x=>x.id===id);if(!p)return;document.getElementById('editId').value=p.id;document.getElementById('pName').value=p.name;document.getElementById('pPrice').value=p.price;document.getElementById('pDesc').value=p.description||'';document.getElementById('pIcon').value=p.icon||'📦';document.getElementById('pAvailable').checked=!!p.available;document.getElementById('admin').scrollIntoView({behavior:'smooth'})}
+function deleteProduct(id){if(!confirm('تأكيد حذف المنتج من هذه النسخة التجريبية؟'))return;products=products.filter(p=>p.id!==id);save()}
+document.getElementById('productForm').addEventListener('submit',e=>{e.preventDefault();const id=document.getElementById('editId').value;const p={id:id||('p-'+Date.now()),name:document.getElementById('pName').value.trim(),price:Number(document.getElementById('pPrice').value),description:document.getElementById('pDesc').value.trim(),icon:document.getElementById('pIcon').value.trim()||'📦',available:document.getElementById('pAvailable').checked,demo:false};if(id){products=products.map(x=>x.id===id?p:x)}else products.push(p);save();resetProductForm();alert('تم الحفظ في المتصفح الحالي فقط.')});
+document.getElementById('repairForm').addEventListener('submit',e=>{e.preventDefault();const name=document.getElementById('customerName').value.trim(),phone=document.getElementById('customerPhone').value.trim(),type=document.getElementById('repairType').value,address=document.getElementById('repairAddress').value.trim(),desc=document.getElementById('repairDescription').value.trim();const text='طلب صيانة منزلية — password - باسوورد%0Aالاسم: '+name+'%0Aرقم العميل: '+phone+'%0Aالخدمة: '+type+'%0Aالعنوان داخل قطور: '+address+'%0Aوصف العطل: '+desc;window.open('https://wa.me/201004575343?text='+encodeURIComponent(text),'_blank')});
+render();
+</script></body></html>
