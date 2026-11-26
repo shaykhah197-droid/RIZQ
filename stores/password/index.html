@@ -48,6 +48,8 @@ textarea{min-height:85px}
 .page{display:none!important}
 .page.active{display:block!important}
 .back-btn{margin-bottom:12px}
+.home-links .home-card{min-height:145px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;font-size:17px;line-height:1.5}
+.home-links .home-card small{font-size:12px;font-weight:normal;opacity:.9}
 footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 .admin-product,.request{border:1px solid var(--line);border-radius:10px;padding:12px;margin:8px 0}
 .admin-product{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
@@ -80,18 +82,54 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 </header>
 
 <main class="wrap">
-<section id="home" class="hero page active">
+<section id="home" class="page active">
+<div class="hero">
 <div>
-<h2>كل احتياجات الكمبيوتر في مكان واحد</h2>
-<p class="muted">تصفح المنتجات أو اطلب صيانة منزلية. خدمة الصيانة داخل مركز ومدينة قطور فقط.</p>
+<h2>كل ما يخص الكمبيوتر والإلكترونيات في مكان واحد</h2>
+<p class="muted">بيع منتجات الكمبيوتر والإلكترونيات وخدمات الصيانة المنزلية داخل مركز ومدينة قطور.</p>
 <div class="chips">
+<span class="chip">أجهزة وإكسسوارات</span>
 <span class="chip">صيانة كمبيوتر ولابتوب</span>
 <span class="chip">ويندوز وبرامج</span>
 <span class="chip">طابعات وشبكات وراوترات</span>
-<span class="chip">تركيب وترقية أجهزة</span>
 </div>
 </div>
-<div class="notice"><b>تنبيه</b><br>يتم تأكيد السعر والتوفر وموعد الصيانة بالتواصل المباشر قبل تنفيذ الطلب.</div>
+<div class="notice"><b>خدمة داخل قطور</b><br>يتم تأكيد السعر والتوفر وموعد الصيانة بالتواصل المباشر قبل تنفيذ الطلب.</div>
+</div>
+<div class="panel">
+<h2>اختار الخدمة اللي محتاجها</h2>
+<div class="grid home-links">
+<button type="button" class="home-card" onclick="showPage('products')">🛒<br><b>تصفح المنتجات</b><br><small>أجهزة وإكسسوارات الكمبيوتر والإلكترونيات</small></button>
+<button type="button" class="home-card" onclick="showPage('repair')">🧰<br><b>طلب صيانة منزلية</b><br><small>حدد العطل وأرسل طلبك</small></button>
+<a class="btn home-card" href="https://wa.me/201004575343" target="_blank" rel="noopener">💬<br><b>تواصل معنا</b><br><small>واتساب واستفسارات</small></a>
+<button type="button" class="home-card" onclick="showPage('about')">ℹ️<br><b>عن باسوورد</b><br><small>تعرف على خدماتنا ونطاق العمل</small></button>
+</div>
+</div>
+<div class="panel">
+<h2>لماذا تختار باسوورد؟</h2>
+<ul>
+<li>سهولة طلب الصيانة.</li>
+<li>التواصل لتحديد السعر والموعد.</li>
+<li>منتجات كمبيوتر وإلكترونيات.</li>
+<li>خدمة منزلية داخل قطور فقط.</li>
+</ul>
+</div>
+</section>
+
+<section id="about" class="panel page">
+<button class="light back-btn" type="button" onclick="showPage('home')">← الرئيسية</button>
+<h2>عن باسوورد</h2>
+<p class="muted">password - باسوورد لخدمات الكمبيوتر والإلكترونيات والصيانة المنزلية.</p>
+<h3>خدماتنا</h3>
+<ul>
+<li>بيع منتجات الكمبيوتر والإلكترونيات.</li>
+<li>صيانة الكمبيوتر واللابتوب.</li>
+<li>تثبيت ويندوز والبرامج.</li>
+<li>صيانة الطابعات والشبكات والراوترات.</li>
+<li>تركيب وترقية الأجهزة.</li>
+</ul>
+<div class="notice"><b>نطاق الصيانة المنزلية</b><br>مركز ومدينة قطور، محافظة الغربية، مصر فقط. يتم التواصل مع العميل لتأكيد السعر والموعد قبل تنفيذ الخدمة.</div>
+<p><a class="btn" href="https://wa.me/201004575343" target="_blank" rel="noopener">تواصل عبر واتساب</a></p>
 </section>
 
 <section id="products" class="panel page">
