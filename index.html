@@ -256,8 +256,21 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <button class="secondary customer-only-nav" onclick="showTab('history')">السجل</button>
 <button class="secondary customer-only-nav" onclick="showTab('account')">الحساب</button>
 <button class="secondary customer-only-nav" onclick="showTab('mydata')">بياناتي</button>
+<button class="secondary" id="rizqStoresNav" type="button" onclick="showTab('stores')">المتاجر</button>
 <button id="adminNav" class="hidden" onclick="showTab('admin')">لوحة المدير</button>
 </nav>
+
+<section id="tab-stores" class="tab hidden">
+<div class="card">
+<h2>متاجر RIZQ</h2>
+<p class="muted">تسوق من المتاجر والشركات المشاركة على منصة RIZQ.</p>
+<div class="notice">قسم المتاجر قيد التجهيز. سنبدأ بمتجر شركة الكمبيوتر، ثم نضيف متاجر أخرى بعد تجهيز بياناتها.</div>
+<div class="card" style="margin-top:12px;background:#f8fbf9">
+<h3>أول متجر: شركة الكمبيوتر</h3>
+<p class="muted">سيتم عرض منتجات الشركة وأسعارها وصورها وطرق التواصل هنا بعد استلام بيانات المتجر واعتمادها.</p>
+</div>
+</div>
+</section>
 
 <section id="tab-home" class="tab">
 <div class="row">
