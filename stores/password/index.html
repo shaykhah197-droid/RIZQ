@@ -45,6 +45,9 @@ textarea{min-height:85px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .notice{background:#f0f7f2;border:1px solid var(--line);padding:12px;border-radius:10px;font-size:13px}
 .hidden{display:none!important}
+.page{display:none!important}
+.page.active{display:block!important}
+.back-btn{margin-bottom:12px}
 footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 .admin-product,.request{border:1px solid var(--line);border-radius:10px;padding:12px;margin:8px 0}
 .admin-product{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
@@ -67,8 +70,9 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <a class="btn light" href="https://www.facebook.com/share/19pNFknDWo/" target="_blank" rel="noopener">صفحة فيسبوك</a>
 </div>
 <nav>
-<a class="btn light" href="#products">المنتجات</a>
-<a class="btn light" href="#repair">طلب صيانة منزلية</a>
+<button class="light" onclick="showPage(\'home\')">الرئيسية</button>
+<button class="light" onclick="showPage(\'products\')">المنتجات</button>
+<button class="light" onclick="showPage(\'repair\')">طلب صيانة منزلية</button>
 <a class="btn light" href="https://wa.me/201004575343" target="_blank">واتساب 01004575343</a>
 <button class="light" onclick="showAdmin()">إدارة المتجر</button>
 </nav>
@@ -76,7 +80,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 </header>
 
 <main class="wrap">
-<section class="hero">
+<section id="home" class="hero page active">
 <div>
 <h2>كل احتياجات الكمبيوتر في مكان واحد</h2>
 <p class="muted">تصفح المنتجات أو اطلب صيانة منزلية. خدمة الصيانة داخل مركز ومدينة قطور فقط.</p>
@@ -90,12 +94,14 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <div class="notice"><b>تنبيه</b><br>يتم تأكيد السعر والتوفر وموعد الصيانة بالتواصل المباشر قبل تنفيذ الطلب.</div>
 </section>
 
-<section id="products" class="panel">
+<section id="products" class="panel page">
+<button class="light back-btn" type="button" onclick="showPage(\'home\')">← الرئيسية</button>
 <h2>🛒 المنتجات</h2>
 <div id="productsGrid" class="grid"><p>جاري تحميل المنتجات...</p></div>
 </section>
 
-<section id="repair" class="service">
+<section id="repair" class="service page">
+<button class="light back-btn" type="button" onclick="showPage(\'home\')">← الرئيسية</button>
 <h2>🧰 طلب صيانة منزلية</h2>
 <p class="muted">داخل مركز ومدينة قطور فقط. اكتب بياناتك ووصف المشكلة وسنتواصل معك.</p>
 <form id="repairForm">
@@ -116,7 +122,8 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 </form>
 </section>
 
-<section id="admin" class="panel hidden">
+<section id="admin" class="panel page">
+<button class="light back-btn" type="button" onclick="showPage(\'home\')">← الرئيسية</button>
 <h2>⚙️ إدارة المتجر</h2>
 <div id="loginArea">
 <p class="muted">سجّل الدخول بحساب المدير الذي أنشأته في Supabase.</p>
@@ -241,10 +248,11 @@ el('repairForm').addEventListener('submit',async e=>{
  e.target.reset();
 });
 
-function showAdmin(){
- el('admin').classList.remove('hidden');
- el('admin').scrollIntoView({behavior:'smooth'});
+function showPage(page){
+ document.querySelectorAll('.page').forEach(section=>section.classList.toggle('active',section.id===page));
+ window.scrollTo({top:0,behavior:'smooth'});
 }
+function showAdmin(){showPage('admin');}
 async function checkSession(){
  const {data}=await db.auth.getSession();
  currentUser=data.session?.user||null;
