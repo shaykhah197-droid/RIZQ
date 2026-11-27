@@ -396,7 +396,7 @@ el('productForm').addEventListener('submit',async e=>{
  ?await db.from('products').update(record).eq('id',Number(id))
  :await db.from('products').insert(record);
  saveBtn.disabled=false;saveBtn.textContent='حفظ المنتج';
- if(result.error){showMessage('adminMessage','تعذر حفظ المنتج. تأكد من صلاحيات المدير والبيانات.','err');return}
+ if(result.error){console.error('Product save error:',result.error);showMessage('adminMessage','سبب فشل الحفظ: '+(result.error.message||'خطأ غير معروف')+' — كود: '+(result.error.code||'غير متاح'),'err');return}
  showMessage('adminMessage','تم حفظ المنتج.');
  resetProductForm();await loadAdminData();
 });
