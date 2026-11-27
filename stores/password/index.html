@@ -86,7 +86,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <button class="light" type="button" onclick="showPage('products')">المنتجات</button>
 <button class="light" type="button" onclick="showRequestsPage()">الطلبات الجديدة <span id="serviceRequestCount" class="request-count" title="عدد الطلبات">0</span></button>
 <a class="btn light" href="https://wa.me/201004575343" target="_blank" rel="noopener">واتساب 01004575343</a>
-<button class="light" type="button" onclick="showAdmin()">إدارة المتجر</button>
+<button class="light" type="button" onclick="showPage('account')">حسابي / دخول العملاء</button><button class="light" type="button" onclick="showAdmin()">إدارة المتجر</button>
 </nav>
 </div>
 </header>
@@ -165,6 +165,25 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 </div>
 </section>
 <div id="productDetail" class="product-detail hidden" onclick="if(event.target===this)closeProductDetail()"></div>
+
+<section id="account" class="panel page">
+<button class="light back-btn" type="button" onclick="showPage('home')">← الرئيسية</button>
+<h2>👤 حساب العميل</h2>
+<div id="customerAuth" class="grid">
+<form id="customerSignupForm" class="admin-section-card">
+<h3>إنشاء حساب جديد</h3><label>الاسم الثلاثي</label><input id="signupName" required maxlength="150">
+<label>البريد الإلكتروني</label><input id="signupEmail" type="email" required>
+<label>كلمة المرور</label><input id="signupPassword" type="password" minlength="8" required>
+<label>تأكيد كلمة المرور</label><input id="signupPassword2" type="password" minlength="8" required>
+<button id="signupButton" type="submit">إنشاء الحساب</button><div id="signupMessage"></div>
+</form>
+<form id="customerLoginForm" class="admin-section-card">
+<h3>تسجيل الدخول</h3><label>البريد الإلكتروني</label><input id="customerEmail" type="email" required>
+<label>كلمة المرور</label><input id="customerPassword" type="password" required>
+<button id="customerLoginButton" type="submit">دخول</button><div id="customerLoginMessage"></div>
+</form></div>
+<div id="customerAccount" class="hidden"><div id="customerWelcome" class="notice"></div><button class="danger" type="button" onclick="customerLogout()">تسجيل الخروج</button><h3>طلباتي</h3><div id="customerOrders"></div></div>
+</section>
 <section id="requests" class="panel page"><button class="light back-btn" type="button" onclick="showPage('home')">← الرئيسية</button><h2>الطلبات الجديدة</h2><div id="newRequestsContent">جاري تحميل الطلبات...</div></section>
 <section id="repair" class="service page">
 <button class="light back-btn" type="button" onclick="showPage(\'home\')">← الرئيسية</button>
@@ -320,6 +339,42 @@ async function askProduct(id){
  window.open('https://wa.me/201004575343?text='+encodeURIComponent(msg),'_blank');
  alert('تم تسجيل استفسارك بنجاح.');
 }
+
+async function renderAccount(){
+ const customer=!!currentUser&&!currentAdminRole;
+ el('customerAuth').classList.toggle('hidden',!!currentUser);
+ el('customerAccount').classList.toggle('hidden',!customer);
+ if(customer){el('customerWelcome').textContent='مرحبًا '+(currentUser.user_metadata?.full_name||currentUser.email);loadCustomerOrders();}
+}
+el('customerSignupForm').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const name=el('signupName').value.trim(),pass=el('signupPassword').value;
+ if(name.split(/\s+/).length<3){showMessage('signupMessage','اكتب الاسم الثلاثي كاملًا.','err');return}
+ if(pass!==el('signupPassword2').value){showMessage('signupMessage','كلمتا المرور غير متطابقتين.','err');return}
+ const btn=el('signupButton');btn.disabled=true;
+ const {error}=await db.auth.signUp({email:el('signupEmail').value.trim(),password:pass,options:{data:{full_name:name},emailRedirectTo:location.origin}});
+ btn.disabled=false;
+ if(error){showMessage('signupMessage','تعذر إنشاء الحساب: '+error.message,'err');return}
+ showMessage('signupMessage','تم إنشاء الحساب. افتح رسالة التفعيل في بريدك الإلكتروني، ثم سجّل الدخول. لا يمكن الشراء قبل تأكيد البريد.');
+ e.target.reset();
+});
+el('customerLoginForm').addEventListener('submit',async e=>{
+ e.preventDefault();const btn=el('customerLoginButton');btn.disabled=true;
+ const {data,error}=await db.auth.signInWithPassword({email:el('customerEmail').value.trim(),password:el('customerPassword').value});
+ btn.disabled=false;
+ if(error){showMessage('customerLoginMessage','تعذر الدخول. تأكد من كلمة المرور وتأكيد البريد الإلكتروني.','err');return}
+ currentUser=data.user;await loadAdminRole();updateAdminView();
+ if(currentAdminRole){showPage('admin');await loadAdminData();adminTab('overview')}
+ else{showPage('account');renderAccount()}
+});
+async function customerLogout(){await db.auth.signOut();currentUser=null;currentAdminRole=null;updateAdminView();renderAccount()}
+async function loadCustomerOrders(){
+ if(!currentUser||currentAdminRole)return;
+ const box=el('customerOrders');box.textContent='جاري تحميل الطلبات...';
+ const {data,error}=await db.from('store_orders').select('*').order('created_at',{ascending:false});
+ if(error){box.textContent='تعذر تحميل طلباتك.';return}
+ box.innerHTML=(data||[]).map(o=>'<div class="request"><b>طلب #'+escapeHTML(o.id)+'</b><div>الحالة: '+escapeHTML(o.status)+' · الدفع: '+escapeHTML(o.payment_status)+'</div><div>قيمة المنتجات: '+money(o.subtotal)+' · التوصيل: '+(o.delivery_fee===null?'بانتظار التحديد':money(o.delivery_fee))+' · الإجمالي: '+(o.total===null?'بانتظار التحديد':money(o.total))+'</div></div>').join('')||'لا توجد طلبات بعد.';
+}
 el('repairForm').addEventListener('submit',async e=>{
  e.preventDefault();
  const btn=el('repairSubmit');btn.disabled=true;btn.textContent='جاري الإرسال...';
@@ -352,7 +407,7 @@ async function checkSession(){
  currentUser=data.session?.user||null;
  await loadAdminRole();
  updateAdminView();
- if(currentUser&&currentAdminRole){await loadAdminData();adminTab('overview');}
+ if(currentUser&&currentAdminRole){await loadAdminData();adminTab('overview');}else{renderAccount();}
 }
 async function loadAdminRole(){
  currentAdminRole=null;
@@ -362,7 +417,7 @@ async function loadAdminRole(){
  if(!error&&data?.role)currentAdminRole=data.role;
 }
 function updateAdminView(){
- el('loginArea').classList.toggle('hidden',!!currentUser);
+ el('loginArea').classList.toggle('hidden',!!currentAdminRole);
  el('dashboard').classList.toggle('hidden',!currentUser||!currentAdminRole);
  el('adminManagement').classList.toggle('hidden',currentAdminRole!=='full');
 }
@@ -513,7 +568,7 @@ async function updateRequest(table,id){
  await loadRequests();
 }
 db.auth.onAuthStateChange((_event,session)=>{
- currentUser=session?.user||null;currentAdminRole=null;updateAdminView();if(currentUser){loadAdminRole().then(()=>{updateAdminView();if(currentAdminRole){loadAdminData();if(currentAdminRole==='full')loadStoreAdmins();}});}
+ currentUser=session?.user||null;currentAdminRole=null;updateAdminView();if(currentUser){loadAdminRole().then(()=>{updateAdminView();if(currentAdminRole){loadAdminData();if(currentAdminRole==='full')loadStoreAdmins();}else{renderAccount();}});}else{renderAccount();}
 });
 checkSession();
 loadProducts();
