@@ -183,8 +183,9 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <label>كلمة المرور</label><input id="customerPassword" type="password" required>
 <button id="customerLoginButton" type="submit">دخول</button><div id="customerLoginMessage"></div><button class="light" type="button" onclick="sendPasswordReset()">نسيت كلمة المرور؟ استعادة كلمة المرور</button><div id="passwordResetMessage"></div>
 </form></div>
-<div id="customerAccount" class="hidden"><div id="customerWelcome" class="notice"></div><div id="passwordRecoveryPanel" class="notice hidden"><h3>تعيين كلمة مرور جديدة</h3><form id="passwordRecoveryForm"><label>كلمة المرور الجديدة</label><input id="newCustomerPassword" type="password" minlength="6" required><label>تأكيد كلمة المرور</label><input id="newCustomerPassword2" type="password" minlength="6" required><button type="submit">حفظ كلمة المرور الجديدة</button><div id="passwordRecoveryMessage"></div></form></div><h3>طلباتي وحالة الدفع</h3><div id="customerOrders"></div></div>
+<div id="customerAccount" class="hidden"><div id="customerWelcome" class="notice"></div><div class="actions"><button type="button" class="light" onclick="toggleCustomerProfile()">تعديل بياناتي</button><button type="button" class="danger" onclick="customerLogout()">تسجيل الخروج</button></div><form id="customerProfileForm" class="admin-section-card hidden"><h3>تعديل بياناتي</h3><label>الاسم</label><input id="profileFullName" maxlength="150" required><label>رقم الهاتف</label><input id="profilePhone" maxlength="25" inputmode="tel"><label>البريد الإلكتروني</label><input id="profileEmail" type="email" disabled><button type="submit">حفظ البيانات</button><div id="profileMessage"></div></form><div id="passwordRecoveryPanel" class="notice hidden"><h3>تعيين كلمة مرور جديدة</h3><form id="passwordRecoveryForm"><label>كلمة المرور الجديدة</label><input id="newCustomerPassword" type="password" minlength="6" required><label>تأكيد كلمة المرور</label><input id="newCustomerPassword2" type="password" minlength="6" required><button type="submit">حفظ كلمة المرور الجديدة</button><div id="passwordRecoveryMessage"></div></form></div></div>
 </section>
+<section id="myOrders" class="panel page"><button class="light back-btn" type="button" onclick="showPage('home')">← الرئيسية</button><h2>📦 طلباتي وحالة الدفع</h2><div id="customerOrders"></div></section>
 <section id="checkout" class="panel page">
 <button class="light back-btn" type="button" onclick="showPage('products')">← العودة للمنتجات</button>
 <h2>🧾 إتمام طلب الشراء</h2><div id="checkoutSummary" class="notice"></div>
@@ -362,7 +363,7 @@ function startResendCooldown(seconds=60){const btn=el('resendSignupButton');if(!
 async function resendSignupEmail(){const email=sessionStorage.getItem('passwordStorePendingEmail')||el('signupEmail').value.trim();if(!email){showMessage('signupMessage','اكتب البريد الإلكتروني الذي سجلت به أولًا.','err');return;}const btn=el('resendSignupButton');if(btn.disabled)return;btn.disabled=true;const {error}=await db.auth.resend({type:'signup',email,options:{emailRedirectTo:location.origin}});if(error){btn.disabled=false;showMessage('signupMessage','تعذر إعادة الإرسال: '+error.message,'err');return;}showMessage('signupMessage','تم إرسال رسالة تأكيد جديدة إلى '+email+'.');startResendCooldown(60);}
 el('passwordRecoveryForm')?.addEventListener('submit',async e=>{e.preventDefault();const p=el('newCustomerPassword').value;if(p!==el('newCustomerPassword2').value){showMessage('passwordRecoveryMessage','كلمتا المرور غير متطابقتين.','err');return;}const btn=e.target.querySelector('button[type="submit"]');btn.disabled=true;const {error}=await db.auth.updateUser({password:p});btn.disabled=false;if(error){showMessage('passwordRecoveryMessage','تعذر تغيير كلمة المرور: '+error.message,'err');return;}showMessage('passwordRecoveryMessage','تم تغيير كلمة المرور بنجاح. يمكنك استخدام كلمة المرور الجديدة في تسجيل الدخول.');e.target.reset();});
 async function sendPasswordReset(){const email=el('customerEmail').value.trim();if(!email){showMessage('passwordResetMessage','اكتب بريدك الإلكتروني في خانة تسجيل الدخول أولًا.','err');return;}const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin});if(error){showMessage('passwordResetMessage','تعذر إرسال رابط استعادة كلمة المرور: '+error.message,'err');return;}showMessage('passwordResetMessage','أرسلنا رابط استعادة كلمة المرور إلى بريدك الإلكتروني. افتحه واتبع التعليمات لتعيين كلمة مرور جديدة.');}
-async function renderAccount(){const customer=!!currentUser&&!currentAdminRole;el('customerAuth').classList.toggle('hidden',!!currentUser);el('customerAccount').classList.toggle('hidden',!customer);if(customer){el('customerWelcome').textContent='مرحبًا '+(currentUser.user_metadata?.full_name||currentUser.email);await loadCustomerOrders();}}
+async function renderAccount(){const customer=!!currentUser&&!currentAdminRole;el('customerAuth').classList.toggle('hidden',!!currentUser);el('customerAccount').classList.toggle('hidden',!customer);if(customer){const meta=currentUser.user_metadata||{};el('customerWelcome').textContent='مرحبًا '+(meta.full_name||currentUser.email);el('profileFullName').value=meta.full_name||'';el('profilePhone').value=meta.phone||'';el('profileEmail').value=currentUser.email||'';}}
 
 el('customerSignupForm').addEventListener('submit',async e=>{
  e.preventDefault();
@@ -469,8 +470,18 @@ el('repairForm').addEventListener('submit',async e=>{
 function openMyOrders(){
  if(!currentUser){showPage('account');showMessage('customerLoginMessage','سجّل الدخول أولًا حتى تظهر طلباتك.','err');return;}
  if(currentAdminRole){showPage('account');return;}
- showPage('account');renderAccount();
+ showPage('myOrders');loadCustomerOrders();
 }
+function toggleCustomerProfile(){const f=el('customerProfileForm');if(!f)return;f.classList.toggle('hidden');}
+el('customerProfileForm').addEventListener('submit',async e=>{
+ e.preventDefault();if(!currentUser||currentAdminRole)return;
+ const name=el('profileFullName').value.trim(),phone=el('profilePhone').value.trim();
+ if(!name){showMessage('profileMessage','اكتب الاسم.','err');return;}
+ const {data,error}=await db.auth.updateUser({data:{...currentUser.user_metadata,full_name:name,phone}});
+ if(error){showMessage('profileMessage','تعذر حفظ البيانات: '+error.message,'err');return;}
+ currentUser=data.user;el('customerWelcome').textContent='مرحبًا '+name;
+ showMessage('profileMessage','تم حفظ بياناتك بنجاح.','success');
+});
 function toggleCustomerAuth(mode){
  const signup=el('customerSignupForm'),login=el('customerLoginForm');
  if(!signup||!login)return;
