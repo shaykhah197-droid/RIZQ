@@ -18,7 +18,7 @@ header p{margin:5px 0;color:#d7eee2}
 nav,.actions,.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
 button,a.btn{border:0;border-radius:10px;padding:11px 15px;background:var(--green);color:white;font-weight:bold;text-decoration:none;cursor:pointer;font-size:14px}
 button.light,a.light{background:white;color:var(--green);border:1px solid var(--line)}
-body.admin-page-open #navMyOrders,body.admin-page-open #navCheckout{display:none!important}
+body.admin-user #navMyOrders,body.admin-user #navCheckout{display:none!important}
 button.soft{background:var(--mint);color:var(--green)}
 button.danger{background:#a52d2d}
 button:disabled{opacity:.5;cursor:not-allowed}
@@ -718,6 +718,8 @@ async function loadAdminRole(user=currentUser){
  if(!error&&data?.role)currentAdminRole=data.role;
 }
 function updateAdminView(){
+ // Hide customer-only navigation everywhere while an authenticated admin session exists.
+ document.body.classList.toggle('admin-user',!!currentUser&&!!currentAdminRole);
  el('loginArea').classList.toggle('hidden',!!currentAdminRole||!!currentUser);
  el('dashboard').classList.toggle('hidden',!currentUser||!currentAdminRole);
  el('adminManagement').classList.toggle('hidden',currentAdminRole!=='full');
