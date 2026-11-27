@@ -334,7 +334,7 @@ function showPage(page){
  window.scrollTo({top:0,behavior:'smooth'});
 }
 function showAdmin(){showPage('admin');}
-async function toggleAdminRequests(){const panel=el('adminRequestsDropdown');if(!currentUser){showAdmin();showMessage('adminMessage','سجّل دخول المدير أولًا لعرض الطلبات.','err');return;}const opening=panel.classList.contains('hidden');panel.classList.toggle('hidden');if(opening){el('quickServiceRequests').textContent='جاري تحميل الطلبات...';await loadRequests();el('quickServiceRequests').innerHTML=el('serviceRequests').innerHTML;}}
+async function toggleAdminRequests(){const panel=el('adminRequestsDropdown');if(!currentUser){panel.classList.remove('hidden');el('quickServiceRequests').innerHTML='<div class="request" style="color:#a52d2d">سجّل دخول المدير أولًا لعرض الطلبات.</div>';return;}const opening=panel.classList.contains('hidden');panel.classList.toggle('hidden');if(opening){el('quickServiceRequests').innerHTML='<div class="request">جاري تحميل الطلبات...</div>';await loadRequests();el('quickServiceRequests').innerHTML=el('serviceRequests').innerHTML||'<div class="request">لا توجد طلبات جديدة.</div>';}}
 async function checkSession(){
  const {data}=await db.auth.getSession();
  currentUser=data.session?.user||null;
@@ -444,7 +444,7 @@ async function loadAdminData(){
 }
 async function loadRequests(){
  const {data:services,error:sError}=await db.from('service_requests').select('*').order('created_at',{ascending:false});
- if(sError){el('serviceRequests').textContent='تعذر تحميل طلبات الصيانة.';el('serviceRequestCount').textContent='!'}
+ if(sError){el('serviceRequests').innerHTML='<div class="request" style="color:#a52d2d;background:#fff0f0;white-space:normal">تعذر تحميل الطلبات: '+escapeHTML(sError.message||'خطأ غير معروف')+'</div>';el('serviceRequestCount').textContent='!'}
  else {el('serviceRequestCount').textContent=(services||[]).length;el('serviceRequests').innerHTML=(services||[]).map(r=>`
  <div class="request"><b>${escapeHTML(r.customer_name)}</b> — ${escapeHTML(r.customer_phone)}
  <div>${escapeHTML(r.service_type)} · ${escapeHTML(r.address)}</div>
