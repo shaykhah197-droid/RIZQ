@@ -449,6 +449,8 @@ async function loadCheckoutMethods(){
  const {data,error}=await db.from('store_payment_methods').select('*').eq('enabled',true).order('sort_order');
  if(error)return;
  (data||[]).forEach(m=>{if(m.account_name&&m.account_number){const o=document.createElement('option');o.value=m.code;o.textContent=m.provider_name;sel.appendChild(o)}});
+ try{const raw=localStorage.getItem(shoppingDraftKey('checkout'));if(raw){const draft=JSON.parse(raw);if(draft?.paymentMethod&&[...sel.options].some(o=>o.value===draft.paymentMethod))sel.value=draft.paymentMethod;}}catch(e){}
+ sel.dispatchEvent(new Event('change'));saveCheckoutDraft();
 }
 el('paymentMethod').addEventListener('change',async()=>{
  const code=el('paymentMethod').value,box=el('paymentMethodDetails');
