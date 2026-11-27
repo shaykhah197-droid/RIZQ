@@ -403,7 +403,7 @@ el('productForm').addEventListener('submit',async e=>{
   const ext=(extra.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
   const path=Date.now()+'-'+Math.random().toString(36).slice(2,9)+'.'+ext;
   const {error:extraError}=await db.storage.from('product-images').upload(path,extra,{upsert:false,contentType:extra.type});
-  if(extraError){saveBtn.disabled=false;saveBtn.textContent='حفظ المنتج';showMessage('adminMessage','تعذر رفع إحدى الصور الإضافية. حاول مرة أخرى.','err');return}
+  if(extraError){console.error('Gallery image upload error:',extraError);saveBtn.disabled=false;saveBtn.textContent='حفظ المنتج';showMessage('adminMessage','فشل رفع الصورة الإضافية: '+(extraError.message||extraError.error||'خطأ غير معروف')+' — كود: '+(extraError.statusCode||extraError.status||'غير متاح'),'err');return}
   galleryUrls.push(db.storage.from('product-images').getPublicUrl(path).data.publicUrl);
  }
  if(id){const existing=products.find(x=>Number(x.id)===Number(id));galleryUrls=[...(Array.isArray(existing?.gallery_urls)?existing.gallery_urls:[]),...galleryUrls]}
