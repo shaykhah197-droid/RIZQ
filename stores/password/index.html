@@ -553,13 +553,21 @@ async function reviewStorePayment(id,decision){
 async function openCustomerStoreReceipt(path){
  if(!currentUser||currentAdminRole){alert('معاينة الإيصال متاحة لصاحب الطلب فقط.');return}
  if(!path||!path.startsWith(currentUser.id+'/')){alert('الإيصال غير متاح لهذا الحساب.');return}
+ const previewTab=window.open('about:blank','_blank');
+ if(!previewTab){alert('اسمح بفتح النوافذ المنبثقة لمعاينة الإيصال.');return}
+ previewTab.document.write('<p style="font-family:Arial;padding:24px">جاري تحميل الإيصال...</p>');
  const {data,error}=await db.storage.from('payment-receipts').createSignedUrl(path,300);
- if(error){alert('تعذر فتح معاينة الإيصال. تأكد من صلاحية الوصول إلى إيصال طلبك.');return}
- window.open(data.signedUrl,'_blank','noopener');
+ if(error||!data?.signedUrl){previewTab.close();alert('تعذر فتح معاينة الإيصال: '+(error?.message||'رابط الإيصال غير متاح.'));return}
+ previewTab.location.href=data.signedUrl;
 }
 async function openStoreReceipt(path){
+ if(!currentAdminRole){alert('هذه المعاينة متاحة للمدير فقط.');return}
+ const previewTab=window.open('about:blank','_blank');
+ if(!previewTab){alert('اسمح بفتح النوافذ المنبثقة لمعاينة الإيصال.');return}
+ previewTab.document.write('<p style="font-family:Arial;padding:24px">جاري تحميل الإيصال...</p>');
  const {data,error}=await db.storage.from('payment-receipts').createSignedUrl(path,300);
- if(error){alert('تعذر فتح الإيصال.');return}window.open(data.signedUrl,'_blank','noopener');
+ if(error||!data?.signedUrl){previewTab.close();alert('تعذر فتح الإيصال: '+(error?.message||'رابط الإيصال غير متاح.'));return}
+ previewTab.location.href=data.signedUrl;
 }
 async function loadPaymentMethodsAdmin(){
  const box=el('paymentMethodsAdmin');if(!box||!currentAdminRole)return;
