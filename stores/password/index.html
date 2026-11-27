@@ -372,16 +372,31 @@ async function logout(){
  showMessage('adminMessage','تم تسجيل الخروج.');
 }
 function clearProductImage(){el('pImageFile').value='';el('imagePreview').classList.add('hidden');el('imagePreviewImg').src='';}
+function isSupportedImage(file){
+ const name=(file.name||'').toLowerCase(),type=(file.type||'').toLowerCase();
+ return type.startsWith('image/') || /\\.(jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(name);
+}
+function previewSelectedImage(file,img,container){
+ if(!file||!isSupportedImage(file)){alert('اختار ملف صورة بصيغة JPG أو PNG أو WebP أو GIF.');return false}
+ if(file.size>5*1024*1024){alert('حجم الصورة يجب ألا يتجاوز 5 ميجابايت.');return false}
+ const reader=new FileReader();
+ reader.onload=()=>{img.src=reader.result;container.classList.remove('hidden')};
+ reader.onerror=()=>{alert('تعذر قراءة الصورة من الجهاز. جرّب اختيارها مرة أخرى أو احفظها بصيغة JPG.');container.classList.add('hidden')};
+ reader.readAsDataURL(file);return true;
+}
 el('pImageFile').addEventListener('change',()=>{
  const file=el('pImageFile').files[0];if(!file){clearProductImage();return}
- if(!file.type.startsWith('image/')){alert('من فضلك اختار ملف صورة فقط.');clearProductImage();return}
- if(file.size>5*1024*1024){alert('حجم الصورة يجب ألا يتجاوز 5 ميجابايت.');clearProductImage();return}
- el('imagePreviewImg').src=URL.createObjectURL(file);el('imagePreview').classList.remove('hidden');
+ el('imagePreview').classList.add('hidden');
+ if(!previewSelectedImage(file,el('imagePreviewImg'),el('imagePreview')))clearProductImage();
 });
 function resetProductForm(){
  el('productForm').reset();el('editId').value='';el('pIcon').value='💻';el('pAvailable').checked=true;clearProductImage();el('galleryPreview').textContent='';
 }
-el('pGalleryFiles').addEventListener('change',()=>{const files=[...el('pGalleryFiles').files];if(files.some(f=>!f.type.startsWith('image/')||f.size>5*1024*1024)){alert('كل الملفات يجب أن تكون صورًا وألا يتجاوز حجم كل صورة 5 ميجابايت.');el('pGalleryFiles').value='';el('galleryPreview').textContent='';return}el('galleryPreview').textContent='تم اختيار '+files.length+' صور إضافية.';
+el('pGalleryFiles').addEventListener('change',()=>{
+ const files=[...el('pGalleryFiles').files];
+ const bad=files.find(f=>!isSupportedImage(f)||f.size>5*1024*1024);
+ if(bad){alert(!isSupportedImage(bad)?'ملف غير مدعوم: '+(bad.name||'صورة')+'. اختار JPG أو PNG أو WebP أو GIF.':'حجم الصورة '+(bad.name||'')+' أكبر من 5 ميجابايت.');el('pGalleryFiles').value='';el('galleryPreview').textContent='';return}
+ el('galleryPreview').textContent='تم اختيار '+files.length+' صور إضافية.';
 });
 el('productForm').addEventListener('submit',async e=>{
  e.preventDefault();
@@ -394,7 +409,7 @@ el('productForm').addEventListener('submit',async e=>{
  if(file){
   const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
   const path=Date.now()+'-'+Math.random().toString(36).slice(2,9)+'.'+ext;
-  const {error:uploadError}=await db.storage.from('product-images').upload(path,file,{upsert:false,contentType:file.type||'image/jpeg'});
+  const {error:uploadError}=await db.storage.from('product-images').upload(path,file,{upsert:false,contentType:file.type||({jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',bmp:'image/bmp'}[(file.name.split('.').pop()||'').toLowerCase()]||'application/octet-stream')});
   if(uploadError){console.error('Main image upload error:',uploadError);saveBtn.disabled=false;saveBtn.textContent='حفظ المنتج';showMessage('adminMessage','فشل رفع الصورة: '+(uploadError.message||uploadError.error||'خطأ غير معروف')+' — كود: '+(uploadError.statusCode||uploadError.status||uploadError.code||'غير متاح'),'err');return}
   const {data:urlData}=db.storage.from('product-images').getPublicUrl(path);imageUrl=urlData.publicUrl;
  }
@@ -402,7 +417,7 @@ el('productForm').addEventListener('submit',async e=>{
  for(const extra of galleryFiles){
   const ext=(extra.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
   const path=Date.now()+'-'+Math.random().toString(36).slice(2,9)+'.'+ext;
-  const {error:extraError}=await db.storage.from('product-images').upload(path,extra,{upsert:false,contentType:extra.type});
+  const {error:extraError}=await db.storage.from('product-images').upload(path,extra,{upsert:false,contentType:extra.type||({jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',bmp:'image/bmp'}[(extra.name.split('.').pop()||'').toLowerCase()]||'application/octet-stream')});
   if(extraError){console.error('Gallery image upload error:',extraError);saveBtn.disabled=false;saveBtn.textContent='حفظ المنتج';showMessage('adminMessage','فشل رفع الصورة الإضافية: '+(extraError.message||extraError.error||'خطأ غير معروف')+' — كود: '+(extraError.statusCode||extraError.status||'غير متاح'),'err');return}
   galleryUrls.push(db.storage.from('product-images').getPublicUrl(path).data.publicUrl);
  }
