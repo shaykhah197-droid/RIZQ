@@ -377,12 +377,15 @@ function isSupportedImage(file){
  return type.startsWith('image/') || /\\.(jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(name);
 }
 function previewSelectedImage(file,img,container){
- if(!file||!isSupportedImage(file)){alert('اختار ملف صورة بصيغة JPG أو PNG أو WebP أو GIF.');return false}
+ if(!file||!isSupportedImage(file)){alert('اختار ملف صورة من المعرض بصيغة JPG أو PNG أو WebP أو GIF.');return false}
  if(file.size>5*1024*1024){alert('حجم الصورة يجب ألا يتجاوز 5 ميجابايت.');return false}
- const reader=new FileReader();
- reader.onload=()=>{img.src=reader.result;container.classList.remove('hidden')};
- reader.onerror=()=>{alert('تعذر قراءة الصورة من الجهاز. جرّب اختيارها مرة أخرى أو احفظها بصيغة JPG.');container.classList.add('hidden')};
- reader.readAsDataURL(file);return true;
+ try{
+  const objectUrl=URL.createObjectURL(file);
+  img.onload=()=>{container.classList.remove('hidden')};
+  img.onerror=()=>{container.classList.add('hidden');alert('صيغة الصورة غير مدعومة للمعاينة. افتح الصورة من المعرض واحفظ نسخة بصيغة JPG ثم اخترها.');URL.revokeObjectURL(objectUrl)};
+  img.src=objectUrl;
+  return true;
+ }catch(err){console.error('Image preview error:',err);alert('تعذر فتح الصورة من المعرض. جرّب اختيار صورة أخرى.');return false}
 }
 el('pImageFile').addEventListener('change',()=>{
  const file=el('pImageFile').files[0];if(!file){clearProductImage();return}
