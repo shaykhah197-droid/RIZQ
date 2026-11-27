@@ -56,7 +56,7 @@ textarea{min-height:85px}
 .home-links .home-card small{font-size:12px;font-weight:normal;opacity:.9}
 footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 .admin-product,.request{border:1px solid var(--line);border-radius:10px;padding:12px;margin:8px 0}
-.admin-product{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.admin-product{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.requests-heading{display:flex;align-items:center;gap:12px;margin-top:22px}.request-count{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;min-width:30px;border-radius:50%;background:#c62828;color:#fff;font-size:14px;font-weight:bold;line-height:1;box-shadow:0 2px 6px #0002}
 .admin-detail-btn{background:#eef5f0;color:var(--green)}
 .status{display:inline-block;background:var(--mint);color:var(--green);padding:3px 9px;border-radius:20px;font-size:12px}
 .message{padding:10px;border-radius:9px;margin:10px 0;font-size:14px}
@@ -216,7 +216,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <button type="submit" id="saveProductButton">حفظ المنتج</button>
 <button type="button" class="soft" onclick="resetProductForm()">إلغاء التعديل</button>
 </form>
-<h3>الطلبات المنزلية</h3>
+<h3 class="requests-heading"><span>الطلبات المنزلية</span><span id="serviceRequestCount" class="request-count" title="إجمالي طلبات الصيانة المنزلية">0</span></h3>
 <div id="serviceRequests">جاري التحميل...</div>
 <h3>استفسارات المنتجات</h3>
 <div id="productInquiries">جاري التحميل...</div>
@@ -442,13 +442,13 @@ async function loadAdminData(){
 }
 async function loadRequests(){
  const {data:services,error:sError}=await db.from('service_requests').select('*').order('created_at',{ascending:false});
- if(sError){el('serviceRequests').textContent='تعذر تحميل طلبات الصيانة.'}
- else el('serviceRequests').innerHTML=(services||[]).map(r=>`
+ if(sError){el('serviceRequests').textContent='تعذر تحميل طلبات الصيانة.';el('serviceRequestCount').textContent='!'}
+ else {el('serviceRequestCount').textContent=(services||[]).length;el('serviceRequests').innerHTML=(services||[]).map(r=>`
  <div class="request"><b>${escapeHTML(r.customer_name)}</b> — ${escapeHTML(r.customer_phone)}
  <div>${escapeHTML(r.service_type)} · ${escapeHTML(r.address)}</div>
  <p>${escapeHTML(r.problem_description||'')}</p>
  <span class="status">${escapeHTML(r.status)}</span>
- <div class="actions"><button class="soft" onclick="updateRequest('service_requests',${Number(r.id)})">تحديث الحالة</button></div></div>`).join('')||'لا توجد طلبات صيانة.';
+ <div class="actions"><button class="soft" onclick="updateRequest('service_requests',${Number(r.id)})">تحديث الحالة</button></div></div>`).join('')||'لا توجد طلبات صيانة.';}
  const {data:inquiries,error:iError}=await db.from('product_inquiries').select('*,products(name)').order('created_at',{ascending:false});
  if(iError){el('productInquiries').textContent='تعذر تحميل استفسارات المنتجات.'}
  else el('productInquiries').innerHTML=(inquiries||[]).map(r=>`
