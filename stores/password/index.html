@@ -552,7 +552,7 @@ let storeOrderWatchTimer=null;
 let storeOrderWatchInitialized=false;
 let knownUnreviewedPaidOrders=new Set();
 function updateStoreOrderBadge(count){
- ['storeOrderCount','newStoreOrderCount'].forEach(id=>{const badge=el(id);if(badge){badge.textContent=String(count);badge.classList.toggle('hidden',!count);}});
+ ['storeOrderCount','newStoreOrderCount','serviceRequestCount'].forEach(id=>{const badge=el(id);if(badge){badge.textContent=String(count);badge.classList.toggle('hidden',!count);}});
  const alert=el('adminOrderAlert');
  if(alert){alert.classList.toggle('hidden',!count);alert.textContent=count?'🔔 يوجد '+count+' طلب شراء وارد. افتح «الطلبات الجديدة» لمشاهدة كل الطلبات.':'لا توجد طلبات شراء واردة.';}
 }
@@ -610,7 +610,7 @@ async function setStoreOrderFee(id,fixed){
 }
 async function reviewStorePayment(id,decision){
  const {error}=await db.rpc('admin_review_store_payment',{p_order_id:id,p_decision:decision});
- if(error){alert('تعذر تحديث الدفع: '+error.message);return}await loadStoreOrders();
+ if(error){alert('تعذر تحديث الدفع: '+error.message);return}await loadStoreOrders();if(document.getElementById('requests')?.classList.contains('active'))await showRequestsPage();
 }
 // Use delegated click handlers so receipt paths never become inline JavaScript.
 document.addEventListener('click',event=>{
