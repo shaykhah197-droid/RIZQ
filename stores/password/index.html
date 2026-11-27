@@ -85,7 +85,8 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <nav>
 <button class="light" type="button" onclick="showPage('home')">الرئيسية</button>
 <button class="light" type="button" onclick="showPage('products')">المنتجات</button>
-<button class="light admin-entry" type="button" onclick="showRequestsPage()">الطلبات الجديدة <span id="serviceRequestCount" class="request-count" title="عدد الطلبات">0</span></button>
+<button class="light admin-entry" type="button" onclick="showMaintenanceRequestsPage()">طلبات الصيانة <span id="serviceRequestCount" class="request-count" title="طلبات الصيانة">0</span></button>
+<button class="light admin-entry" type="button" onclick="showRequestsPage()">طلبات الشراء <span id="purchaseRequestCount" class="request-count" title="طلبات الشراء">0</span></button>
 <a class="btn light" href="https://wa.me/201004575343" target="_blank" rel="noopener">واتساب 01004575343</a>
 <button id="navMyOrders" class="light" type="button" onclick="openMyOrders()">طلباتي</button><button id="navCheckout" class="light" type="button" onclick="checkoutCart()">إتمام الشراء</button><button class="light" type="button" onclick="showPage('account')">حسابي / دخول العملاء</button><button class="light admin-entry" type="button" onclick="showAdmin()">إدارة المتجر</button>
 </nav>
@@ -201,7 +202,8 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <label>ملاحظات إضافية</label><textarea id="orderNotes" maxlength="1000"></textarea>
 <button id="placeOrderButton" type="submit">تأكيد وإرسال الطلب</button><div id="checkoutMessage"></div>
 </form></section>
-<section id="requests" class="panel page"><button class="light back-btn" type="button" onclick="showPage('home')">← الرئيسية</button><h2>الطلبات الجديدة</h2><div id="newRequestsContent">جاري تحميل الطلبات...</div></section>
+<section id="maintenanceRequests" class="panel page"><button class="light back-btn" type="button" onclick="showPage('home')">← الرئيسية</button><h2>طلبات الصيانة</h2><div id="maintenanceRequestsContent">جاري تحميل طلبات الصيانة...</div></section>
+<section id="requests" class="panel page"><button class="light back-btn" type="button" onclick="showPage('home')">← الرئيسية</button><h2>طلبات الشراء</h2><div id="newRequestsContent">جاري تحميل طلبات الشراء...</div></section>
 <section id="repair" class="service page">
 <button class="light back-btn" type="button" onclick="showPage(\'home\')">← الرئيسية</button>
 <h2>🧰 طلب صيانة منزلية</h2>
@@ -552,7 +554,7 @@ let storeOrderWatchTimer=null;
 let storeOrderWatchInitialized=false;
 let knownUnreviewedPaidOrders=new Set();
 function updateStoreOrderBadge(count){
- ['storeOrderCount','newStoreOrderCount','serviceRequestCount'].forEach(id=>{const badge=el(id);if(badge){badge.textContent=String(count);badge.classList.toggle('hidden',!count);}});
+ ['storeOrderCount','newStoreOrderCount','purchaseRequestCount'].forEach(id=>{const badge=el(id);if(badge){badge.textContent=String(count);badge.classList.toggle('hidden',!count);}});
  const alert=el('adminOrderAlert');
  if(alert){alert.classList.toggle('hidden',!count);alert.textContent=count?'🔔 يوجد '+count+' طلب شراء وارد. افتح «الطلبات الجديدة» لمشاهدة كل الطلبات.':'لا توجد طلبات شراء واردة.';}
 }
@@ -649,6 +651,19 @@ async function saveStorePaymentMethod(event,code){
  const {error}=await db.from('store_payment_methods').update({account_name:f.account_name.value.trim(),account_number:f.account_number.value.trim(),instructions:f.instructions.value.trim(),enabled:f.enabled.checked}).eq('code',code);
  if(error){alert('تعذر حفظ البيانات: '+error.message);return}alert('تم الحفظ.');await loadPaymentMethodsAdmin();
 }
+async function showMaintenanceRequestsPage(){
+ if(!currentAdminRole){showPage(currentUser?'account':'admin');return;}
+ showPage('maintenanceRequests');
+ const content=el('maintenanceRequestsContent');
+ content.innerHTML='<div class="request">جاري تحميل طلبات الصيانة...</div>';
+ try{
+  const {data,error}=await db.from('service_requests').select('*').order('created_at',{ascending:false});
+  if(error)throw error;
+  const rows=data||[];
+  const badge=el('serviceRequestCount');if(badge){badge.textContent=String(rows.length);badge.classList.toggle('hidden',!rows.length);}
+  content.innerHTML=rows.length?rows.map(r=>'<div class="request"><b>'+escapeHTML(r.customer_name||'')+'</b> — '+escapeHTML(r.customer_phone||'')+'<div>'+escapeHTML(r.service_type||'')+' · '+escapeHTML(r.address||'')+'</div><p>'+escapeHTML(r.problem_description||'')+'</p><span class="status">'+escapeHTML(r.status||'')+'</span><div class="actions"><button class="soft" type="button" onclick="updateRequest(\\'service_requests\\','+Number(r.id)+')">تحديث الحالة</button></div></div>').join(''):'<div class="request">لا توجد طلبات صيانة حتى الآن.</div>';
+ }catch(error){content.innerHTML='<div class="request" style="color:#a52d2d">تعذر تحميل طلبات الصيانة: '+escapeHTML(error.message||'خطأ غير معروف')+'</div>';}
+}
 async function showRequestsPage(){
  if(!currentAdminRole){showPage(currentUser?'account':'admin');return;}
  showPage('requests');
@@ -658,7 +673,7 @@ async function showRequestsPage(){
   const {data,error}=await db.from('store_orders').select('*,store_order_items(*)').order('created_at',{ascending:false});
   if(error)throw error;
   const rows=data||[];
-  const badge=el('serviceRequestCount');if(badge)badge.textContent=String(rows.length);
+  const badge=el('purchaseRequestCount');if(badge)badge.textContent=String(rows.length);
   content.innerHTML=rows.length?rows.map(o=>{
    const items=(o.store_order_items||[]).map(i=>escapeHTML(i.product_name)+' × '+i.quantity+' ('+money(i.line_total)+')').join('، ');
    let buttons='';
@@ -846,7 +861,7 @@ async function loadAdminData(){
 async function loadRequests(){
  const {data:services,error:sError}=await db.from('service_requests').select('*').order('created_at',{ascending:false});
  if(sError){el('serviceRequests').innerHTML='<div class="request" style="color:#a52d2d;background:#fff0f0;white-space:normal">تعذر تحميل الطلبات: '+escapeHTML(sError.message||'خطأ غير معروف')+'</div>';el('serviceRequestCount').textContent='!'}
- else {el('serviceRequestCount').textContent=(services||[]).length;el('serviceRequests').innerHTML=(services||[]).map(r=>`
+ else {el('serviceRequestCount').textContent=(services||[]).length;el('serviceRequestCount').classList.toggle('hidden',!(services||[]).length);el('serviceRequests').innerHTML=(services||[]).map(r=>`
  <div class="request"><b>${escapeHTML(r.customer_name)}</b> — ${escapeHTML(r.customer_phone)}
  <div>${escapeHTML(r.service_type)} · ${escapeHTML(r.address)}</div>
  <p>${escapeHTML(r.problem_description||'')}</p>
