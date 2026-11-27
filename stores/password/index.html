@@ -593,7 +593,7 @@ async function loadStoreOrders(){
  const boxes=['storeOrdersAdmin','newStoreOrdersAdmin'].map(el).filter(Boolean);if(!boxes.length)return;boxes.forEach(box=>box.textContent='جاري تحميل الطلبات...');
  const {data,error}=await db.from('store_orders').select('*,store_order_items(*)').order('created_at',{ascending:false});
  if(error){boxes.forEach(box=>box.textContent='تعذر تحميل الطلبات: '+error.message);return}
- box.innerHTML=(data||[]).map(o=>{
+ const rendered=(data||[]).map(o=>{
   const items=(o.store_order_items||[]).map(i=>escapeHTML(i.product_name)+' × '+i.quantity+' ('+money(i.line_total)+')').join('، ');
   let buttons='';
   if(o.payment_status==='under_review')buttons+='<button onclick="reviewStorePayment('+JSON.stringify(o.id)+',\'approved\')">اعتماد الدفع</button><button class="danger" onclick="reviewStorePayment('+JSON.stringify(o.id)+',\'rejected\')">رفض الإيصال</button>';
