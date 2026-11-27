@@ -175,14 +175,14 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <label>البريد الإلكتروني</label><input id="signupEmail" type="email" required>
 <label>كلمة المرور</label><input id="signupPassword" type="password" minlength="8" required>
 <label>تأكيد كلمة المرور</label><input id="signupPassword2" type="password" minlength="8" required>
-<button id="signupButton" type="submit">إنشاء الحساب</button><div id="signupMessage"></div>
+<button id="signupButton" type="submit">إنشاء الحساب</button><div id="signupMessage"></div><button id="resendSignupButton" class="light" type="button" onclick="resendSignupEmail()" disabled>إعادة إرسال رسالة التأكيد (60 ثانية)</button>
 </form>
 <form id="customerLoginForm" class="admin-section-card">
 <h3>تسجيل الدخول</h3><label>البريد الإلكتروني</label><input id="customerEmail" type="email" required>
 <label>كلمة المرور</label><input id="customerPassword" type="password" required>
-<button id="customerLoginButton" type="submit">دخول</button><div id="customerLoginMessage"></div>
+<button id="customerLoginButton" type="submit">دخول</button><div id="customerLoginMessage"></div><button class="light" type="button" onclick="sendPasswordReset()">نسيت كلمة المرور؟ استعادة كلمة المرور</button><div id="passwordResetMessage"></div>
 </form></div>
-<div id="customerAccount" class="hidden"><div id="customerWelcome" class="notice"></div><button class="danger" type="button" onclick="customerLogout()">تسجيل الخروج</button><h3>طلباتي</h3><div id="customerOrders"></div></div>
+<div id="customerAccount" class="hidden"><div id="customerWelcome" class="notice"></div><div class="actions"><button type="button" onclick="showPage('products')">تصفح المنتجات</button><button type="button" class="soft" onclick="showPage('checkout')">إتمام الشراء / الدفع</button><button type="button" class="light" onclick="loadCustomerOrders()">تحديث طلباتي</button><button class="danger" type="button" onclick="customerLogout()">تسجيل الخروج</button></div><h3>طلباتي وحالة الدفع</h3><div id="customerOrders"></div></div>
 </section>
 <section id="checkout" class="panel page">
 <button class="light back-btn" type="button" onclick="showPage('products')">← العودة للمنتجات</button>
@@ -231,7 +231,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 </form>
 </div>
 <div id="dashboard" class="hidden">
-<div class="notice">أهلًا بك في لوحة إدارة باسوورد. اختار القسم اللي عايز تشتغل عليه.</div><div class="admin-nav" id="adminNav"><button type="button" data-admin-tab="overview" onclick="adminTab('overview')"><span>🏠</span>الرئيسية<small>ملخص واختصارات</small></button><button type="button" data-admin-tab="products" onclick="adminTab('products')"><span>📦</span>المنتجات<small>إضافة وتعديل المنتجات</small></button><button type="button" data-admin-tab="orders" onclick="adminTab('orders')"><span>🛒</span>طلبات الشراء<small>الطلبات والدفع</small></button><button type="button" data-admin-tab="requests" onclick="adminTab('requests')"><span>📋</span>الطلبات والاستفسارات<small>متابعة وتحديث الحالات</small></button><button type="button" data-admin-tab="admins" data-full-only="true" onclick="adminTab('admins')"><span>👥</span>إدارة المديرين<small>الصلاحيات والحسابات</small></button></div><div id="adminOverview" class="admin-view active"><div class="admin-section-card"><h3>لوحة التحكم</h3><p class="muted">كل أدوات الإدارة منظمة في أقسام مستقلة، من غير تمرير طويل.</p><div class="admin-quick"><button type="button" onclick="adminTab('products')">📦<br>إدارة المنتجات</button><button type="button" onclick="adminTab('requests')">📋<br>الطلبات والاستفسارات</button><button type="button" data-full-only="true" onclick="adminTab('admins')">👥<br>إدارة المديرين</button><button type="button" onclick="loadAdminData()">🔄<br>تحديث البيانات</button></div></div></div>
+<div class="notice">أهلًا بك في لوحة إدارة باسوورد. اختار القسم اللي عايز تشتغل عليه.</div><div class="admin-nav" id="adminNav"><button type="button" data-admin-tab="overview" onclick="adminTab('overview')"><span>🏠</span>الرئيسية<small>ملخص واختصارات</small></button><button type="button" data-admin-tab="products" onclick="adminTab('products')"><span>📦</span>المنتجات<small>إضافة وتعديل المنتجات</small></button><button type="button" data-admin-tab="orders" onclick="adminTab('orders')"><span>🛒</span>طلبات الشراء<small>الطلبات والدفع</small></button><button type="button" data-admin-tab="requests" onclick="adminTab('requests')"><span>📋</span>الطلبات والاستفسارات<small>متابعة وتحديث الحالات</small></button><button type="button" data-admin-tab="admins" data-full-only="true" onclick="adminTab('admins')"><span>👥</span>إدارة المديرين<small>الصلاحيات والحسابات</small></button></div><div id="adminOverview" class="admin-view active"><div class="admin-section-card"><h3>إحصائيات المتجر</h3><div id="storeMetrics" class="grid"><div class="notice">جاري تحميل الإحصائيات...</div></div><button class="light" type="button" onclick="loadStoreMetrics()">تحديث الإحصائيات</button></div><div class="admin-section-card"><h3>لوحة التحكم</h3><p class="muted">كل أدوات الإدارة منظمة في أقسام مستقلة، من غير تمرير طويل.</p><div class="admin-quick"><button type="button" onclick="adminTab('products')">📦<br>إدارة المنتجات</button><button type="button" onclick="adminTab('requests')">📋<br>الطلبات والاستفسارات</button><button type="button" data-full-only="true" onclick="adminTab('admins')">👥<br>إدارة المديرين</button><button type="button" onclick="loadAdminData()">🔄<br>تحديث البيانات</button></div></div></div>
 <div id="adminManagement" class="panel admin-view hidden" data-admin-view="admins">
 <h3>👥 إدارة المديرين</h3>
 <p class="muted">اختر نوع الصلاحية قبل إضافة المدير. يجب أن يكون لديه حساب مسجل مسبقًا في المتجر.</p>
@@ -308,6 +308,7 @@ function changeProductPage(page){productPage=page;renderProducts();document.getE
 function galleryMarkup(p){const urls=[p.image_url,...(Array.isArray(p.gallery_urls)?p.gallery_urls:[])].filter(Boolean);return urls.length?urls.map(url=>'<img src="'+escapeHTML(url)+'" alt="'+escapeHTML(p.name||'صورة المنتج')+'" loading="lazy">').join(''):'<div class="detail-image-fallback">'+escapeHTML(p.icon||'📦')+'</div>';}
 function showProductDetail(id){
  const p=products.find(x=>Number(x.id)===Number(id));if(!p)return;
+ if(!currentAdminRole){db.rpc('track_password_product_view',{p_product_id:Number(id)}).then(()=>{}).catch(()=>{});}
  el('productDetail').innerHTML=`<div class="product-detail-card"><div class="top"><h2>تفاصيل المنتج</h2><button class="light" onclick="closeProductDetail()">✕</button></div><div class="detail-gallery">${galleryMarkup(p)}</div><span class="product-type">${productKind(p)==='digital'?'منتج رقمي':'منتج ملموس'}</span><h2>${escapeHTML(p.name)}</h2><div class="price">${money(p.price)}</div><p class="muted">${escapeHTML(p.description||'لا يوجد وصف إضافي لهذا المنتج.')}</p>${p.is_demo?'<span class="demo">منتج تجريبي — سعر افتراضي</span>':''}<button style="width:100%;margin-top:12px" onclick="addToCart(${Number(p.id)});closeProductDetail()">أضف إلى السلة</button></div>`;
  el('productDetail').classList.remove('hidden');
 }
@@ -355,12 +356,11 @@ async function askProduct(id){
  alert('تم تسجيل استفسارك بنجاح.');
 }
 
-async function renderAccount(){
- const customer=!!currentUser&&!currentAdminRole;
- el('customerAuth').classList.toggle('hidden',!!currentUser);
- el('customerAccount').classList.toggle('hidden',!customer);
- if(customer){el('customerWelcome').textContent='مرحبًا '+(currentUser.user_metadata?.full_name||currentUser.email);loadCustomerOrders();}
-}
+let resendCooldownTimer=null;
+function startResendCooldown(seconds=60){const btn=el('resendSignupButton');if(!btn)return;let left=seconds;btn.disabled=true;btn.textContent='إعادة إرسال رسالة التأكيد ('+left+' ثانية)';if(resendCooldownTimer)clearInterval(resendCooldownTimer);resendCooldownTimer=setInterval(()=>{left--;if(left<=0){clearInterval(resendCooldownTimer);resendCooldownTimer=null;btn.disabled=false;btn.textContent='إعادة إرسال رسالة التأكيد';}else btn.textContent='إعادة إرسال رسالة التأكيد ('+left+' ثانية)';},1000);}
+async function resendSignupEmail(){const email=sessionStorage.getItem('passwordStorePendingEmail')||el('signupEmail').value.trim();if(!email){showMessage('signupMessage','اكتب البريد الإلكتروني الذي سجلت به أولًا.','err');return;}const btn=el('resendSignupButton');if(btn.disabled)return;btn.disabled=true;const {error}=await db.auth.resend({type:'signup',email,options:{emailRedirectTo:location.origin}});if(error){btn.disabled=false;showMessage('signupMessage','تعذر إعادة الإرسال: '+error.message,'err');return;}showMessage('signupMessage','تم إرسال رسالة تأكيد جديدة إلى '+email+'.');startResendCooldown(60);}
+async function sendPasswordReset(){const email=el('customerEmail').value.trim();if(!email){showMessage('passwordResetMessage','اكتب بريدك الإلكتروني في خانة تسجيل الدخول أولًا.','err');return;}const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin});if(error){showMessage('passwordResetMessage','تعذر إرسال رابط استعادة كلمة المرور: '+error.message,'err');return;}showMessage('passwordResetMessage','أرسلنا رابط استعادة كلمة المرور إلى بريدك الإلكتروني. افتحه واتبع التعليمات لتعيين كلمة مرور جديدة.');}
+async function renderAccount(){const customer=!!currentUser&&!currentAdminRole;el('customerAuth').classList.toggle('hidden',!!currentUser);el('customerAccount').classList.toggle('hidden',!customer);if(customer){el('customerWelcome').textContent='مرحبًا '+(currentUser.user_metadata?.full_name||currentUser.email);await loadCustomerOrders();}}
 el('customerSignupForm').addEventListener('submit',async e=>{
  e.preventDefault();
  const name=el('signupName').value.trim(),pass=el('signupPassword').value;
@@ -370,8 +370,9 @@ el('customerSignupForm').addEventListener('submit',async e=>{
  const {error}=await db.auth.signUp({email:el('signupEmail').value.trim(),password:pass,options:{data:{full_name:name},emailRedirectTo:location.origin}});
  btn.disabled=false;
  if(error){showMessage('signupMessage','تعذر إنشاء الحساب: '+error.message,'err');return}
+ sessionStorage.setItem('passwordStorePendingEmail',el('signupEmail').value.trim());
  showMessage('signupMessage','تم إنشاء الحساب. افتح رسالة التفعيل في بريدك الإلكتروني، ثم سجّل الدخول. لا يمكن الشراء قبل تأكيد البريد.');
- e.target.reset();
+ startResendCooldown(60);
 });
 el('customerLoginForm').addEventListener('submit',async e=>{
  e.preventDefault();const btn=el('customerLoginButton');btn.disabled=true;
@@ -464,6 +465,7 @@ function showAdmin(){if(currentUser&&!currentAdminRole){showPage('account');retu
 function adminTab(tab){const allowed=['overview','products','requests','orders','admins'];if(!allowed.includes(tab))tab='overview';if(tab==='admins'&&currentAdminRole!=='full')tab='overview';document.querySelectorAll('[data-admin-view]').forEach(v=>v.classList.toggle('active',v.dataset.adminView===tab));document.querySelectorAll('#adminNav [data-admin-tab]').forEach(b=>b.classList.toggle('active',b.dataset.adminTab===tab));document.querySelectorAll('[data-full-only="true"]').forEach(b=>b.classList.toggle('hidden',currentAdminRole!=='full'));}
 
 
+async function loadStoreMetrics(){if(!currentAdminRole)return;const box=el('storeMetrics');if(!box)return;box.innerHTML='<div class="notice">جاري تحميل الإحصائيات...</div>';const {data,error}=await db.rpc('admin_password_store_metrics');if(error){box.innerHTML='<div class="notice">إحصائيات المتجر تحتاج تجهيز قاعدة البيانات في الخطوة التالية.</div>';return;}const m=data||{};box.innerHTML=[['العملاء المسجلون',m.customers||0],['مشاهدات المنتجات',m.product_views||0],['قيمة المبيعات المؤكدة',money(m.confirmed_sales||0)],['المبالغ المحصلة',money(m.collected_sales||0)]].map(x=>'<div class="notice"><b>'+x[0]+'</b><h2>'+x[1]+'</h2></div>').join('');}
 async function loadStoreOrders(){
  if(!currentAdminRole)return;
  const box=el('storeOrdersAdmin');if(!box)return;box.textContent='جاري تحميل الطلبات...';
@@ -673,7 +675,7 @@ async function updateRequest(table,id){
  await loadRequests();
 }
 db.auth.onAuthStateChange((_event,session)=>{
- currentUser=session?.user||null;currentAdminRole=null;updateAdminView();if(currentUser){loadAdminRole().then(()=>{updateAdminView();if(currentAdminRole){loadAdminData();if(currentAdminRole==='full')loadStoreAdmins();}else{renderAccount();loadProducts();}});}else{renderAccount();loadProducts();}
+ currentUser=session?.user||null;currentAdminRole=null;updateAdminView();if(currentUser){loadAdminRole().then(()=>{updateAdminView();if(currentAdminRole){loadAdminData();loadStoreMetrics();if(currentAdminRole==='full')loadStoreAdmins();}else{renderAccount();loadProducts();}});}else{renderAccount();loadProducts();}
 });
 checkSession();
 loadProducts();
