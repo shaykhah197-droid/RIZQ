@@ -535,7 +535,7 @@ el('repairForm').addEventListener('submit',async e=>{
  };
  const {error}=await db.from('service_requests').insert(record);
  btn.disabled=false;btn.textContent='إرسال طلب الصيانة';
- if(error){showMessage('repairMessage','تعذر تسجيل الطلب. راجع البيانات وحاول مرة أخرى.','err');return}
+ if(error){console.error('Service request insert failed:',error);showMessage('repairMessage','تعذر تسجيل الطلب: '+(error.message||error.details||'خطأ غير معروف')+' — ابعتلي نص الرسالة دي.','err');return}
  showMessage('repairMessage','تم تسجيل طلبك بنجاح. يمكنك أيضًا التواصل معنا عبر واتساب.');
  const msg='طلب صيانة منزلية — password - باسوورد\nالاسم: '+record.customer_name+'\nرقم العميل: '+record.customer_phone+'\nالخدمة: '+record.service_type+'\nالعنوان: '+record.address+'\nوصف العطل: '+record.problem_description;
  window.open('https://wa.me/201004575343?text='+encodeURIComponent(msg),'_blank');
