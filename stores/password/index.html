@@ -161,7 +161,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <div class="top"><h2>🛒 سلة الطلبات</h2><button type="button" class="light" onclick="toggleCart(false)">إغلاق</button></div>
 <div id="cartItems"></div><div class="cart-strip"><b>الإجمالي التقريبي</b><strong id="cartTotal">0 جنيه</strong></div>
 <p class="muted" style="font-size:12px">السعر والتوفر النهائيان يتم تأكيدهما قبل إتمام الطلب.</p>
-<button type="button" style="width:100%" onclick="checkoutCart()">إرسال الطلب عبر واتساب</button>
+<button type="button" style="width:100%" onclick="checkoutCart()">إتمام الشراء</button>
 </div>
 </section>
 <div id="productDetail" class="product-detail hidden" onclick="if(event.target===this)closeProductDetail()"></div>
@@ -184,6 +184,19 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 </form></div>
 <div id="customerAccount" class="hidden"><div id="customerWelcome" class="notice"></div><button class="danger" type="button" onclick="customerLogout()">تسجيل الخروج</button><h3>طلباتي</h3><div id="customerOrders"></div></div>
 </section>
+<section id="checkout" class="panel page">
+<button class="light back-btn" type="button" onclick="showPage('products')">← العودة للمنتجات</button>
+<h2>🧾 إتمام طلب الشراء</h2><div id="checkoutSummary" class="notice"></div>
+<form id="checkoutForm">
+<label>الاسم الثلاثي</label><input id="orderName" required maxlength="150">
+<label>رقم الهاتف</label><input id="orderPhone" required maxlength="25" inputmode="tel">
+<label>طريقة الاستلام</label><select id="deliveryType"><option value="delivery">توصيل للمنزل</option><option value="pickup">استلام من المتجر</option></select>
+<div id="deliveryFields"><label>القرية / المنطقة داخل قطور</label><input id="orderVillage" maxlength="150"><label>العنوان بالتفصيل</label><textarea id="orderAddress" maxlength="500"></textarea></div>
+<label>طريقة الدفع</label><select id="paymentMethod"><option value="cash">نقدًا عند الاستلام</option></select>
+<div id="paymentMethodDetails" class="notice">الدفع نقدًا عند الاستلام.</div>
+<label>ملاحظات إضافية</label><textarea id="orderNotes" maxlength="1000"></textarea>
+<button id="placeOrderButton" type="submit">تأكيد وإرسال الطلب</button><div id="checkoutMessage"></div>
+</form></section>
 <section id="requests" class="panel page"><button class="light back-btn" type="button" onclick="showPage('home')">← الرئيسية</button><h2>الطلبات الجديدة</h2><div id="newRequestsContent">جاري تحميل الطلبات...</div></section>
 <section id="repair" class="service page">
 <button class="light back-btn" type="button" onclick="showPage(\'home\')">← الرئيسية</button>
@@ -315,11 +328,13 @@ function changeCartQty(id,delta){const x=cart.find(v=>Number(v.id)===Number(id))
 function removeCartItem(id){cart=cart.filter(x=>Number(x.id)!==Number(id));renderCart()}
 function toggleCart(force){const p=el('cartPanel');if(typeof force==='boolean')p.classList.toggle('hidden',!force);else p.classList.toggle('hidden');renderCart()}
 function checkoutCart(){
- const lines=cart.map(x=>{const p=products.find(v=>Number(v.id)===Number(x.id));return p?{...x,product:p}:null}).filter(Boolean);if(!lines.length){alert('السلة فارغة.');return}
- const name=prompt('اكتب اسمك لإرسال الطلب');if(!name||!name.trim())return;const phone=prompt('اكتب رقم هاتفك للتواصل');if(!phone||!phone.trim())return;
- const rows=lines.map(x=>'- '+x.product.name+' × '+x.quantity+' = '+money(Number(x.product.price)*x.quantity));const total=lines.reduce((n,x)=>n+Number(x.product.price)*x.quantity,0);
- const msg='مرحبًا باسوورد، أريد الاستفسار وطلب المنتجات التالية:\nالاسم: '+name.trim()+'\nالهاتف: '+phone.trim()+'\n'+rows.join('\n')+'\nالإجمالي التقريبي: '+money(total)+'\nبرجاء تأكيد التوفر والسعر النهائي.';
- window.open('https://wa.me/201004575343?text='+encodeURIComponent(msg),'_blank');
+ const lines=cart.map(x=>{const p=products.find(v=>Number(v.id)===Number(x.id));return p?{...x,product:p}:null}).filter(Boolean);
+ if(!lines.length){alert('السلة فارغة.');return}
+ if(!currentUser){showPage('account');renderAccount();showMessage('customerLoginMessage','سجّل الدخول أو أنشئ حسابًا أولًا لإتمام الشراء.','err');return}
+ if(!currentUser.email_confirmed_at){showPage('account');showMessage('customerLoginMessage','أكد بريدك الإلكتروني من رسالة التفعيل أولًا.','err');return}
+ el('orderName').value=currentUser.user_metadata?.full_name||'';
+ el('checkoutSummary').innerHTML='<b>محتويات الطلب:</b><br>'+lines.map(x=>escapeHTML(x.product.name)+' × '+x.quantity+' — '+money(Number(x.product.price)*x.quantity)).join('<br>')+'<hr>الإجمالي التقريبي: '+money(lines.reduce((n,x)=>n+Number(x.product.price)*x.quantity,0))+'<br><small>رسوم التوصيل تُحدد بعد مراجعة العنوان، ثم تؤكد الإجمالي النهائي.</small>';
+ loadCheckoutMethods();showPage('checkout');
 }
 async function askProduct(id){
  const p=products.find(x=>Number(x.id)===id);
@@ -375,6 +390,29 @@ async function loadCustomerOrders(){
  if(error){box.textContent='تعذر تحميل طلباتك.';return}
  box.innerHTML=(data||[]).map(o=>'<div class="request"><b>طلب #'+escapeHTML(o.id)+'</b><div>الحالة: '+escapeHTML(o.status)+' · الدفع: '+escapeHTML(o.payment_status)+'</div><div>قيمة المنتجات: '+money(o.subtotal)+' · التوصيل: '+(o.delivery_fee===null?'بانتظار التحديد':money(o.delivery_fee))+' · الإجمالي: '+(o.total===null?'بانتظار التحديد':money(o.total))+'</div></div>').join('')||'لا توجد طلبات بعد.';
 }
+async function loadCheckoutMethods(){
+ const sel=el('paymentMethod');sel.innerHTML='<option value="cash">نقدًا عند الاستلام</option>';
+ const {data,error}=await db.from('store_payment_methods').select('*').eq('enabled',true).order('sort_order');
+ if(error)return;
+ (data||[]).forEach(m=>{if(m.account_name&&m.account_number){const o=document.createElement('option');o.value=m.code;o.textContent=m.provider_name;sel.appendChild(o)}});
+}
+el('paymentMethod').addEventListener('change',async()=>{
+ const code=el('paymentMethod').value,box=el('paymentMethodDetails');
+ if(code==='cash'){box.textContent='الدفع نقدًا عند الاستلام.';return}
+ const {data}=await db.from('store_payment_methods').select('provider_name,account_name,account_number,instructions').eq('code',code).maybeSingle();
+ box.innerHTML=data?'<b>'+escapeHTML(data.provider_name)+'</b><br>اسم المستلم: '+escapeHTML(data.account_name)+'<br>رقم التحويل: '+escapeHTML(data.account_number)+'<br>'+escapeHTML(data.instructions||''):'بيانات الدفع غير متاحة.';
+});
+el('deliveryType').addEventListener('change',()=>el('deliveryFields').classList.toggle('hidden',el('deliveryType').value==='pickup'));
+el('checkoutForm').addEventListener('submit',async e=>{
+ e.preventDefault();if(!currentUser){alert('سجّل الدخول أولًا.');return}
+ const btn=el('placeOrderButton');btn.disabled=true;btn.textContent='جاري إرسال الطلب...';
+ const payload={p_customer_name:el('orderName').value.trim(),p_phone:el('orderPhone').value.trim(),p_delivery_type:el('deliveryType').value,p_village:el('orderVillage').value.trim(),p_address:el('orderAddress').value.trim(),p_customer_notes:el('orderNotes').value.trim(),p_payment_method:el('paymentMethod').value,p_items:cart.map(x=>({product_id:Number(x.id),quantity:Number(x.quantity)}))};
+ const {data,error}=await db.rpc('create_store_order',payload);
+ btn.disabled=false;btn.textContent='تأكيد وإرسال الطلب';
+ if(error){showMessage('checkoutMessage','تعذر إنشاء الطلب: '+error.message,'err');return}
+ cart=[];renderCart();showMessage('checkoutMessage','تم تسجيل طلبك بنجاح. رقم الطلب: '+data+' — ستراجع الإدارة العنوان وتحدد رسوم التوصيل.');
+ setTimeout(()=>{showPage('account');renderAccount();loadCustomerOrders()},900);
+});
 el('repairForm').addEventListener('submit',async e=>{
  e.preventDefault();
  const btn=el('repairSubmit');btn.disabled=true;btn.textContent='جاري الإرسال...';
