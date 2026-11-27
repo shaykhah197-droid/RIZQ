@@ -210,9 +210,10 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <div><label>السعر بالجنيه المصري</label><input id="pPrice" type="number" min="0" step="0.01" required placeholder="السعر"></div>
 </div>
 <div><label>وصف المنتج</label><textarea id="pDesc" maxlength="2000" placeholder="وصف المنتج"></textarea></div>
+<div><label>صورة المنتج</label><input id="pImageFile" type="file" accept="image/*"><small class="muted">اختار صورة من موبايلك أو جهازك (JPG أو PNG أو WebP).</small><div id="imagePreview" class="hidden" style="margin-top:10px"><img id="imagePreviewImg" alt="معاينة صورة المنتج" style="width:150px;height:120px;object-fit:contain;border:1px solid var(--line);border-radius:10px;padding:5px"><button type="button" class="soft" onclick="clearProductImage()">إزالة الصورة المختارة</button></div></div>
 <div class="two">
-<div><label>رابط صورة المنتج (اختياري)</label><input id="pImage" type="url" placeholder="https://..."></div>
-<div><label>رمز مؤقت للصورة</label><input id="pIcon" value="💻" maxlength="5"></div>
+<div><label>أو رابط صورة من الإنترنت (اختياري)</label><input id="pImage" type="url" placeholder="https://..."></div>
+<div><label>رمز بديل عند عدم وجود صورة</label><input id="pIcon" value="💻" maxlength="5"></div>
 </div>
 <label><input id="pAvailable" type="checkbox" checked style="width:auto"> متوفر للبيع</label>
 <button type="submit" id="saveProductButton">حفظ المنتج</button>
@@ -359,24 +360,42 @@ async function logout(){
  await db.auth.signOut();currentUser=null;updateAdminView();
  showMessage('adminMessage','تم تسجيل الخروج.');
 }
+function clearProductImage(){el('pImageFile').value='';el('imagePreview').classList.add('hidden');el('imagePreviewImg').src='';}
+el('pImageFile').addEventListener('change',()=>{
+ const file=el('pImageFile').files[0];if(!file){clearProductImage();return}
+ if(!file.type.startsWith('image/')){alert('من فضلك اختار ملف صورة فقط.');clearProductImage();return}
+ if(file.size>5*1024*1024){alert('حجم الصورة يجب ألا يتجاوز 5 ميجابايت.');clearProductImage();return}
+ el('imagePreviewImg').src=URL.createObjectURL(file);el('imagePreview').classList.remove('hidden');
+});
 function resetProductForm(){
- el('productForm').reset();el('editId').value='';el('pIcon').value='💻';el('pAvailable').checked=true;
+ el('productForm').reset();el('editId').value='';el('pIcon').value='💻';el('pAvailable').checked=true;clearProductImage();
 }
 el('productForm').addEventListener('submit',async e=>{
  e.preventDefault();
  if(!currentUser)return;
  const id=el('editId').value;
+ const saveBtn=el('saveProductButton');saveBtn.disabled=true;saveBtn.textContent='جاري الحفظ...';
+ let imageUrl=el('pImage').value.trim()||null;
+ const file=el('pImageFile').files[0];
+ if(file){
+  const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+  const path=Date.now()+'-'+Math.random().toString(36).slice(2,9)+'.'+ext;
+  const {error:uploadError}=await db.storage.from('product-images').upload(path,file,{upsert:false,contentType:file.type});
+  if(uploadError){saveBtn.disabled=false;saveBtn.textContent='حفظ المنتج';showMessage('adminMessage','تعذر رفع الصورة. تأكد من إعداد مساحة صور المنتجات في Supabase ثم حاول مرة أخرى.','err');return}
+  const {data:urlData}=db.storage.from('product-images').getPublicUrl(path);imageUrl=urlData.publicUrl;
+ }
  const record={
  name:el('pName').value.trim(),
  price:Number(el('pPrice').value),
  description:el('pDesc').value.trim(),
- image_url:el('pImage').value.trim()||null,
+ image_url:imageUrl,
  available:el('pAvailable').checked,
  is_demo:false
  };
  const result=id
  ?await db.from('products').update(record).eq('id',Number(id))
  :await db.from('products').insert(record);
+ saveBtn.disabled=false;saveBtn.textContent='حفظ المنتج';
  if(result.error){showMessage('adminMessage','تعذر حفظ المنتج. تأكد من صلاحيات المدير والبيانات.','err');return}
  showMessage('adminMessage','تم حفظ المنتج.');
  resetProductForm();await loadAdminData();
@@ -385,7 +404,7 @@ async function editProduct(id){
  const p=products.find(x=>Number(x.id)===Number(id));
  if(!p)return;
  el('editId').value=p.id;el('pName').value=p.name;el('pPrice').value=p.price;
- el('pDesc').value=p.description||'';el('pImage').value=p.image_url||'';
+ el('pDesc').value=p.description||'';el('pImage').value=p.image_url||'';clearProductImage();
  el('pAvailable').checked=!!p.available;el('pIcon').value=p.icon||'💻';
  el('productForm').scrollIntoView({behavior:'smooth'});
 }
