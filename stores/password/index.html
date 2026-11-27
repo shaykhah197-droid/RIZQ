@@ -285,7 +285,7 @@ function money(value){return Number(value||0).toLocaleString('ar-EG')+' جنيه
 async function loadProducts(){
  const grid=el('productsGrid');grid.innerHTML='<p>جاري تحميل المنتجات...</p>';
  let query=db.from('products').select('id,name,description,price,available,is_demo,image_url,gallery_urls').order('created_at',{ascending:false});
-  if(!currentUser)query=query.eq('available',true);
+  if(!currentAdminRole)query=query.eq('available',true).eq('is_demo',false);
   const {data,error}=await query;
  if(error){grid.innerHTML='<div class="empty-products">تعذر تحميل المنتجات حاليًا. حاول مرة أخرى لاحقًا.</div>';return}
  products=data||[];renderProducts();
@@ -301,7 +301,7 @@ function renderProducts(){
  el('productsCount').textContent=shown.length?'عرض '+(start+1)+'–'+Math.min(start+PRODUCTS_PER_PAGE,shown.length)+' من إجمالي '+shown.length+' منتج':'عدد المنتجات: 0';
  const pager=el('productsPagination');
  if(!shown.length){grid.innerHTML='<div class="empty-products">لا توجد منتجات مطابقة لبحثك حاليًا.</div>';if(pager)pager.innerHTML='';return}
- grid.innerHTML=pageItems.map(p=>`<article class="product"><div class="pic">${p.image_url?`<img src="${escapeHTML(p.image_url)}" alt="${escapeHTML(p.name)}" loading="lazy">`:escapeHTML(p.icon||'📦')}</div><div class="product-body"><span class="product-type">${productKind(p)==='digital'?'منتج رقمي':'منتج ملموس'}</span><h3>${escapeHTML(p.name)}</h3><div class="price">${money(p.price)}</div>${p.is_demo?'<span class="demo">منتج تجريبي — سعر افتراضي</span>':''}<p class="muted">${escapeHTML(p.description||'تفاصيل المنتج متاحة عند الاستفسار.')}</p><div class="actions"><button class="details-btn" onclick="showProductDetail(${Number(p.id)})">التفاصيل</button>${currentUser?`<button class="soft" onclick="editProduct(${Number(p.id)})">تعديل</button><button class="danger" onclick="deleteProduct(${Number(p.id)})">حذف</button>`:`<button class="add-btn" onclick="addToCart(${Number(p.id)})">أضف للسلة</button>`}</div></div></article>`).join('');
+ grid.innerHTML=pageItems.map(p=>`<article class="product"><div class="pic">${p.image_url?`<img src="${escapeHTML(p.image_url)}" alt="${escapeHTML(p.name)}" loading="lazy">`:escapeHTML(p.icon||'📦')}</div><div class="product-body"><span class="product-type">${productKind(p)==='digital'?'منتج رقمي':'منتج ملموس'}</span><h3>${escapeHTML(p.name)}</h3><div class="price">${money(p.price)}</div>${p.is_demo?'<span class="demo">منتج تجريبي — سعر افتراضي</span>':''}<p class="muted">${escapeHTML(p.description||'تفاصيل المنتج متاحة عند الاستفسار.')}</p><div class="actions"><button class="details-btn" onclick="showProductDetail(${Number(p.id)})">التفاصيل</button>${currentAdminRole?`<button class="soft" onclick="editProduct(${Number(p.id)})">تعديل</button><button class="danger" onclick="deleteProduct(${Number(p.id)})">حذف</button>`:`<button class="add-btn" onclick="addToCart(${Number(p.id)})">أضف للسلة</button>`}</div></div></article>`).join('');
  if(pager){let buttons='';if(totalPages>1){buttons+='<button class="light" '+(productPage===1?'disabled':'')+' onclick="changeProductPage('+(productPage-1)+')">السابق</button>';for(let i=1;i<=totalPages;i++){if(totalPages>7&&i>2&&i<totalPages-1&&Math.abs(i-productPage)>1){if(i===3||i===totalPages-2)buttons+='<span>…</span>';continue}buttons+='<button class="'+(i===productPage?'current':'light')+'" onclick="changeProductPage('+i+')">'+i+'</button>';}buttons+='<button class="light" '+(productPage===totalPages?'disabled':'')+' onclick="changeProductPage('+(productPage+1)+')">التالي</button>';}pager.innerHTML=totalPages>1?'<div class="page-info">صفحة '+productPage+' من '+totalPages+'</div>'+buttons:'';}
 }
 function changeProductPage(page){productPage=page;renderProducts();document.getElementById('products').scrollIntoView({behavior:'smooth',block:'start'});}
@@ -671,7 +671,7 @@ async function updateRequest(table,id){
  await loadRequests();
 }
 db.auth.onAuthStateChange((_event,session)=>{
- currentUser=session?.user||null;currentAdminRole=null;updateAdminView();if(currentUser){loadAdminRole().then(()=>{updateAdminView();if(currentAdminRole){loadAdminData();if(currentAdminRole==='full')loadStoreAdmins();}else{renderAccount();}});}else{renderAccount();}
+ currentUser=session?.user||null;currentAdminRole=null;updateAdminView();if(currentUser){loadAdminRole().then(()=>{updateAdminView();if(currentAdminRole){loadAdminData();if(currentAdminRole==='full')loadStoreAdmins();}else{renderAccount();loadProducts();}});}else{renderAccount();loadProducts();}
 });
 checkSession();
 loadProducts();
