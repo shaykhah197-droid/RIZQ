@@ -319,7 +319,7 @@ function showAdminProductDetail(id){
  el('productDetail').innerHTML=`<div class="product-detail-card"><div class="top"><h2>تفاصيل المنتج والصور</h2><button class="light" onclick="closeProductDetail()">✕ إغلاق</button></div><div class="detail-gallery">${galleryMarkup(p)}</div><h2>${escapeHTML(p.name)}</h2><div class="price">${money(p.price)}</div><p><b>حالة المنتج:</b> ${p.available?'متوفر للبيع':'غير متوفر للبيع'}</p><p><b>الوصف والتفاصيل:</b></p><p class="muted" style="white-space:pre-wrap">${escapeHTML(p.description||'لم تتم إضافة وصف لهذا المنتج.')}</p><p class="muted">رقم المنتج: ${Number(p.id)}</p><button class="soft" style="width:100%;margin-top:12px" onclick="closeProductDetail()">إغلاق التفاصيل</button></div>`;
  el('productDetail').classList.remove('hidden');
 }
-function addToCart(id){const p=products.find(x=>Number(x.id)===Number(id));if(!p)return;const line=cart.find(x=>Number(x.id)===Number(id));if(line)line.quantity=Math.min(99,line.quantity+1);else cart.push({id:p.id,quantity:1});renderCart();alert('تمت إضافة المنتج إلى السلة.')}
+function addToCart(id){const p=products.find(x=>Number(x.id)===Number(id));if(!p)return;const line=cart.find(x=>Number(x.id)===Number(id));if(line)line.quantity=Math.min(99,line.quantity+1);else cart.push({id:p.id,quantity:1});toggleCart(true);el('cartPanel')?.scrollIntoView({behavior:'smooth',block:'center'});}
 function renderCart(){
  const count=cart.reduce((n,x)=>n+x.quantity,0);if(el('cartCount'))el('cartCount').textContent=count;if(!el('cartItems'))return;
  const lines=cart.map(line=>{const p=products.find(x=>Number(x.id)===Number(line.id));return p?{...line,product:p}:null}).filter(Boolean);
