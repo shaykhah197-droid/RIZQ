@@ -388,7 +388,30 @@ async function loadCustomerOrders(){
  const box=el('customerOrders');box.textContent='جاري تحميل الطلبات...';
  const {data,error}=await db.from('store_orders').select('*').order('created_at',{ascending:false});
  if(error){box.textContent='تعذر تحميل طلباتك.';return}
- box.innerHTML=(data||[]).map(o=>'<div class="request"><b>طلب #'+escapeHTML(o.id)+'</b><div>الحالة: '+escapeHTML(o.status)+' · الدفع: '+escapeHTML(o.payment_status)+'</div><div>قيمة المنتجات: '+money(o.subtotal)+' · التوصيل: '+(o.delivery_fee===null?'بانتظار التحديد':money(o.delivery_fee))+' · الإجمالي: '+(o.total===null?'بانتظار التحديد':money(o.total))+'</div></div>').join('')||'لا توجد طلبات بعد.';
+ box.innerHTML=(data||[]).map(o=>{
+  let actions='';
+  if(o.status==='awaiting_customer_confirmation')actions+='<button onclick="confirmStoreOrder('+JSON.stringify(o.id)+')">تأكيد الإجمالي</button>';
+  if(o.status==='confirmed'&&o.payment_method!=='cash'&&['awaiting_payment','receipt_rejected'].includes(o.payment_status))actions+='<button class="soft" onclick="uploadStoreReceipt('+JSON.stringify(o.id)+')">رفع إيصال التحويل</button>';
+  return '<div class="request"><b>طلب #'+escapeHTML(o.id)+'</b><div>الحالة: '+escapeHTML(o.status)+' · الدفع: '+escapeHTML(o.payment_status)+'</div><div>قيمة المنتجات: '+money(o.subtotal)+' · التوصيل: '+(o.delivery_fee===null?'بانتظار التحديد':money(o.delivery_fee))+' · الإجمالي: '+(o.total===null?'بانتظار التحديد':money(o.total))+'</div>'+actions+'</div>';
+ }).join('')||'لا توجد طلبات بعد.';
+}
+async function confirmStoreOrder(id){
+ const {error}=await db.rpc('customer_confirm_store_order',{p_order_id:id});
+ if(error){alert('تعذر تأكيد الطلب: '+error.message);return}await loadCustomerOrders();
+}
+async function uploadStoreReceipt(id){
+ const input=document.createElement('input');input.type='file';input.accept='image/jpeg,image/png,image/webp,application/pdf';
+ input.onchange=async()=>{
+  const file=input.files[0];if(!file)return;
+  if(file.size>5*1024*1024){alert('الحد الأقصى لحجم الإيصال 5 ميجابايت.');return}
+  const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+  const path=currentUser.id+'/'+id+'/'+Date.now()+'.'+ext;
+  const {error:uploadError}=await db.storage.from('payment-receipts').upload(path,file,{upsert:false,contentType:file.type});
+  if(uploadError){alert('تعذر رفع الإيصال: '+uploadError.message);return}
+  const {error}=await db.rpc('customer_submit_payment_receipt',{p_order_id:id,p_receipt_path:path});
+  if(error){alert('تعذر إرسال الإيصال للمراجعة: '+error.message);return}
+  alert('تم إرسال الإيصال للمراجعة.');await loadCustomerOrders();
+ };input.click();
 }
 async function loadCheckoutMethods(){
  const sel=el('paymentMethod');sel.innerHTML='<option value="cash">نقدًا عند الاستلام</option>';
