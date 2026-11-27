@@ -91,7 +91,7 @@ alter table public.store_order_items enable row level security;
 alter table public.store_payment_methods enable row level security;
 
 drop policy if exists "admins read store admins" on public.store_admins;
-create policy "admins read store admins" on public.store_admins for select to authenticated using (public.is_store_admin());
+create policy "admins read store admins" on public.store_admins for select to authenticated using (public.is_full_store_admin());
 drop policy if exists "full admins manage store admins" on public.store_admins;
 create policy "full admins manage store admins" on public.store_admins for all to authenticated
 using (public.is_full_store_admin())
@@ -113,7 +113,7 @@ create policy "everyone read enabled payment methods" on public.store_payment_me
 using (enabled or public.is_store_admin());
 drop policy if exists "admins manage payment methods" on public.store_payment_methods;
 create policy "admins manage payment methods" on public.store_payment_methods for all to authenticated
-using (public.is_store_admin()) with check (public.is_store_admin());
+using (public.is_full_store_admin()) with check (public.is_full_store_admin());
 
 -- إنشاء الطلب وحفظ تفاصيل المنتجات يتمان في معاملة واحدة مع اعتماد الأسعار من قاعدة البيانات.
 create or replace function public.create_store_order(
