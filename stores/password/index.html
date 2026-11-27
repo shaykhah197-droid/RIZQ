@@ -412,7 +412,7 @@ el('productForm').addEventListener('submit',async e=>{
  if(file){
   const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
   const path=Date.now()+'-'+Math.random().toString(36).slice(2,9)+'.'+ext;
-  const {error:uploadError}=await db.storage.from('product-images').upload(path,file,{upsert:false,contentType:file.type||({jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',bmp:'image/bmp'}[(file.name.split('.').pop()||'').toLowerCase()]||'application/octet-stream')});
+  const {error:uploadError}=await db.storage.from('product-images').upload(path,file,{upsert:false,contentType:({jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',bmp:'image/bmp'}[(file.name.split('.').pop()||'').toLowerCase()]||file.type||'application/octet-stream')});
   if(uploadError){console.error('Main image upload error:',uploadError);saveBtn.disabled=false;saveBtn.textContent='حفظ المنتج';showMessage('adminMessage','فشل رفع الصورة: '+(uploadError.message||uploadError.error||'خطأ غير معروف')+' — كود: '+(uploadError.statusCode||uploadError.status||uploadError.code||'غير متاح'),'err');return}
   const {data:urlData}=db.storage.from('product-images').getPublicUrl(path);imageUrl=urlData.publicUrl;
  }
@@ -420,7 +420,7 @@ el('productForm').addEventListener('submit',async e=>{
  for(const extra of galleryFiles){
   const ext=(extra.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
   const path=Date.now()+'-'+Math.random().toString(36).slice(2,9)+'.'+ext;
-  const {error:extraError}=await db.storage.from('product-images').upload(path,extra,{upsert:false,contentType:extra.type||({jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',bmp:'image/bmp'}[(extra.name.split('.').pop()||'').toLowerCase()]||'application/octet-stream')});
+  const {error:extraError}=await db.storage.from('product-images').upload(path,extra,{upsert:false,contentType:({jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',bmp:'image/bmp'}[(extra.name.split('.').pop()||'').toLowerCase()]||extra.type||'application/octet-stream')});
   if(extraError){console.error('Gallery image upload error:',extraError);saveBtn.disabled=false;saveBtn.textContent='حفظ المنتج';showMessage('adminMessage','فشل رفع الصورة الإضافية: '+(extraError.message||extraError.error||'خطأ غير معروف')+' — كود: '+(extraError.statusCode||extraError.status||'غير متاح'),'err');return}
   galleryUrls.push(db.storage.from('product-images').getPublicUrl(path).data.publicUrl);
  }
