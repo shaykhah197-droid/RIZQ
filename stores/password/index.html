@@ -649,7 +649,25 @@ async function saveStorePaymentMethod(event,code){
  const {error}=await db.from('store_payment_methods').update({account_name:f.account_name.value.trim(),account_number:f.account_number.value.trim(),instructions:f.instructions.value.trim(),enabled:f.enabled.checked}).eq('code',code);
  if(error){alert('تعذر حفظ البيانات: '+error.message);return}alert('تم الحفظ.');await loadPaymentMethodsAdmin();
 }
-async function showRequestsPage(){if(!currentAdminRole){showPage(currentUser?'account':'admin');return;}showPage('requests');const content=el('newRequestsContent');if(!currentUser){content.innerHTML='<div class="request">سجّل دخول المدير أولًا لعرض الطلبات.</div>';return;}content.innerHTML='<div class="request">جاري تحميل الطلبات...</div>';try{const {data,error}=await db.from('service_requests').select('*').order('created_at',{ascending:false});if(error)throw error;const rows=data||[];el('serviceRequestCount').textContent=String(rows.length);content.innerHTML=rows.length?rows.map(r=>'<div class="request"><b>'+escapeHTML(r.customer_name||'')+'</b> — '+escapeHTML(r.customer_phone||'')+'<div>'+escapeHTML(r.service_type||'')+' · '+escapeHTML(r.address||'')+'</div><p>'+escapeHTML(r.problem_description||'')+'</p><span class="status">'+escapeHTML(r.status||'new')+'</span><div class="actions"><button class="soft" onclick="updateRequest(\'service_requests\','+Number(r.id)+')">تحديث الحالة</button></div></div>').join(''):'<div class="request">لا توجد طلبات جديدة.</div>';}catch(error){content.innerHTML='<div class="request" style="color:#a52d2d">تعذر تحميل الطلبات: '+escapeHTML(error.message||'خطأ غير معروف')+'</div>';}}
+async async function showRequestsPage(){
+ if(!currentAdminRole){showPage(currentUser?'account':'admin');return;}
+ showPage('requests');
+ const content=el('newRequestsContent');
+ content.innerHTML='<div class="request">جاري تحميل طلبات الشراء...</div>';
+ try{
+  const {data,error}=await db.from('store_orders').select('*,store_order_items(*)').order('created_at',{ascending:false});
+  if(error)throw error;
+  const rows=data||[];
+  const badge=el('serviceRequestCount');if(badge)badge.textContent=String(rows.length);
+  content.innerHTML=rows.length?rows.map(o=>{
+   const items=(o.store_order_items||[]).map(i=>escapeHTML(i.product_name)+' × '+i.quantity+' ('+money(i.line_total)+')').join('، ');
+   let buttons='';
+   if(o.payment_status==='under_review')buttons+='<button onclick="reviewStorePayment('+JSON.stringify(o.id)+',\\'approved\\')">اعتماد الدفع</button><button class="danger" onclick="reviewStorePayment('+JSON.stringify(o.id)+',\\'rejected\\')">رفض الإيصال</button>';
+   if(o.receipt_path)buttons+='<button class="soft" type="button" data-admin-receipt="'+escapeHTML(o.receipt_path)+'">عرض الإيصال</button>';
+   return '<div class="request"><b>طلب شراء #'+escapeHTML(o.id)+'</b><div>العميل: '+escapeHTML(o.customer_name)+' — '+escapeHTML(o.phone)+'</div><div>العنوان: '+escapeHTML(o.village||'')+' '+escapeHTML(o.address||'استلام من المتجر')+'</div><div>المنتجات: '+items+'</div><div>قيمة المنتجات: '+money(o.subtotal)+' · التوصيل: '+(o.delivery_type==='pickup'?'لا يوجد':'يُحصّل عند الاستلام')+' · الإجمالي: '+money(o.total||o.subtotal)+'</div><div>حالة الطلب: '+escapeHTML(o.status)+' · حالة الدفع: '+escapeHTML(o.payment_status)+'</div><div class="actions">'+buttons+'</div></div>';
+  }).join(''):'<div class="request">لا توجد طلبات شراء حتى الآن.</div>';
+ }catch(error){content.innerHTML='<div class="request" style="color:#a52d2d">تعذر تحميل الطلبات: '+escapeHTML(error.message||'خطأ غير معروف')+'</div>';}
+}
 let authRevision=0;
 async function clearPasswordStoreSession(){
  // Invalidate any pending role/session restoration before signing out.
