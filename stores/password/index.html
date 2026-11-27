@@ -334,7 +334,7 @@ function showPage(page){
  window.scrollTo({top:0,behavior:'smooth'});
 }
 function showAdmin(){showPage('admin');}
-async async function toggleAdminRequests(){const panel=el('adminRequestsDropdown');if(!currentUser){panel.classList.remove('hidden');el('quickServiceRequests').innerHTML='<div class="request" style="color:#a52d2d">سجّل دخول المدير أولًا لعرض الطلبات.</div>';return;}const opening=panel.classList.contains('hidden');panel.classList.toggle('hidden');if(opening){el('quickServiceRequests').innerHTML='<div class="request">جاري تحميل الطلبات...</div>';await loadRequests();el('quickServiceRequests').innerHTML=el('serviceRequests').innerHTML||'<div class="request">لا توجد طلبات جديدة.</div>';}}
+async function toggleAdminRequests(){const panel=el('adminRequestsDropdown');if(!currentUser){panel.classList.remove('hidden');el('quickServiceRequests').innerHTML='<div class="request" style="color:#a52d2d">سجّل دخول المدير أولًا لعرض الطلبات.</div>';return;}const opening=panel.classList.contains('hidden');panel.classList.toggle('hidden');if(opening){el('quickServiceRequests').innerHTML='<div class="request">جاري تحميل الطلبات...</div>';await loadRequests();el('quickServiceRequests').innerHTML=el('serviceRequests').innerHTML||'<div class="request">لا توجد طلبات جديدة.</div>';}}
 async function checkSession(){
  const {data}=await db.auth.getSession();
  currentUser=data.session?.user||null;
