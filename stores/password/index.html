@@ -677,7 +677,7 @@ async function showRequestsPage(){
   content.innerHTML=rows.length?rows.map(o=>{
    const items=(o.store_order_items||[]).map(i=>escapeHTML(i.product_name)+' × '+i.quantity+' ('+money(i.line_total)+')').join('، ');
    let buttons='';
-   if(o.payment_status==='under_review')buttons+='<button onclick="reviewStorePayment('+JSON.stringify(o.id)+',\\'approved\\')">اعتماد الدفع</button><button class="danger" onclick="reviewStorePayment('+JSON.stringify(o.id)+',\\'rejected\\')">رفض الإيصال</button>';
+   if(o.payment_status==='under_review')buttons+='<button onclick="reviewStorePayment('+JSON.stringify(o.id)+',\'approved\')">اعتماد الدفع</button><button class="danger" onclick="reviewStorePayment('+JSON.stringify(o.id)+',\'rejected\')">رفض الإيصال</button>';
    if(o.receipt_path)buttons+='<button class="soft" type="button" data-admin-receipt="'+escapeHTML(o.receipt_path)+'">عرض الإيصال</button>';
    return '<div class="request"><b>طلب شراء #'+escapeHTML(o.id)+'</b><div>العميل: '+escapeHTML(o.customer_name)+' — '+escapeHTML(o.phone)+'</div><div>العنوان: '+escapeHTML(o.village||'')+' '+escapeHTML(o.address||'استلام من المتجر')+'</div><div>المنتجات: '+items+'</div><div>قيمة المنتجات: '+money(o.subtotal)+' · التوصيل: '+(o.delivery_type==='pickup'?'لا يوجد':'يُحصّل عند الاستلام')+' · الإجمالي: '+money(o.total||o.subtotal)+'</div><div>حالة الطلب: '+escapeHTML(o.status)+' · حالة الدفع: '+escapeHTML(o.payment_status)+'</div><div class="actions">'+buttons+'</div></div>';
   }).join(''):'<div class="request">لا توجد طلبات شراء حتى الآن.</div>';
