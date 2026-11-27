@@ -273,7 +273,14 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <script>
 const SUPABASE_URL = 'https://avrluoclwkhhzbwxmupk.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_W9nD5Km-FBUkWHbxTMwkMg_jpw0vtHB';
-const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+ auth: {
+  persistSession: true,
+  autoRefreshToken: true,
+  detectSessionInUrl: true,
+  storageKey: 'password-store-v3-auth'
+ }
+});
 let products = [];
 let currentUser = null;
 let currentAdminRole = null;
@@ -417,7 +424,7 @@ async function loadCustomerOrders(){
   let actions='';
   if(o.status==='pending_review')actions+='<button class="danger" type="button" onclick="cancelCustomerStoreOrder(\''+o.id+'\')">إلغاء الطلب</button>';
   if(o.status==='awaiting_customer_confirmation')actions+='<button onclick="confirmStoreOrder('+JSON.stringify(o.id)+')">تأكيد الإجمالي</button>';
-  if(o.receipt_path)actions+='<button class="soft" type="button" onclick="openCustomerStoreReceipt(&quot;'+escapeHTML(o.receipt_path)+'&quot;)">معاينة إيصال التحويل</button>';
+  if(o.receipt_path)actions+='<button class="soft" type="button" data-customer-receipt="'+escapeHTML(o.receipt_path)+'">معاينة إيصال التحويل</button>';
   return '<div class="request"><b>طلب #'+escapeHTML(o.id)+'</b><div>الحالة: '+escapeHTML(o.status)+' · الدفع: '+escapeHTML(o.payment_status)+'</div><div>قيمة المنتجات: '+money(o.subtotal)+' · التوصيل: '+(o.delivery_fee===null?'يُحصّل عند الاستلام':money(o.delivery_fee))+' · الإجمالي: '+money(o.subtotal)+'</div>'+actions+'</div>';
  }).join('')||'لا توجد طلبات بعد.';
 }
@@ -536,7 +543,7 @@ async function loadStoreOrders(){
   const items=(o.store_order_items||[]).map(i=>escapeHTML(i.product_name)+' × '+i.quantity+' ('+money(i.line_total)+')').join('، ');
   let buttons='';
   if(o.payment_status==='under_review')buttons+='<button onclick="reviewStorePayment('+JSON.stringify(o.id)+',\'approved\')">اعتماد الدفع</button><button class="danger" onclick="reviewStorePayment('+JSON.stringify(o.id)+',\'rejected\')">رفض الإيصال</button>';
-  if(o.receipt_path)buttons+='<button class="soft" type="button" onclick="openStoreReceipt(&quot;'+escapeHTML(o.receipt_path)+'&quot;)">عرض الإيصال</button>';
+  if(o.receipt_path)buttons+='<button class="soft" type="button" data-admin-receipt="'+escapeHTML(o.receipt_path)+'">عرض الإيصال</button>';
   return '<div class="request"><b>طلب #'+escapeHTML(o.id)+'</b><div>العميل: '+escapeHTML(o.customer_name)+' — '+escapeHTML(o.phone)+'</div><div>العنوان: '+escapeHTML(o.village||'')+' '+escapeHTML(o.address||'استلام من المتجر')+'</div><div>المنتجات: '+items+'</div><div>المنتجات: '+money(o.subtotal)+' · التوصيل: '+(o.delivery_type==='pickup'?'لا يوجد': 'يُحصّل عند الاستلام')+' · المبلغ المحوّل المطلوب: '+money(o.subtotal)+'</div><div>الطلب: '+escapeHTML(o.status)+' · الدفع: '+escapeHTML(o.payment_status)+'</div>'+buttons+'</div>';
  }).join('')||'لا توجد طلبات شراء.';
 }
@@ -550,6 +557,13 @@ async function reviewStorePayment(id,decision){
  const {error}=await db.rpc('admin_review_store_payment',{p_order_id:id,p_decision:decision});
  if(error){alert('تعذر تحديث الدفع: '+error.message);return}await loadStoreOrders();
 }
+// Use delegated click handlers so receipt paths never become inline JavaScript.
+document.addEventListener('click',event=>{
+ const customerButton=event.target.closest('[data-customer-receipt]');
+ if(customerButton){event.preventDefault();openCustomerStoreReceipt(customerButton.dataset.customerReceipt);return;}
+ const adminButton=event.target.closest('[data-admin-receipt]');
+ if(adminButton){event.preventDefault();openStoreReceipt(adminButton.dataset.adminReceipt);}
+});
 async function openCustomerStoreReceipt(path){
  if(!currentUser||currentAdminRole){alert('معاينة الإيصال متاحة لصاحب الطلب فقط.');return}
  if(!path||!path.startsWith(currentUser.id+'/')){alert('الإيصال غير متاح لهذا الحساب.');return}
