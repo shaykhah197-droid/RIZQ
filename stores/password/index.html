@@ -279,10 +279,13 @@ const SUPABASE_KEY = 'sb_publishable_W9nD5Km-FBUkWHbxTMwkMg_jpw0vtHB';
 const DEFAULT_AUTH_STORAGE_KEY='sb-avrluoclwkhhzbwxmupk-auth-token';
 const CUSTOM_AUTH_STORAGE_KEY='password-store-v3-auth';
 try{
- if(!localStorage.getItem(DEFAULT_AUTH_STORAGE_KEY)&&localStorage.getItem(CUSTOM_AUTH_STORAGE_KEY)){
-  localStorage.setItem(DEFAULT_AUTH_STORAGE_KEY,localStorage.getItem(CUSTOM_AUTH_STORAGE_KEY));
+ const legacySession=localStorage.getItem(CUSTOM_AUTH_STORAGE_KEY);
+ if(legacySession&&!localStorage.getItem(DEFAULT_AUTH_STORAGE_KEY)){
+  localStorage.setItem(DEFAULT_AUTH_STORAGE_KEY,legacySession);
  }
-}catch(storageError){console.warn('تعذر ترحيل جلسة الدخول المحفوظة:',storageError);}
+ // Remove the old key permanently so it cannot restore a signed-out session later.
+ localStorage.removeItem(CUSTOM_AUTH_STORAGE_KEY);
+}catch(storageError){console.warn('تعذر تنظيف جلسة الدخول القديمة:',storageError);}
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
  auth: {
   persistSession: true,
@@ -423,7 +426,7 @@ async function changeCustomerPassword(){
  el('profileCurrentPassword').value='';el('profileNewPassword').value='';el('profileConfirmPassword').value='';
  showMessage('profilePasswordMessage','تم تغيير كلمة المرور بنجاح.','success');
 }
-async function customerLogout(){stopStoreOrderWatcher();document.body.classList.remove('admin-page-open');await db.auth.signOut();currentUser=null;currentAdminRole=null;updateAdminView();showPage('account');renderAccount()}
+async function customerLogout(){await clearPasswordStoreSession();showPage('account');renderAccount()}
 async function loadCustomerOrders(){
  if(!currentUser||currentAdminRole)return;
  const box=el('customerOrders');box.textContent='جاري تحميل الطلبات...';
@@ -648,6 +651,28 @@ async function saveStorePaymentMethod(event,code){
 }
 async function showRequestsPage(){if(!currentAdminRole){showPage(currentUser?'account':'admin');return;}showPage('requests');const content=el('newRequestsContent');if(!currentUser){content.innerHTML='<div class="request">سجّل دخول المدير أولًا لعرض الطلبات.</div>';return;}content.innerHTML='<div class="request">جاري تحميل الطلبات...</div>';try{const {data,error}=await db.from('service_requests').select('*').order('created_at',{ascending:false});if(error)throw error;const rows=data||[];el('serviceRequestCount').textContent=String(rows.length);content.innerHTML=rows.length?rows.map(r=>'<div class="request"><b>'+escapeHTML(r.customer_name||'')+'</b> — '+escapeHTML(r.customer_phone||'')+'<div>'+escapeHTML(r.service_type||'')+' · '+escapeHTML(r.address||'')+'</div><p>'+escapeHTML(r.problem_description||'')+'</p><span class="status">'+escapeHTML(r.status||'new')+'</span><div class="actions"><button class="soft" onclick="updateRequest(\'service_requests\','+Number(r.id)+')">تحديث الحالة</button></div></div>').join(''):'<div class="request">لا توجد طلبات جديدة.</div>';}catch(error){content.innerHTML='<div class="request" style="color:#a52d2d">تعذر تحميل الطلبات: '+escapeHTML(error.message||'خطأ غير معروف')+'</div>';}}
 let authRevision=0;
+async function clearPasswordStoreSession(){
+ // Invalidate any pending role/session restoration before signing out.
+ authRevision++;
+ stopStoreOrderWatcher();
+ document.body.classList.remove('admin-page-open');
+ currentUser=null;
+ currentAdminRole=null;
+ updateAdminView();
+ try{
+  const {error}=await db.auth.signOut({scope:'local'});
+  if(error)console.warn('Supabase sign-out warning:',error.message);
+ }catch(signOutError){console.warn('Supabase sign-out failed:',signOutError);}
+ // Remove both the current and legacy keys to prevent an old session from returning.
+ try{
+  localStorage.removeItem(DEFAULT_AUTH_STORAGE_KEY);
+  localStorage.removeItem(CUSTOM_AUTH_STORAGE_KEY);
+ }catch(storageError){console.warn('تعذر مسح بيانات الجلسة المحلية:',storageError);}
+ authRevision++;
+ currentUser=null;
+ currentAdminRole=null;
+ updateAdminView();
+}
 async function applyAuthSession(session,event=''){
  const revision=++authRevision;
  currentUser=session?.user||null;
@@ -710,8 +735,8 @@ el('loginForm').addEventListener('submit',async e=>{
  await applyAuthSession(data.session,'SIGNED_IN');if(!currentAdminRole){await db.auth.signOut();currentUser=null;currentAdminRole=null;updateAdminView();showMessage('adminMessage','هذا الحساب غير مضاف كمدير للمتجر.','err');return;}adminTab('overview');showPage('admin');
 });
 async function logout(){
- stopStoreOrderWatcher();document.body.classList.remove('admin-page-open');
- await db.auth.signOut();currentUser=null;updateAdminView();
+ await clearPasswordStoreSession();
+ showPage('account');
  showMessage('adminMessage','تم تسجيل الخروج.');
 }
 function resetProductForm(){
