@@ -211,8 +211,6 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <button type="submit" id="saveProductButton">حفظ المنتج</button>
 <button type="button" class="soft" onclick="resetProductForm()">إلغاء التعديل</button>
 </form>
-<h3>المنتجات الحالية</h3>
-<div id="adminProducts">جاري التحميل...</div>
 <h3>الطلبات المنزلية</h3>
 <div id="serviceRequests">جاري التحميل...</div>
 <h3>استفسارات المنتجات</h3>
@@ -238,7 +236,9 @@ function showMessage(id,text,type='ok'){
 function money(value){return Number(value||0).toLocaleString('ar-EG')+' جنيه'}
 async function loadProducts(){
  const grid=el('productsGrid');grid.innerHTML='<p>جاري تحميل المنتجات...</p>';
- const {data,error}=await db.from('products').select('id,name,description,price,available,is_demo,image_url,gallery_urls').eq('available',true).order('created_at',{ascending:false});
+ let query=db.from('products').select('id,name,description,price,available,is_demo,image_url,gallery_urls').order('created_at',{ascending:false});
+  if(!currentUser)query=query.eq('available',true);
+  const {data,error}=await query;
  if(error){grid.innerHTML='<div class="empty-products">تعذر تحميل المنتجات حاليًا. حاول مرة أخرى لاحقًا.</div>';return}
  products=data||[];renderProducts();
 }
@@ -250,7 +250,7 @@ function renderProducts(){
  const shown=products.filter(p=>((p.name||'')+' '+(p.description||'')).toLowerCase().includes(term)&&(activeCategory==='all'||productKind(p)===activeCategory));
  el('productsCount').textContent='عدد المنتجات: '+shown.length;
  if(!shown.length){grid.innerHTML='<div class="empty-products">لا توجد منتجات مطابقة لبحثك حاليًا.</div>';return}
- grid.innerHTML=shown.map(p=>`<article class="product"><div class="pic">${p.image_url?`<img src="${escapeHTML(p.image_url)}" alt="${escapeHTML(p.name)}" loading="lazy">`:escapeHTML(p.icon||'📦')}</div><div class="product-body"><span class="product-type">${productKind(p)==='digital'?'منتج رقمي':'منتج ملموس'}</span><h3>${escapeHTML(p.name)}</h3><div class="price">${money(p.price)}</div>${p.is_demo?'<span class="demo">منتج تجريبي — سعر افتراضي</span>':''}<p class="muted">${escapeHTML(p.description||'تفاصيل المنتج متاحة عند الاستفسار.')}</p><div class="actions"><button class="details-btn" onclick="showProductDetail(${Number(p.id)})">التفاصيل</button><button class="add-btn" onclick="addToCart(${Number(p.id)})">أضف للسلة</button></div></div></article>`).join('');
+ grid.innerHTML=shown.map(p=>`<article class="product"><div class="pic">${p.image_url?`<img src="${escapeHTML(p.image_url)}" alt="${escapeHTML(p.name)}" loading="lazy">`:escapeHTML(p.icon||'📦')}</div><div class="product-body"><span class="product-type">${productKind(p)==='digital'?'منتج رقمي':'منتج ملموس'}</span><h3>${escapeHTML(p.name)}</h3><div class="price">${money(p.price)}</div>${p.is_demo?'<span class="demo">منتج تجريبي — سعر افتراضي</span>':''}<p class="muted">${escapeHTML(p.description||'تفاصيل المنتج متاحة عند الاستفسار.')}</p><div class="actions"><button class="details-btn" onclick="showProductDetail(${Number(p.id)})">التفاصيل</button>${currentUser?`<button class="soft" onclick="editProduct(${Number(p.id)})">تعديل</button><button class="danger" onclick="deleteProduct(${Number(p.id)})">حذف</button>`:`<button class="add-btn" onclick="addToCart(${Number(p.id)})">أضف للسلة</button>`}</div></div></article>`).join('');
 }
 function galleryMarkup(p){const urls=[p.image_url,...(Array.isArray(p.gallery_urls)?p.gallery_urls:[])].filter(Boolean);return urls.length?urls.map(url=>'<img src="'+escapeHTML(url)+'" alt="'+escapeHTML(p.name||'صورة المنتج')+'" loading="lazy">').join(''):'<div class="detail-image-fallback">'+escapeHTML(p.icon||'📦')+'</div>';}
 function showProductDetail(id){
@@ -401,8 +401,8 @@ el('productForm').addEventListener('submit',async e=>{
  :await db.from('products').insert(record);
  saveBtn.disabled=false;saveBtn.textContent='حفظ المنتج';
  if(result.error){console.error('Product save error:',result.error);showMessage('adminMessage','سبب فشل الحفظ: '+(result.error.message||'خطأ غير معروف')+' — كود: '+(result.error.code||'غير متاح'),'err');return}
- showMessage('adminMessage','تم حفظ المنتج.');
- resetProductForm();await loadAdminData();
+ showMessage('adminMessage','تم حفظ المنتج، وتم تحديث صفحة المنتجات.');
+ resetProductForm();await loadAdminData();showPage('products');
 });
 async function editProduct(id){
  const p=products.find(x=>Number(x.id)===Number(id));
@@ -413,6 +413,7 @@ async function editProduct(id){
  el('pImageUrl').value=p.image_url||'';
  el('imagePreview').textContent=p.image_url?'الصورة الحالية محفوظة.':'لم يتم اختيار صورة.';
  el('galleryPreview').textContent=Array.isArray(p.gallery_urls)&&p.gallery_urls.length?('الصور الإضافية الحالية: '+p.gallery_urls.length):'يمكنك اختيار أكثر من صورة.';
+ showPage('admin');
  el('productForm').scrollIntoView({behavior:'smooth'});
 }
 async function deleteProduct(id){
@@ -426,9 +427,6 @@ async function loadAdminData(){
  const {data:prod,error:prodError}=await db.from('products').select('*').order('created_at',{ascending:false});
  if(prodError){showMessage('adminMessage','تعذر تحميل بيانات الإدارة. تأكد من حساب المدير وصلاحياته.','err');return}
  products=prod||[];
- el('adminProducts').innerHTML=products.map(p=>`
- <div class="admin-product"><div style="display:flex;align-items:center;gap:12px;min-width:0"><div style="width:90px;height:80px;flex:0 0 90px;background:#f1f7f3;border-radius:9px;display:grid;place-items:center;font-size:30px;overflow:hidden">${p.image_url?`<img src="${escapeHTML(p.image_url)}" alt="" style="width:100%;height:100%;object-fit:contain">`:escapeHTML(p.icon||'📦')}</div><div><b>${escapeHTML(p.name)}</b><div class="muted">${money(p.price)} · ${p.available?'متوفر':'غير متوفر'}</div></div></div>
- <div class="actions"><button class="admin-detail-btn" onclick="showAdminProductDetail(${Number(p.id)})">التفاصيل</button><button class="soft" onclick="editProduct(${Number(p.id)})">تعديل</button><button class="danger" onclick="deleteProduct(${Number(p.id)})">حذف</button></div></div>`).join('')||'لا توجد منتجات.';
  await loadProducts();
  await loadRequests();
 }
