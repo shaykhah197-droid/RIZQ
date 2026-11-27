@@ -86,7 +86,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <button class="light" type="button" onclick="showPage('products')">المنتجات</button>
 <button class="light admin-entry" type="button" onclick="showRequestsPage()">الطلبات الجديدة <span id="serviceRequestCount" class="request-count" title="عدد الطلبات">0</span></button>
 <a class="btn light" href="https://wa.me/201004575343" target="_blank" rel="noopener">واتساب 01004575343</a>
-<button class="light" type="button" onclick="showPage('account')">حسابي / دخول العملاء</button><button class="light admin-entry" type="button" onclick="showAdmin()">إدارة المتجر</button>
+<button class="light" type="button" onclick="openMyOrders()">طلباتي</button><button class="light" type="button" onclick="checkoutCart()">إتمام الشراء</button><button class="light" type="button" onclick="showPage('account')">حسابي / دخول العملاء</button><button class="light admin-entry" type="button" onclick="showAdmin()">إدارة المتجر</button>
 </nav>
 </div>
 </header>
@@ -436,7 +436,7 @@ el('checkoutForm').addEventListener('submit',async e=>{
  btn.disabled=false;btn.textContent='تأكيد وإرسال الطلب';
  if(error){showMessage('checkoutMessage','تعذر إنشاء الطلب: '+error.message,'err');return}
  cart=[];renderCart();showMessage('checkoutMessage','تم تسجيل طلبك بنجاح. رقم الطلب: '+data+' — ستراجع الإدارة العنوان وتحدد رسوم التوصيل.');
- setTimeout(()=>{showPage('account');renderAccount();loadCustomerOrders()},900);
+ showPage('account');await renderAccount();await loadCustomerOrders();
 });
 el('repairForm').addEventListener('submit',async e=>{
  e.preventDefault();
@@ -457,6 +457,11 @@ el('repairForm').addEventListener('submit',async e=>{
  window.open('https://wa.me/201004575343?text='+encodeURIComponent(msg),'_blank');
  e.target.reset();
 });
+function openMyOrders(){
+ if(!currentUser){showPage('account');showMessage('customerLoginMessage','سجّل الدخول أولًا حتى تظهر طلباتك.','err');return;}
+ if(currentAdminRole){showPage('account');return;}
+ showPage('account');renderAccount();
+}
 function showPage(page){
  if((page==='admin'||page==='requests')&&currentUser&&!currentAdminRole){page='account';}
  document.querySelectorAll('.page').forEach(section=>section.classList.toggle('active',section.id===page));
