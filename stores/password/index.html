@@ -649,7 +649,7 @@ async function saveStorePaymentMethod(event,code){
  const {error}=await db.from('store_payment_methods').update({account_name:f.account_name.value.trim(),account_number:f.account_number.value.trim(),instructions:f.instructions.value.trim(),enabled:f.enabled.checked}).eq('code',code);
  if(error){alert('تعذر حفظ البيانات: '+error.message);return}alert('تم الحفظ.');await loadPaymentMethodsAdmin();
 }
-async async function showRequestsPage(){
+async function showRequestsPage(){
  if(!currentAdminRole){showPage(currentUser?'account':'admin');return;}
  showPage('requests');
  const content=el('newRequestsContent');
