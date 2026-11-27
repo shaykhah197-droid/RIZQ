@@ -417,8 +417,9 @@ async function loadCustomerOrders(){
   let actions='';
   if(o.status==='pending_review')actions+='<button class="danger" type="button" onclick="cancelCustomerStoreOrder(\''+o.id+'\')">إلغاء الطلب</button>';
   if(o.status==='awaiting_customer_confirmation')actions+='<button onclick="confirmStoreOrder('+JSON.stringify(o.id)+')">تأكيد الإجمالي</button>';
+  if(o.receipt_path)actions+='<button class="soft" type="button" onclick="openCustomerStoreReceipt('+JSON.stringify(o.receipt_path)+')">معاينة إيصال التحويل</button>';
   if(o.payment_method!=='cash'&&o.payment_status!=='paid'&&o.payment_status!=='under_review'&&(o.status==='pending_review'||o.status==='confirmed'))actions+='<button class="soft" onclick="uploadStoreReceipt('+JSON.stringify(o.id)+')">رفع / إعادة رفع إيصال التحويل</button>';
-  return '<div class="request"><b>طلب #'+escapeHTML(o.id)+'</b><div>الحالة: '+escapeHTML(o.status)+' · الدفع: '+escapeHTML(o.payment_status)+'</div><div>قيمة المنتجات: '+money(o.subtotal)+' · التوصيل: '+(o.delivery_fee===null?'بانتظار التحديد':money(o.delivery_fee))+' · الإجمالي: '+(o.total===null?'بانتظار التحديد':money(o.total))+'</div>'+actions+'</div>';
+  return '<div class="request"><b>طلب #'+escapeHTML(o.id)+'</b><div>الحالة: '+escapeHTML(o.status)+' · الدفع: '+escapeHTML(o.payment_status)+'</div><div>قيمة المنتجات: '+money(o.subtotal)+' · التوصيل: '+(o.delivery_fee===null?'يُحصّل عند الاستلام':money(o.delivery_fee))+' · الإجمالي: '+money(o.subtotal)+'</div>'+actions+'</div>';
  }).join('')||'لا توجد طلبات بعد.';
 }
 async function cancelCustomerStoreOrder(id){
@@ -554,6 +555,13 @@ async function setStoreOrderFee(id,fixed){
 async function reviewStorePayment(id,decision){
  const {error}=await db.rpc('admin_review_store_payment',{p_order_id:id,p_decision:decision});
  if(error){alert('تعذر تحديث الدفع: '+error.message);return}await loadStoreOrders();
+}
+async function openCustomerStoreReceipt(path){
+ if(!currentUser||currentAdminRole){alert('معاينة الإيصال متاحة لصاحب الطلب فقط.');return}
+ if(!path||!path.startsWith(currentUser.id+'/')){alert('الإيصال غير متاح لهذا الحساب.');return}
+ const {data,error}=await db.storage.from('payment-receipts').createSignedUrl(path,300);
+ if(error){alert('تعذر فتح معاينة الإيصال. تأكد من صلاحية الوصول إلى إيصال طلبك.');return}
+ window.open(data.signedUrl,'_blank','noopener');
 }
 async function openStoreReceipt(path){
  const {data,error}=await db.storage.from('payment-receipts').createSignedUrl(path,300);
