@@ -464,6 +464,7 @@ async function loadCustomerOrders(){
   if(o.receipt_path)actions+='<button class="soft" type="button" data-customer-receipt="'+escapeHTML(o.receipt_path)+'">معاينة إيصال التحويل</button>';
   return '<div class="request"><b>طلب #'+escapeHTML(o.id)+'</b><div>الحالة: '+escapeHTML(o.status)+' · الدفع: '+escapeHTML(o.payment_status)+'</div><div>قيمة المنتجات: '+money(o.subtotal)+' · التوصيل: '+(o.delivery_fee===null?'يُحصّل عند الاستلام':money(o.delivery_fee))+' · الإجمالي: '+money(o.subtotal)+'</div>'+actions+'</div>';
  }).join('')||'لا توجد طلبات بعد.';
+ box.innerHTML=rendered;
 }
 async function cancelCustomerStoreOrder(id){
  if(!confirm('هل أنت متأكد من إلغاء هذا الطلب؟ لا يمكن التراجع عن الإلغاء.'))return;
