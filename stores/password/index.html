@@ -273,20 +273,20 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <script>
 const SUPABASE_URL = 'https://avrluoclwkhhzbwxmupk.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_W9nD5Km-FBUkWHbxTMwkMg_jpw0vtHB';
-const AUTH_STORAGE_KEY='password-store-v3-auth';
-const LEGACY_AUTH_STORAGE_KEY='sb-avrluoclwkhhzbwxmupk-auth-token';
-const authStorage={
- getItem(key){return localStorage.getItem(key)||localStorage.getItem(LEGACY_AUTH_STORAGE_KEY);},
- setItem(key,value){localStorage.setItem(key,value);localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);},
- removeItem(key){localStorage.removeItem(key);localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);}
-};
+// Keep Supabase on its standard localStorage key. Migrate any session
+// saved by the previous custom-key version before initializing the client.
+const DEFAULT_AUTH_STORAGE_KEY='sb-avrluoclwkhhzbwxmupk-auth-token';
+const CUSTOM_AUTH_STORAGE_KEY='password-store-v3-auth';
+try{
+ if(!localStorage.getItem(DEFAULT_AUTH_STORAGE_KEY)&&localStorage.getItem(CUSTOM_AUTH_STORAGE_KEY)){
+  localStorage.setItem(DEFAULT_AUTH_STORAGE_KEY,localStorage.getItem(CUSTOM_AUTH_STORAGE_KEY));
+ }
+}catch(storageError){console.warn('تعذر ترحيل جلسة الدخول المحفوظة:',storageError);}
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
  auth: {
   persistSession: true,
   autoRefreshToken: true,
-  detectSessionInUrl: true,
-  storageKey: AUTH_STORAGE_KEY,
-  storage: authStorage
+  detectSessionInUrl: true
  }
 });
 let products = [];
@@ -533,6 +533,7 @@ function toggleCustomerAuth(mode){
  login.classList.toggle('hidden',mode!=='login');
 }
 function showPage(page){
+ if(page==='account'&&currentUser&&currentAdminRole)page='admin';
  if((page==='admin'||page==='requests')&&currentUser&&!currentAdminRole){page='account';}
  document.querySelectorAll('.page').forEach(section=>section.classList.toggle('active',section.id===page));
  window.scrollTo({top:0,behavior:'smooth'});
