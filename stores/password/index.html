@@ -598,7 +598,7 @@ async function loadStoreOrders(){
  const rendered=(data||[]).map(o=>{
   const items=(o.store_order_items||[]).map(i=>escapeHTML(i.product_name)+' × '+i.quantity+' ('+money(i.line_total)+')').join('، ');
   let buttons='';
-  if(o.payment_status==='under_review')buttons+='<button onclick="reviewStorePayment('+JSON.stringify(o.id)+',\'approved\')">اعتماد الدفع</button><button class="danger" onclick="reviewStorePayment('+JSON.stringify(o.id)+',\'rejected\')">رفض الإيصال</button>';
+  if(o.payment_status==='under_review')buttons+='<button type="button" data-review-payment="approved" data-order-id="'+escapeHTML(o.id)+'">اعتماد الدفع</button><button type="button" class="danger" data-review-payment="rejected" data-order-id="'+escapeHTML(o.id)+'">رفض الإيصال</button>';
   if(o.receipt_path)buttons+='<button class="soft" type="button" data-admin-receipt="'+escapeHTML(o.receipt_path)+'">عرض الإيصال</button>';
   return '<div class="request"><b>طلب #'+escapeHTML(o.id)+'</b><div>العميل: '+escapeHTML(o.customer_name)+' — '+escapeHTML(o.phone)+'</div><div>العنوان: '+escapeHTML(o.village||'')+' '+escapeHTML(o.address||'استلام من المتجر')+'</div><div>المنتجات: '+items+'</div><div>المنتجات: '+money(o.subtotal)+' · التوصيل: '+(o.delivery_type==='pickup'?'لا يوجد': 'يُحصّل عند الاستلام')+' · المبلغ المحوّل المطلوب: '+money(o.subtotal)+'</div><div>الطلب: '+escapeHTML(o.status)+' · الدفع: '+escapeHTML(o.payment_status)+'</div>'+buttons+'</div>';
  }).join('')||'لا توجد طلبات شراء.';
@@ -611,11 +611,29 @@ async function setStoreOrderFee(id,fixed){
  if(error){alert('تعذر حفظ الرسوم: '+error.message);return}await loadStoreOrders();
 }
 async function reviewStorePayment(id,decision){
- const {error}=await db.rpc('admin_review_store_payment',{p_order_id:id,p_decision:decision});
- if(error){alert('تعذر تحديث الدفع: '+error.message);return}await loadStoreOrders();if(document.getElementById('requests')?.classList.contains('active'))await showRequestsPage();
+ if(!currentAdminRole)throw new Error('يجب تسجيل الدخول بحساب المدير أولًا.');
+ if(!id||!['approved','rejected'].includes(decision))throw new Error('بيانات مراجعة الدفع غير صحيحة.');
+ const {data,error}=await db.rpc('admin_review_store_payment',{p_order_id:id,p_decision:decision});
+ if(error)throw error;
+ await loadStoreOrders();
+ if(el('requests')?.classList.contains('active'))await showRequestsPage();
+ showMessage('adminMessage',decision==='approved'?'تم اعتماد الدفع بنجاح.':'تم رفض الإيصال بنجاح.');
+ return data;
 }
 // Use delegated click handlers so receipt paths never become inline JavaScript.
 document.addEventListener('click',event=>{
+ const reviewButton=event.target.closest('[data-review-payment]');
+ if(reviewButton){
+  event.preventDefault();
+  if(reviewButton.disabled)return;
+  reviewButton.disabled=true;
+  const oldLabel=reviewButton.textContent;
+  reviewButton.textContent='جاري التنفيذ...';
+  reviewStorePayment(reviewButton.dataset.orderId,reviewButton.dataset.reviewPayment)
+   .catch(error=>{alert('تعذر تحديث الدفع: '+(error.message||'خطأ غير معروف'));})
+   .finally(()=>{reviewButton.disabled=false;reviewButton.textContent=oldLabel;});
+  return;
+ }
  const customerButton=event.target.closest('[data-customer-receipt]');
  if(customerButton){event.preventDefault();openCustomerStoreReceipt(customerButton.dataset.customerReceipt);return;}
  const adminButton=event.target.closest('[data-admin-receipt]');
@@ -677,7 +695,7 @@ async function showRequestsPage(){
   content.innerHTML=rows.length?rows.map(o=>{
    const items=(o.store_order_items||[]).map(i=>escapeHTML(i.product_name)+' × '+i.quantity+' ('+money(i.line_total)+')').join('، ');
    let buttons='';
-   if(o.payment_status==='under_review')buttons+='<button onclick="reviewStorePayment('+JSON.stringify(o.id)+',\'approved\')">اعتماد الدفع</button><button class="danger" onclick="reviewStorePayment('+JSON.stringify(o.id)+',\'rejected\')">رفض الإيصال</button>';
+   if(o.payment_status==='under_review')buttons+='<button type="button" data-review-payment="approved" data-order-id="'+escapeHTML(o.id)+'">اعتماد الدفع</button><button type="button" class="danger" data-review-payment="rejected" data-order-id="'+escapeHTML(o.id)+'">رفض الإيصال</button>';
    if(o.receipt_path)buttons+='<button class="soft" type="button" data-admin-receipt="'+escapeHTML(o.receipt_path)+'">عرض الإيصال</button>';
    return '<div class="request"><b>طلب شراء #'+escapeHTML(o.id)+'</b><div>العميل: '+escapeHTML(o.customer_name)+' — '+escapeHTML(o.phone)+'</div><div>العنوان: '+escapeHTML(o.village||'')+' '+escapeHTML(o.address||'استلام من المتجر')+'</div><div>المنتجات: '+items+'</div><div>قيمة المنتجات: '+money(o.subtotal)+' · التوصيل: '+(o.delivery_type==='pickup'?'لا يوجد':'يُحصّل عند الاستلام')+' · الإجمالي: '+money(o.total||o.subtotal)+'</div><div>حالة الطلب: '+escapeHTML(o.status)+' · حالة الدفع: '+escapeHTML(o.payment_status)+'</div><div class="actions">'+buttons+'</div></div>';
   }).join(''):'<div class="request">لا توجد طلبات شراء حتى الآن.</div>';
@@ -903,8 +921,9 @@ async function updateRequest(table,id){
  if(!status)return;
  if(!['new','contacted','completed','cancelled'].includes(status)){alert('الحالة غير صحيحة.');return}
  const {error}=await db.from(table).update({status}).eq('id',id);
- if(error){alert('تعذر تحديث الحالة.');return}
- await loadRequests();
+ if(error){alert('تعذر تحديث الحالة: '+error.message);return}
+ if(table==='service_requests'&&el('maintenanceRequests')?.classList.contains('active'))await showMaintenanceRequestsPage();
+ else await loadRequests();
 }
 db.auth.onAuthStateChange((event,session)=>{
  // INITIAL_SESSION is handled once by checkSession; ignore it to avoid racing getSession().
