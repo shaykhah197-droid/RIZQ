@@ -379,13 +379,16 @@ function isSupportedImage(file){
 function previewSelectedImage(file,img,container){
  if(!file||!isSupportedImage(file)){alert('اختار ملف صورة من المعرض بصيغة JPG أو PNG أو WebP أو GIF.');return false}
  if(file.size>5*1024*1024){alert('حجم الصورة يجب ألا يتجاوز 5 ميجابايت.');return false}
- try{
-  const objectUrl=URL.createObjectURL(file);
-  img.onload=()=>{container.classList.remove('hidden')};
-  img.onerror=()=>{container.classList.add('hidden');alert('صيغة الصورة غير مدعومة للمعاينة. افتح الصورة من المعرض واحفظ نسخة بصيغة JPG ثم اخترها.');URL.revokeObjectURL(objectUrl)};
-  img.src=objectUrl;
-  return true;
- }catch(err){console.error('Image preview error:',err);alert('تعذر فتح الصورة من المعرض. جرّب اختيار صورة أخرى.');return false}
+ container.classList.remove('hidden');
+ img.onload=()=>{img.dataset.previewFailed='false'};
+ img.onerror=()=>{
+  img.dataset.previewFailed='true';
+  img.removeAttribute('src');
+  container.classList.remove('hidden');
+  showMessage('adminMessage','تم اختيار الملف ('+(file.name||'صورة')+') لكن المتصفح لم يعرض المعاينة. الملف ما زال مختارًا؛ جرّب حفظ المنتج لاختبار الرفع.','err');
+ };
+ try{img.dataset.previewFailed='false';img.src=URL.createObjectURL(file);return true}
+ catch(err){console.error('Image preview error:',err);showMessage('adminMessage','تعذرت المعاينة، لكن الملف ما زال مختارًا ويمكن تجربة حفظه.','err');return true}
 }
 el('pImageFile').addEventListener('change',()=>{
  const file=el('pImageFile').files[0];if(!file){clearProductImage();return}
