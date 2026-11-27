@@ -273,12 +273,20 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <script>
 const SUPABASE_URL = 'https://avrluoclwkhhzbwxmupk.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_W9nD5Km-FBUkWHbxTMwkMg_jpw0vtHB';
+const AUTH_STORAGE_KEY='password-store-v3-auth';
+const LEGACY_AUTH_STORAGE_KEY='sb-avrluoclwkhhzbwxmupk-auth-token';
+const authStorage={
+ getItem(key){return localStorage.getItem(key)||localStorage.getItem(LEGACY_AUTH_STORAGE_KEY);},
+ setItem(key,value){localStorage.setItem(key,value);localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);},
+ removeItem(key){localStorage.removeItem(key);localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);}
+};
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
  auth: {
   persistSession: true,
   autoRefreshToken: true,
   detectSessionInUrl: true,
-  storageKey: 'password-store-v3-auth'
+  storageKey: AUTH_STORAGE_KEY,
+  storage: authStorage
  }
 });
 let products = [];
@@ -595,19 +603,47 @@ async function saveStorePaymentMethod(event,code){
  if(error){alert('تعذر حفظ البيانات: '+error.message);return}alert('تم الحفظ.');await loadPaymentMethodsAdmin();
 }
 async function showRequestsPage(){if(!currentAdminRole){showPage(currentUser?'account':'admin');return;}showPage('requests');const content=el('newRequestsContent');if(!currentUser){content.innerHTML='<div class="request">سجّل دخول المدير أولًا لعرض الطلبات.</div>';return;}content.innerHTML='<div class="request">جاري تحميل الطلبات...</div>';try{const {data,error}=await db.from('service_requests').select('*').order('created_at',{ascending:false});if(error)throw error;const rows=data||[];el('serviceRequestCount').textContent=String(rows.length);content.innerHTML=rows.length?rows.map(r=>'<div class="request"><b>'+escapeHTML(r.customer_name||'')+'</b> — '+escapeHTML(r.customer_phone||'')+'<div>'+escapeHTML(r.service_type||'')+' · '+escapeHTML(r.address||'')+'</div><p>'+escapeHTML(r.problem_description||'')+'</p><span class="status">'+escapeHTML(r.status||'new')+'</span><div class="actions"><button class="soft" onclick="updateRequest(\'service_requests\','+Number(r.id)+')">تحديث الحالة</button></div></div>').join(''):'<div class="request">لا توجد طلبات جديدة.</div>';}catch(error){content.innerHTML='<div class="request" style="color:#a52d2d">تعذر تحميل الطلبات: '+escapeHTML(error.message||'خطأ غير معروف')+'</div>';}}
-async function checkSession(){
- const {data}=await db.auth.getSession();
- currentUser=data.session?.user||null;
+let authRevision=0;
+async function applyAuthSession(session,event=''){
+ const revision=++authRevision;
+ currentUser=session?.user||null;
+ restoredDraftUserId=null;
  restoreShoppingDraft();
- await loadAdminRole();
- updateAdminView();
- if(currentUser&&currentAdminRole){await loadAdminData();adminTab('overview');}else{renderAccount();}
-}
-async function loadAdminRole(){
  currentAdminRole=null;
- if(!currentUser?.email)return;
- if(currentUser.email.toLowerCase()==='elbtawy.mahmoud@gmail.com'){currentAdminRole='full';}
- const {data,error}=await db.from('store_admins').select('role').eq('email',currentUser.email.toLowerCase()).maybeSingle();
+ updateAdminView();
+ if(event==='PASSWORD_RECOVERY'){
+  setTimeout(()=>{showPage('account');el('passwordRecoveryPanel')?.classList.remove('hidden');},0);
+ }
+ if(!currentUser){
+  renderAccount();
+  loadProducts();
+  return;
+ }
+ const user=currentUser;
+ await loadAdminRole(user);
+ if(revision!==authRevision||currentUser?.id!==user.id)return;
+ updateAdminView();
+ if(currentAdminRole){
+  await loadAdminData();
+  if(revision!==authRevision||currentUser?.id!==user.id)return;
+  await loadStoreMetrics();
+  if(currentAdminRole==='full')await loadStoreAdmins();
+ }else{
+  renderAccount();
+  loadProducts();
+  if(event==='PASSWORD_RECOVERY')el('passwordRecoveryPanel')?.classList.remove('hidden');
+ }
+}
+async function checkSession(){
+ const {data,error}=await db.auth.getSession();
+ if(error){showMessage('adminMessage','تعذر استعادة جلسة الدخول: '+error.message,'err');return;}
+ await applyAuthSession(data.session,'INITIAL_SESSION');
+}
+async function loadAdminRole(user=currentUser){
+ currentAdminRole=null;
+ if(!user?.email)return;
+ if(user.email.toLowerCase()==='elbtawy.mahmoud@gmail.com'){currentAdminRole='full';}
+ const {data,error}=await db.from('store_admins').select('role').eq('email',user.email.toLowerCase()).maybeSingle();
  if(!error&&data?.role)currentAdminRole=data.role;
 }
 function updateAdminView(){
@@ -625,7 +661,7 @@ el('loginForm').addEventListener('submit',async e=>{
  });
  btn.disabled=false;
  if(error){showMessage('adminMessage','تعذر تسجيل الدخول. تأكد من البريد وكلمة المرور.','err');return}
- currentUser=data.user;await loadAdminRole();updateAdminView();if(!currentAdminRole){await db.auth.signOut();currentUser=null;currentAdminRole=null;updateAdminView();showMessage('adminMessage','هذا الحساب غير مضاف كمدير للمتجر.','err');return;}await loadAdminData();if(currentAdminRole==='full')await loadStoreAdmins();adminTab('overview');
+ await applyAuthSession(data.session,'SIGNED_IN');if(!currentAdminRole){await db.auth.signOut();currentUser=null;currentAdminRole=null;updateAdminView();showMessage('adminMessage','هذا الحساب غير مضاف كمدير للمتجر.','err');return;}adminTab('overview');showPage('admin');
 });
 async function logout(){
  await db.auth.signOut();currentUser=null;updateAdminView();
@@ -764,8 +800,10 @@ async function updateRequest(table,id){
  await loadRequests();
 }
 db.auth.onAuthStateChange((event,session)=>{
- currentUser=session?.user||null;restoredDraftUserId=null;restoreShoppingDraft();currentAdminRole=null;updateAdminView();if(event==='PASSWORD_RECOVERY'){setTimeout(()=>{showPage('account');el('passwordRecoveryPanel')?.classList.remove('hidden');},0);}
- if(currentUser){loadAdminRole().then(()=>{updateAdminView();if(currentAdminRole){loadAdminData();loadStoreMetrics();if(currentAdminRole==='full')loadStoreAdmins();}else{renderAccount();loadProducts();if(event==='PASSWORD_RECOVERY')el('passwordRecoveryPanel')?.classList.remove('hidden');}});}else{renderAccount();loadProducts();}
+ // INITIAL_SESSION is handled once by checkSession; ignore it to avoid racing getSession().
+ if(event==='INITIAL_SESSION')return;
+ // Defer Supabase calls until after its auth callback has completed.
+ setTimeout(()=>{applyAuthSession(session,event);},0);
 });
 checkSession();
 loadProducts();
