@@ -28,6 +28,23 @@ as $$
   );
 $$;
 
+create or replace function public.is_full_store_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, auth
+as $
+  select coalesce(
+    lower((select email from auth.users where id = auth.uid())) = 'elbtawy.mahmoud@gmail.com'
+    or exists (
+      select 1 from public.store_admins a
+      where lower(a.email) = lower((select email from auth.users where id = auth.uid()))
+        and a.role = 'full'
+    ), false
+  );
+$;
+
 create table if not exists public.store_orders (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -77,8 +94,8 @@ drop policy if exists "admins read store admins" on public.store_admins;
 create policy "admins read store admins" on public.store_admins for select to authenticated using (public.is_store_admin());
 drop policy if exists "full admins manage store admins" on public.store_admins;
 create policy "full admins manage store admins" on public.store_admins for all to authenticated
-using (public.is_store_admin() and lower((select email from auth.users where id=auth.uid()))='elbtawy.mahmoud@gmail.com')
-with check (public.is_store_admin() and lower((select email from auth.users where id=auth.uid()))='elbtawy.mahmoud@gmail.com');
+using (public.is_full_store_admin())
+with check (public.is_full_store_admin());
 
 drop policy if exists "customers read own orders or admins read all" on public.store_orders;
 create policy "customers read own orders or admins read all" on public.store_orders for select to authenticated
@@ -182,3 +199,5 @@ using (bucket_id='order-receipts' and ((storage.foldername(name))[1]=auth.uid():
 grant select on public.store_orders, public.store_order_items, public.store_payment_methods, public.store_admins to authenticated;
 grant select on public.store_payment_methods to anon;
 grant update on public.store_orders to authenticated;
+grant insert, update, delete on public.store_admins to authenticated;
+grant insert, update, delete on public.store_payment_methods to authenticated;
