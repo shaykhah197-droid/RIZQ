@@ -387,7 +387,7 @@ el('customerLoginForm').addEventListener('submit',async e=>{
  if(currentAdminRole){showPage('admin');await loadAdminData();adminTab('overview')}
  else{showPage('account');renderAccount()}
 });
-async function customerLogout(){await db.auth.signOut();currentUser=null;currentAdminRole=null;updateAdminView();renderAccount()}
+async function customerLogout(){await db.auth.signOut();currentUser=null;currentAdminRole=null;updateAdminView();showPage('account');renderAccount()}
 async function loadCustomerOrders(){
  if(!currentUser||currentAdminRole)return;
  const box=el('customerOrders');box.textContent='جاري تحميل الطلبات...';
