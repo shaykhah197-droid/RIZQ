@@ -66,6 +66,8 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 @media(max-width:650px){.hero,.two{grid-template-columns:1fr}h1{font-size:25px}}
 /* Products page */
 .products-toolbar{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin:14px 0}.search-box{position:relative}.search-box input{padding-right:42px}.search-box:before{content:'⌕';position:absolute;right:14px;top:3px;font-size:25px;color:var(--muted)}.category-bar{display:flex;gap:8px;overflow:auto;padding:4px 0 12px;scrollbar-width:thin}.category-btn{white-space:nowrap;border:1px solid var(--line);background:#fff;color:var(--muted);padding:8px 14px;border-radius:30px;font-size:13px}.category-btn.active{background:var(--green);color:#fff;border-color:var(--green)}.products-count{font-size:12px;color:var(--muted);margin:0 0 10px}.product .pic{height:210px;background:linear-gradient(145deg,#f1f7f3,#e2eee6);position:relative;overflow:hidden}.product .pic img{width:100%;height:100%;object-fit:contain;padding:6px}.product-type{display:inline-block;font-size:11px;background:#eef5f0;color:var(--green);padding:4px 9px;border-radius:20px;margin-bottom:8px}.product .product-body{padding:15px}.product .product-body h3{font-size:16px}.product .price{font-size:20px;margin:6px 0}.product .actions{margin-top:12px}.product .actions button{min-height:42px}.product .details-btn{background:#eef5f0;color:var(--green)}.product .add-btn{background:var(--green);color:#fff}.product-detail{position:fixed;inset:0;background:#0009;z-index:50;display:grid;place-items:center;padding:16px}.product-detail-card{background:#fff;width:min(520px,100%);max-height:90vh;overflow:auto;border-radius:18px;padding:18px}.product-detail-card img{width:100%;height:340px;object-fit:contain;background:#f1f7f3;border-radius:12px;display:block}.detail-image-wrap{width:100%;background:#f1f7f3;border-radius:12px;overflow:hidden}.detail-gallery{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.detail-gallery img{width:100%;height:190px;object-fit:contain;background:#f1f7f3;border-radius:12px}.detail-gallery .detail-image-fallback{grid-column:1/-1}.detail-image-fallback{height:340px;display:grid;place-items:center;background:#f1f7f3;font-size:64px}.cart-strip{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#eef5f0;border:1px solid var(--line);border-radius:12px;padding:12px;margin:12px 0}.cart-line{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}.cart-line small{display:block;color:var(--muted)}.empty-products{grid-column:1/-1;text-align:center;padding:30px 15px;background:#f7faf8;border:1px dashed var(--line);border-radius:14px;color:var(--muted)}@media(max-width:900px){#productsGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:650px){.products-toolbar{grid-template-columns:1fr}#productsGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.product .pic{height:155px}.product .product-body{padding:10px}.product .product-body h3{font-size:14px}.product .price{font-size:17px}.product .product-body p{font-size:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.product .actions{gap:5px;flex-direction:column}.product .actions button{width:100%;padding:9px 6px;font-size:12px}.product-detail-card img,.detail-image-fallback{height:300px}}
+
+.admin-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:14px 0 18px}.admin-nav button{min-height:76px;border:1px solid #dce9e0;border-radius:14px;background:linear-gradient(145deg,#fff,#f0f7f2);color:#075b3e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px;font-size:14px;box-shadow:0 3px 10px #075b3e0b}.admin-nav button span{font-size:23px;line-height:1.2}.admin-nav button small{font-size:11px;font-weight:normal;color:#65756c}.admin-nav button.active{background:linear-gradient(135deg,#075b3e,#0b7950);color:#fff;border-color:#075b3e;box-shadow:0 5px 14px #075b3e30}.admin-nav button.active small{color:#e0f1e7}.admin-view{display:none;animation:adminFade .18s ease}.admin-view.active{display:block}.admin-section-card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:15px;margin:10px 0 14px}.admin-view h3{margin:8px 0 12px}.admin-topline{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0}.admin-quick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.admin-quick button{background:#eef5f0;color:var(--green);min-height:64px;border:1px solid var(--line)}@keyframes adminFade{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:none}}@media(min-width:700px){.admin-nav{grid-template-columns:repeat(4,minmax(0,1fr))}.admin-quick{grid-template-columns:repeat(4,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -197,8 +199,8 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 </form>
 </div>
 <div id="dashboard" class="hidden">
-<div class="notice">أنت داخل لوحة الإدارة. لا تشارك بيانات الدخول مع أي شخص.</div>
-<div id="adminManagement" class="panel hidden">
+<div class="notice">أهلًا بك في لوحة إدارة باسوورد. اختار القسم اللي عايز تشتغل عليه.</div><div class="admin-nav" id="adminNav"><button type="button" data-admin-tab="overview" onclick="adminTab('overview')"><span>🏠</span>الرئيسية<small>ملخص واختصارات</small></button><button type="button" data-admin-tab="products" onclick="adminTab('products')"><span>📦</span>المنتجات<small>إضافة وتعديل المنتجات</small></button><button type="button" data-admin-tab="requests" onclick="adminTab('requests')"><span>📋</span>الطلبات والاستفسارات<small>متابعة وتحديث الحالات</small></button><button type="button" data-admin-tab="admins" data-full-only="true" onclick="adminTab('admins')"><span>👥</span>إدارة المديرين<small>الصلاحيات والحسابات</small></button></div><div id="adminOverview" class="admin-view active"><div class="admin-section-card"><h3>لوحة التحكم</h3><p class="muted">كل أدوات الإدارة منظمة في أقسام مستقلة، من غير تمرير طويل.</p><div class="admin-quick"><button type="button" onclick="adminTab('products')">📦<br>إدارة المنتجات</button><button type="button" onclick="adminTab('requests')">📋<br>الطلبات والاستفسارات</button><button type="button" data-full-only="true" onclick="adminTab('admins')">👥<br>إدارة المديرين</button><button type="button" onclick="loadAdminData()">🔄<br>تحديث البيانات</button></div></div></div>
+<div id="adminManagement" class="panel admin-view hidden" data-admin-view="admins">
 <h3>👥 إدارة المديرين</h3>
 <p class="muted">اختر نوع الصلاحية قبل إضافة المدير. يجب أن يكون لديه حساب مسجل مسبقًا في المتجر.</p>
 <div class="grid">
@@ -211,7 +213,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <button class="soft" onclick="loadAdminData()">تحديث البيانات</button>
 <button class="danger" onclick="logout()">تسجيل الخروج</button>
 </div>
-<h3>إضافة أو تعديل منتج</h3>
+<div class="admin-view" data-admin-view="products"><div class="admin-section-card"><div class="admin-topline"><h3>📦 إضافة أو تعديل منتج</h3><button type="button" class="light" onclick="adminTab('overview')">العودة للأقسام</button></div>
 <form id="productForm">
 <input type="hidden" id="editId">
 <div class="two">
@@ -226,11 +228,8 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <label><input id="pAvailable" type="checkbox" checked style="width:auto"> متوفر للبيع</label>
 <button type="submit" id="saveProductButton">حفظ المنتج</button>
 <button type="button" class="soft" onclick="resetProductForm()">إلغاء التعديل</button>
-</form>
-<h3>طلبات الصيانة المنزلية</h3>
-<div id="serviceRequests">جاري التحميل...</div>
-<h3>استفسارات المنتجات</h3>
-<div id="productInquiries">جاري التحميل...</div>
+</form></div></div>
+<div class="admin-view" data-admin-view="requests"><div class="admin-section-card"><div class="admin-topline"><h3>📋 طلبات الصيانة المنزلية</h3><button type="button" class="light" onclick="adminTab('overview')">العودة للأقسام</button></div><div id="serviceRequests">جاري التحميل...</div></div><div class="admin-section-card"><h3>💬 استفسارات المنتجات</h3><div id="productInquiries">جاري التحميل...</div></div></div>
 </div>
 <div id="adminMessage" aria-live="polite"></div>
 </section>
@@ -344,14 +343,16 @@ function showPage(page){
  document.querySelectorAll('.page').forEach(section=>section.classList.toggle('active',section.id===page));
  window.scrollTo({top:0,behavior:'smooth'});
 }
-function showAdmin(){showPage('admin');}
+function showAdmin(){showPage('admin');adminTab('overview');}
+function adminTab(tab){const allowed=['overview','products','requests','admins'];if(!allowed.includes(tab))tab='overview';if(tab==='admins'&&currentAdminRole!=='full')tab='overview';document.querySelectorAll('[data-admin-view]').forEach(v=>v.classList.toggle('active',v.dataset.adminView===tab));document.querySelectorAll('#adminNav [data-admin-tab]').forEach(b=>b.classList.toggle('active',b.dataset.adminTab===tab));document.querySelectorAll('[data-full-only="true"]').forEach(b=>b.classList.toggle('hidden',currentAdminRole!=='full'));}
+
 async function showRequestsPage(){showPage('requests');const content=el('newRequestsContent');if(!currentUser){content.innerHTML='<div class="request">سجّل دخول المدير أولًا لعرض الطلبات.</div>';return;}content.innerHTML='<div class="request">جاري تحميل الطلبات...</div>';try{const {data,error}=await db.from('service_requests').select('*').order('created_at',{ascending:false});if(error)throw error;const rows=data||[];el('serviceRequestCount').textContent=String(rows.length);content.innerHTML=rows.length?rows.map(r=>'<div class="request"><b>'+escapeHTML(r.customer_name||'')+'</b> — '+escapeHTML(r.customer_phone||'')+'<div>'+escapeHTML(r.service_type||'')+' · '+escapeHTML(r.address||'')+'</div><p>'+escapeHTML(r.problem_description||'')+'</p><span class="status">'+escapeHTML(r.status||'new')+'</span><div class="actions"><button class="soft" onclick="updateRequest(\'service_requests\','+Number(r.id)+')">تحديث الحالة</button></div></div>').join(''):'<div class="request">لا توجد طلبات جديدة.</div>';}catch(error){content.innerHTML='<div class="request" style="color:#a52d2d">تعذر تحميل الطلبات: '+escapeHTML(error.message||'خطأ غير معروف')+'</div>';}}
 async function checkSession(){
  const {data}=await db.auth.getSession();
  currentUser=data.session?.user||null;
  await loadAdminRole();
  updateAdminView();
- if(currentUser&&currentAdminRole)await loadAdminData();
+ if(currentUser&&currentAdminRole){await loadAdminData();adminTab('overview');}
 }
 async function loadAdminRole(){
  currentAdminRole=null;
@@ -374,7 +375,7 @@ el('loginForm').addEventListener('submit',async e=>{
  });
  btn.disabled=false;
  if(error){showMessage('adminMessage','تعذر تسجيل الدخول. تأكد من البريد وكلمة المرور.','err');return}
- currentUser=data.user;await loadAdminRole();updateAdminView();if(!currentAdminRole){await db.auth.signOut();currentUser=null;currentAdminRole=null;updateAdminView();showMessage('adminMessage','هذا الحساب غير مضاف كمدير للمتجر.','err');return;}await loadAdminData();if(currentAdminRole==='full')await loadStoreAdmins();
+ currentUser=data.user;await loadAdminRole();updateAdminView();if(!currentAdminRole){await db.auth.signOut();currentUser=null;currentAdminRole=null;updateAdminView();showMessage('adminMessage','هذا الحساب غير مضاف كمدير للمتجر.','err');return;}await loadAdminData();if(currentAdminRole==='full')await loadStoreAdmins();adminTab('overview');
 });
 async function logout(){
  await db.auth.signOut();currentUser=null;updateAdminView();
@@ -446,8 +447,7 @@ async function editProduct(id){
  el('pImageUrl').value=p.image_url||'';
  el('imagePreview').textContent=p.image_url?'الصورة الحالية محفوظة.':'لم يتم اختيار صورة.';
  el('galleryPreview').textContent=Array.isArray(p.gallery_urls)&&p.gallery_urls.length?('الصور الإضافية الحالية: '+p.gallery_urls.length):'يمكنك اختيار أكثر من صورة.';
- showPage('admin');
- el('productForm').scrollIntoView({behavior:'smooth'});
+ showPage('admin');adminTab('products');
 }
 async function deleteProduct(id){
  if(currentAdminRole!=='full'&&!currentAdminRole)return;
