@@ -198,6 +198,15 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 </div>
 <div id="dashboard" class="hidden">
 <div class="notice">أنت داخل لوحة الإدارة. لا تشارك بيانات الدخول مع أي شخص.</div>
+<div id="adminManagement" class="panel hidden">
+<h3>👥 إدارة المديرين</h3>
+<p class="muted">اختر نوع الصلاحية قبل إضافة المدير. يجب أن يكون لديه حساب مسجل مسبقًا في المتجر.</p>
+<div class="grid">
+<div class="notice"><b>مدير بصلاحيات كاملة</b><p>إضافة وتعديل وحذف المنتجات، إدارة الطلبات والعملاء، وإضافة وإدارة المديرين.</p><form id="fullAdminForm"><label>بريد المدير</label><input id="fullAdminEmail" type="email" required placeholder="name@example.com"><button type="submit">إضافة مدير كامل</button></form></div>
+<div class="notice"><b>مدير بصلاحيات محدودة</b><p>إضافة وتعديل المنتجات ومتابعة الطلبات، دون حذف العملاء أو المديرين أو إدارة صلاحياتهم.</p><form id="limitedAdminForm"><label>بريد المدير</label><input id="limitedAdminEmail" type="email" required placeholder="name@example.com"><button type="submit" class="soft">إضافة مدير محدود</button></form></div>
+</div>
+<h3>المديرون الحاليون</h3><div id="storeAdminsList">جاري تحميل المديرين...</div>
+</div>
 <div class="actions">
 <button class="soft" onclick="loadAdminData()">تحديث البيانات</button>
 <button class="danger" onclick="logout()">تسجيل الخروج</button>
@@ -233,6 +242,7 @@ const SUPABASE_KEY = 'sb_publishable_W9nD5Km-FBUkWHbxTMwkMg_jpw0vtHB';
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let products = [];
 let currentUser = null;
+let currentAdminRole = null;
 function el(id){return document.getElementById(id)}
 function escapeHTML(value){
  return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -339,11 +349,21 @@ async function showRequestsPage(){showPage('requests');const content=el('newRequ
 async function checkSession(){
  const {data}=await db.auth.getSession();
  currentUser=data.session?.user||null;
+ await loadAdminRole();
  updateAdminView();
+ if(currentUser&&currentAdminRole)await loadAdminData();
+}
+async function loadAdminRole(){
+ currentAdminRole=null;
+ if(!currentUser?.email)return;
+ if(currentUser.email.toLowerCase()==='elbtawy.mahmoud@gmail.com'){currentAdminRole='full';}
+ const {data,error}=await db.from('store_admins').select('role').eq('email',currentUser.email.toLowerCase()).maybeSingle();
+ if(!error&&data?.role)currentAdminRole=data.role;
 }
 function updateAdminView(){
  el('loginArea').classList.toggle('hidden',!!currentUser);
- el('dashboard').classList.toggle('hidden',!currentUser);
+ el('dashboard').classList.toggle('hidden',!currentUser||!currentAdminRole);
+ el('adminManagement').classList.toggle('hidden',currentAdminRole!=='full');
 }
 el('loginForm').addEventListener('submit',async e=>{
  e.preventDefault();
@@ -354,7 +374,7 @@ el('loginForm').addEventListener('submit',async e=>{
  });
  btn.disabled=false;
  if(error){showMessage('adminMessage','تعذر تسجيل الدخول. تأكد من البريد وكلمة المرور.','err');return}
- currentUser=data.user;updateAdminView();await loadAdminData();
+ currentUser=data.user;await loadAdminRole();updateAdminView();if(!currentAdminRole){await db.auth.signOut();currentUser=null;currentAdminRole=null;updateAdminView();showMessage('adminMessage','هذا الحساب غير مضاف كمدير للمتجر.','err');return;}await loadAdminData();if(currentAdminRole==='full')await loadStoreAdmins();
 });
 async function logout(){
  await db.auth.signOut();currentUser=null;updateAdminView();
@@ -430,6 +450,7 @@ async function editProduct(id){
  el('productForm').scrollIntoView({behavior:'smooth'});
 }
 async function deleteProduct(id){
+ if(currentAdminRole!=='full'&&!currentAdminRole)return;
  if(!confirm('هل تريد حذف هذا المنتج نهائيًا؟'))return;
  const {error}=await db.from('products').delete().eq('id',Number(id));
  if(error){showMessage('adminMessage','تعذر حذف المنتج.','err');return}
@@ -460,6 +481,29 @@ async function loadRequests(){
  <p>${escapeHTML(r.notes||'')}</p><span class="status">${escapeHTML(r.status)}</span>
  <div class="actions"><button class="soft" onclick="updateRequest('product_inquiries',${Number(r.id)})">تحديث الحالة</button></div></div>`).join('')||'لا توجد استفسارات.';
 }
+async function loadStoreAdmins(){
+ const box=el('storeAdminsList');if(!box||currentAdminRole!=='full')return;
+ const {data,error}=await db.from('store_admins').select('email,role').order('email');
+ if(error){box.textContent='تعذر تحميل قائمة المديرين. يلزم إعداد صلاحيات قاعدة البيانات.';return;}
+ box.innerHTML=(data||[]).map(a=>'<div class="admin-product"><span>'+escapeHTML(a.email)+' — '+(a.role==='full'?'صلاحيات كاملة':'صلاحيات محدودة')+'</span><button class="danger" onclick="removeStoreAdmin(\''+escapeHTML(a.email)+'\')">إزالة المدير</button></div>').join('')||'لا يوجد مديرون إضافيون حاليًا.';
+}
+async function addStoreAdmin(email,role){
+ if(currentAdminRole!=='full')return;
+ const normalized=email.trim().toLowerCase();
+ if(!normalized){showMessage('adminMessage','اكتب البريد الإلكتروني.','err');return;}
+ if(normalized===currentUser.email.toLowerCase()){showMessage('adminMessage','لا يمكن تغيير صلاحية حسابك الأساسي من هنا.','err');return;}
+ const {error}=await db.from('store_admins').upsert({email:normalized,role},{onConflict:'email'});
+ if(error){showMessage('adminMessage','تعذرت إضافة المدير. تأكد أن الحساب موجود وأن إعدادات قاعدة البيانات اكتملت.','err');return;}
+ showMessage('adminMessage','تم حفظ صلاحيات المدير. يمكنه تسجيل الدخول ببريده وكلمة مروره.');await loadStoreAdmins();
+}
+async function removeStoreAdmin(email){
+ if(currentAdminRole!=='full'||!confirm('هل تريد إزالة صلاحية هذا المدير؟'))return;
+ const {error}=await db.from('store_admins').delete().eq('email',email);
+ if(error){showMessage('adminMessage','تعذر إزالة المدير.','err');return;}
+ await loadStoreAdmins();showMessage('adminMessage','تمت إزالة صلاحية المدير.');
+}
+el('fullAdminForm').addEventListener('submit',async e=>{e.preventDefault();await addStoreAdmin(el('fullAdminEmail').value,'full');e.target.reset();});
+el('limitedAdminForm').addEventListener('submit',async e=>{e.preventDefault();await addStoreAdmin(el('limitedAdminEmail').value,'limited');e.target.reset();});
 async function updateRequest(table,id){
  const status=prompt('اكتب الحالة الجديدة: new أو contacted أو completed أو cancelled','contacted');
  if(!status)return;
@@ -469,7 +513,7 @@ async function updateRequest(table,id){
  await loadRequests();
 }
 db.auth.onAuthStateChange((_event,session)=>{
- currentUser=session?.user||null;updateAdminView();
+ currentUser=session?.user||null;currentAdminRole=null;updateAdminView();if(currentUser){loadAdminRole().then(()=>{updateAdminView();if(currentAdminRole){loadAdminData();if(currentAdminRole==='full')loadStoreAdmins();}});}
 });
 checkSession();
 loadProducts();
