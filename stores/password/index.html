@@ -444,8 +444,16 @@ async function submitStoreReceiptFile(id,file){
  return true;
 }
 async function uploadStoreReceipt(id){
- const input=document.createElement('input');input.type='file';input.accept='image/jpeg,image/png,image/webp,application/pdf';
- input.onchange=async()=>{const file=input.files[0];if(!file)return;if(await submitStoreReceiptFile(id,file)){alert('تم إرسال الإيصال للمراجعة.');await loadCustomerOrders();}};
+ if(!currentUser||currentAdminRole){alert('سجّل الدخول بحساب العميل صاحب الطلب أولًا.');return;}
+ const input=document.createElement('input');
+ input.type='file';input.accept='image/jpeg,image/png,image/webp,application/pdf';
+ input.style.position='fixed';input.style.left='0';input.style.top='0';input.style.width='2px';input.style.height='2px';input.style.opacity='0.01';input.style.zIndex='2147483647';
+ document.body.appendChild(input);
+ input.addEventListener('change',async()=>{
+  const file=input.files&&input.files[0];input.remove();if(!file)return;
+  if(await submitStoreReceiptFile(id,file)){alert('تم إرسال الإيصال للمراجعة.');await loadCustomerOrders();}
+ });
+ input.addEventListener('cancel',()=>input.remove(),{once:true});
  input.click();
 }
 async function loadCheckoutMethods(){
