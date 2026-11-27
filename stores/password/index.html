@@ -404,6 +404,24 @@ el('pGalleryFiles').addEventListener('change',()=>{
  if(bad){alert(!isSupportedImage(bad)?'ملف غير مدعوم: '+(bad.name||'صورة')+'. اختار JPG أو PNG أو WebP أو GIF.':'حجم الصورة '+(bad.name||'')+' أكبر من 5 ميجابايت.');el('pGalleryFiles').value='';el('galleryPreview').textContent='';return}
  el('galleryPreview').textContent='تم اختيار '+files.length+' صور إضافية.';
 });
+async function uploadStoreImage(file){
+ const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+ const path=Date.now()+'-'+Math.random().toString(36).slice(2,9)+'.'+ext;
+ const contentType=({jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',bmp:'image/bmp'}[ext]||file.type||'application/octet-stream');
+ let lastError=null;
+ for(let attempt=0;attempt<2;attempt++){
+  try{
+   const result=await db.storage.from('product-images').upload(path,file,{upsert:false,contentType});
+   if(!result.error)return {path,url:db.storage.from('product-images').getPublicUrl(path).data.publicUrl};
+   lastError=result.error;
+   if(attempt===0)await new Promise(resolve=>setTimeout(resolve,700));
+  }catch(err){
+   lastError=err;
+   if(attempt===0)await new Promise(resolve=>setTimeout(resolve,700));
+  }
+ }
+ return {error:lastError||new Error('تعذر الاتصال بخدمة تخزين الصور')};
+}
 el('productForm').addEventListener('submit',async e=>{
  e.preventDefault();
  if(!currentUser)return;
@@ -413,19 +431,15 @@ el('productForm').addEventListener('submit',async e=>{
  let galleryUrls=[];
  const file=el('pImageFile').files[0];
  if(file){
-  const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
-  const path=Date.now()+'-'+Math.random().toString(36).slice(2,9)+'.'+ext;
-  const {error:uploadError}=await db.storage.from('product-images').upload(path,file,{upsert:false,contentType:({jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',bmp:'image/bmp'}[(file.name.split('.').pop()||'').toLowerCase()]||file.type||'application/octet-stream')});
-  if(uploadError){console.error('Main image upload error:',uploadError);saveBtn.disabled=false;saveBtn.textContent='حفظ المنتج';showMessage('adminMessage','فشل رفع الصورة: '+(uploadError.message||uploadError.error||'خطأ غير معروف')+' — كود: '+(uploadError.statusCode||uploadError.status||uploadError.code||'غير متاح'),'err');return}
-  const {data:urlData}=db.storage.from('product-images').getPublicUrl(path);imageUrl=urlData.publicUrl;
+  const uploaded=await uploadStoreImage(file);
+  if(uploaded.error){console.error('Main image upload error:',uploaded.error);saveBtn.disabled=false;saveBtn.textContent='حفظ المنتج';showMessage('adminMessage','فشل رفع الصورة: '+(uploaded.error.message||uploaded.error.error||'تعذر الاتصال بخدمة تخزين الصور')+' — راجع اتصال الإنترنت وحاول مرة أخرى.','err');return}
+  imageUrl=uploaded.url;
  }
  const galleryFiles=[...el('pGalleryFiles').files];
  for(const extra of galleryFiles){
-  const ext=(extra.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
-  const path=Date.now()+'-'+Math.random().toString(36).slice(2,9)+'.'+ext;
-  const {error:extraError}=await db.storage.from('product-images').upload(path,extra,{upsert:false,contentType:({jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',bmp:'image/bmp'}[(extra.name.split('.').pop()||'').toLowerCase()]||extra.type||'application/octet-stream')});
-  if(extraError){console.error('Gallery image upload error:',extraError);saveBtn.disabled=false;saveBtn.textContent='حفظ المنتج';showMessage('adminMessage','فشل رفع الصورة الإضافية: '+(extraError.message||extraError.error||'خطأ غير معروف')+' — كود: '+(extraError.statusCode||extraError.status||'غير متاح'),'err');return}
-  galleryUrls.push(db.storage.from('product-images').getPublicUrl(path).data.publicUrl);
+  const uploaded=await uploadStoreImage(extra);
+  if(uploaded.error){console.error('Gallery image upload error:',uploaded.error);saveBtn.disabled=false;saveBtn.textContent='حفظ المنتج';showMessage('adminMessage','فشل رفع الصورة الإضافية: '+(uploaded.error.message||uploaded.error.error||'تعذر الاتصال بخدمة تخزين الصور')+' — تعذر الاتصال بخدمة الصور بعد محاولتين. راجع الإنترنت وحاول مرة أخرى.','err');return}
+  galleryUrls.push(uploaded.url);
  }
  if(id){const existing=products.find(x=>Number(x.id)===Number(id));galleryUrls=[...(Array.isArray(existing?.gallery_urls)?existing.gallery_urls:[]),...galleryUrls]}
  const record={
