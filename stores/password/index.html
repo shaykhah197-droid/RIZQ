@@ -74,11 +74,11 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <a class="btn light" href="https://www.facebook.com/share/19pNFknDWo/" target="_blank" rel="noopener">صفحة فيسبوك</a>
 </div>
 <nav>
-<button class="light" onclick="showPage(\'home\')">الرئيسية</button>
-<button class="light" onclick="showPage(\'products\')">المنتجات</button>
-<button class="light" onclick="showPage(\'repair\')">طلب صيانة منزلية</button>
-<a class="btn light" href="https://wa.me/201004575343" target="_blank">واتساب 01004575343</a>
-<button class="light" onclick="showAdmin()">إدارة المتجر</button>
+<button class="light" type="button" onclick="showPage('home')">الرئيسية</button>
+<button class="light" type="button" onclick="showPage('products')">المنتجات</button>
+<button class="light" type="button" onclick="showPage('repair')">طلب صيانة منزلية</button>
+<a class="btn light" href="https://wa.me/201004575343" target="_blank" rel="noopener">واتساب 01004575343</a>
+<button class="light" type="button" onclick="showAdmin()">إدارة المتجر</button>
 </nav>
 </div>
 </header>
@@ -137,7 +137,10 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 
 <section id="products" class="panel page">
 <button class="light back-btn" type="button" onclick="showPage('home')">← الرئيسية</button>
+<div class="top" style="align-items:center">
 <div><h2>🛍️ اكتشف منتجات باسوورد</h2><p class="muted" style="margin:0">اختار المنتج المناسب ليك، وشوف تفاصيله أو ضيفه لسلة الطلبات.</p></div>
+<button type="button" class="soft" onclick="showAdmin()">＋ إضافة / إدارة المنتجات</button>
+</div>
 <div class="products-toolbar">
 <div class="search-box"><input id="productSearch" type="search" placeholder="ابحث عن اسم المنتج أو وصفه..." oninput="renderProducts()"></div>
 <button type="button" class="soft" onclick="toggleCart()">🛒 السلة <span id="cartCount">0</span></button>
