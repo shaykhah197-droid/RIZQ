@@ -418,7 +418,6 @@ async function loadCustomerOrders(){
   if(o.status==='pending_review')actions+='<button class="danger" type="button" onclick="cancelCustomerStoreOrder(\''+o.id+'\')">إلغاء الطلب</button>';
   if(o.status==='awaiting_customer_confirmation')actions+='<button onclick="confirmStoreOrder('+JSON.stringify(o.id)+')">تأكيد الإجمالي</button>';
   if(o.receipt_path)actions+='<button class="soft" type="button" onclick="openCustomerStoreReceipt('+JSON.stringify(o.receipt_path)+')">معاينة إيصال التحويل</button>';
-  if(o.payment_method!=='cash'&&o.payment_status!=='paid'&&o.payment_status!=='under_review'&&(o.status==='pending_review'||o.status==='confirmed'))actions+='<button class="soft" onclick="uploadStoreReceipt('+JSON.stringify(o.id)+')">رفع / إعادة رفع إيصال التحويل</button>';
   return '<div class="request"><b>طلب #'+escapeHTML(o.id)+'</b><div>الحالة: '+escapeHTML(o.status)+' · الدفع: '+escapeHTML(o.payment_status)+'</div><div>قيمة المنتجات: '+money(o.subtotal)+' · التوصيل: '+(o.delivery_fee===null?'يُحصّل عند الاستلام':money(o.delivery_fee))+' · الإجمالي: '+money(o.subtotal)+'</div>'+actions+'</div>';
  }).join('')||'لا توجد طلبات بعد.';
 }
@@ -438,23 +437,10 @@ async function submitStoreReceiptFile(id,file){
  const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
  const path=currentUser.id+'/'+id+'/'+Date.now()+'.'+ext;
  const {error:uploadError}=await db.storage.from('payment-receipts').upload(path,file,{upsert:false,contentType:file.type});
- if(uploadError){alert('تم إنشاء الطلب لكن تعذر رفع الإيصال: '+uploadError.message+' يمكنك إعادة رفعه من صفحة طلباتي.');return false}
+ if(uploadError){alert('تم إنشاء الطلب لكن تعذر رفع الإيصال: '+uploadError.message+' لا تعِد إنشاء الطلب.');return false}
  const {error}=await db.rpc('customer_submit_payment_receipt',{p_order_id:id,p_receipt_path:path});
- if(error){alert('تم رفع الصورة لكن تعذر إرسالها للمراجعة: '+error.message+' يمكنك المحاولة مرة أخرى من صفحة طلباتي.');return false}
+ if(error){alert('تم رفع الصورة لكن تعذر إرسالها للمراجعة: '+error.message+' لا تعِد إنشاء الطلب.');return false}
  return true;
-}
-async function uploadStoreReceipt(id){
- if(!currentUser||currentAdminRole){alert('سجّل الدخول بحساب العميل صاحب الطلب أولًا.');return;}
- const input=document.createElement('input');
- input.type='file';input.accept='image/jpeg,image/png,image/webp,application/pdf';
- input.style.position='fixed';input.style.left='0';input.style.top='0';input.style.width='2px';input.style.height='2px';input.style.opacity='0.01';input.style.zIndex='2147483647';
- document.body.appendChild(input);
- input.addEventListener('change',async()=>{
-  const file=input.files&&input.files[0];input.remove();if(!file)return;
-  if(await submitStoreReceiptFile(id,file)){alert('تم إرسال الإيصال للمراجعة.');await loadCustomerOrders();}
- });
- input.addEventListener('cancel',()=>input.remove(),{once:true});
- input.click();
 }
 async function loadCheckoutMethods(){
  const sel=el('paymentMethod');sel.innerHTML='<option value="cash">نقدًا عند الاستلام</option>';
@@ -487,7 +473,7 @@ el('checkoutForm').addEventListener('submit',async e=>{
  clearShoppingDraft();cart=[];renderCart();
  if(paymentMethod==='cash')showMessage('checkoutMessage','تم تسجيل طلبك بنجاح. رقم الطلب: '+data+' — الدفع نقدًا عند الاستلام، ورسوم التوصيل منفصلة.','success');
  else if(receiptOk)showMessage('checkoutMessage','تم إرسال الطلب وإيصال التحويل بنجاح. رقم الطلب: '+data+' — الدفع قيد مراجعة المدير، ورسوم التوصيل تُدفع عند الاستلام.','success');
- else showMessage('checkoutMessage','تم إنشاء الطلب رقم '+data+' لكن الإيصال لم يكتمل رفعه. افتح صفحة طلباتي واضغط إعادة رفع إيصال التحويل.','err');
+ else showMessage('checkoutMessage','تم إنشاء الطلب رقم '+data+' لكن تعذر إكمال إرسال الإيصال. لا تعِد إنشاء الطلب؛ تواصل مع الإدارة لمراجعة حالة الدفع.','err');
  el('paymentReceipt').value='';
  showPage('myOrders');await loadCustomerOrders();
 });
