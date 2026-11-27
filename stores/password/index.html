@@ -53,6 +53,7 @@ textarea{min-height:85px}
 footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 .admin-product,.request{border:1px solid var(--line);border-radius:10px;padding:12px;margin:8px 0}
 .admin-product{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.admin-detail-btn{background:#eef5f0;color:var(--green)}
 .status{display:inline-block;background:var(--mint);color:var(--green);padding:3px 9px;border-radius:20px;font-size:12px}
 .message{padding:10px;border-radius:9px;margin:10px 0;font-size:14px}
 .ok{background:#e8f4ed;color:#075b3e}
@@ -274,6 +275,11 @@ function showProductDetail(id){
  el('productDetail').classList.remove('hidden');
 }
 function closeProductDetail(){el('productDetail').classList.add('hidden')}
+function showAdminProductDetail(id){
+ const p=products.find(x=>Number(x.id)===Number(id));if(!p)return;
+ el('productDetail').innerHTML=`<div class="product-detail-card"><div class="top"><h2>تفاصيل المنتج</h2><button class="light" onclick="closeProductDetail()">✕ إغلاق</button></div>${p.image_url?`<img src="${escapeHTML(p.image_url)}" alt="${escapeHTML(p.name)}">`:`<div class="pic" style="border-radius:12px;margin-bottom:12px">${escapeHTML(p.icon||'💻')}</div>`}<h2>${escapeHTML(p.name)}</h2><div class="price">${money(p.price)}</div><p><b>حالة المنتج:</b> ${p.available?'متوفر للبيع':'غير متوفر للبيع'}</p><p><b>الوصف والتفاصيل:</b></p><p class="muted" style="white-space:pre-wrap">${escapeHTML(p.description||'لم تتم إضافة وصف لهذا المنتج.')}</p><p class="muted">رقم المنتج: ${Number(p.id)}</p><button class="soft" style="width:100%;margin-top:12px" onclick="closeProductDetail()">إغلاق التفاصيل</button></div>`;
+ el('productDetail').classList.remove('hidden');
+}
 function addToCart(id){const p=products.find(x=>Number(x.id)===Number(id));if(!p)return;const line=cart.find(x=>Number(x.id)===Number(id));if(line)line.quantity=Math.min(99,line.quantity+1);else cart.push({id:p.id,quantity:1});renderCart();alert('تمت إضافة المنتج إلى السلة.')}
 function renderCart(){
  const count=cart.reduce((n,x)=>n+x.quantity,0);if(el('cartCount'))el('cartCount').textContent=count;if(!el('cartItems'))return;
@@ -421,7 +427,7 @@ async function loadAdminData(){
  products=prod||[];
  el('adminProducts').innerHTML=products.map(p=>`
  <div class="admin-product"><div><b>${escapeHTML(p.name)}</b><div class="muted">${money(p.price)} · ${p.available?'متوفر':'غير متوفر'}</div></div>
- <div class="actions"><button class="soft" onclick="editProduct(${Number(p.id)})">تعديل</button><button class="danger" onclick="deleteProduct(${Number(p.id)})">حذف</button></div></div>`).join('')||'لا توجد منتجات.';
+ <div class="actions"><button class="admin-detail-btn" onclick="showAdminProductDetail(${Number(p.id)})">التفاصيل</button><button class="soft" onclick="editProduct(${Number(p.id)})">تعديل</button><button class="danger" onclick="deleteProduct(${Number(p.id)})">حذف</button></div></div>`).join('')||'لا توجد منتجات.';
  await loadProducts();
  await loadRequests();
 }
