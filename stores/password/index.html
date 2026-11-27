@@ -170,7 +170,8 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <button class="light back-btn" type="button" onclick="showPage('home')">← الرئيسية</button>
 <h2>👤 حساب العميل</h2>
 <div id="customerAuth" class="grid">
-<form id="customerSignupForm" class="admin-section-card">
+<div class="actions" style="grid-column:1/-1"><button type="button" class="soft" onclick="toggleCustomerAuth('signup')">إنشاء حساب</button><button type="button" class="light" onclick="toggleCustomerAuth('login')">تسجيل الدخول</button></div>
+<form id="customerSignupForm" class="admin-section-card hidden">
 <h3>إنشاء حساب جديد</h3><label>الاسم الثلاثي</label><input id="signupName" required maxlength="150">
 <label>البريد الإلكتروني</label><input id="signupEmail" type="email" required>
 <label>كلمة المرور</label><input id="signupPassword" type="password" minlength="8" required>
@@ -182,7 +183,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <label>كلمة المرور</label><input id="customerPassword" type="password" required>
 <button id="customerLoginButton" type="submit">دخول</button><div id="customerLoginMessage"></div><button class="light" type="button" onclick="sendPasswordReset()">نسيت كلمة المرور؟ استعادة كلمة المرور</button><div id="passwordResetMessage"></div>
 </form></div>
-<div id="customerAccount" class="hidden"><div id="customerWelcome" class="notice"></div><div id="passwordRecoveryPanel" class="notice hidden"><h3>تعيين كلمة مرور جديدة</h3><form id="passwordRecoveryForm"><label>كلمة المرور الجديدة</label><input id="newCustomerPassword" type="password" minlength="6" required><label>تأكيد كلمة المرور</label><input id="newCustomerPassword2" type="password" minlength="6" required><button type="submit">حفظ كلمة المرور الجديدة</button><div id="passwordRecoveryMessage"></div></form></div><div class="actions"><button type="button" onclick="showPage('products')">تصفح المنتجات</button><button type="button" class="soft" onclick="showPage('checkout')">إتمام الشراء / الدفع</button><button type="button" class="light" onclick="loadCustomerOrders()">تحديث طلباتي</button><button class="danger" type="button" onclick="customerLogout()">تسجيل الخروج</button></div><h3>طلباتي وحالة الدفع</h3><div id="customerOrders"></div></div>
+<div id="customerAccount" class="hidden"><div id="customerWelcome" class="notice"></div><div id="passwordRecoveryPanel" class="notice hidden"><h3>تعيين كلمة مرور جديدة</h3><form id="passwordRecoveryForm"><label>كلمة المرور الجديدة</label><input id="newCustomerPassword" type="password" minlength="6" required><label>تأكيد كلمة المرور</label><input id="newCustomerPassword2" type="password" minlength="6" required><button type="submit">حفظ كلمة المرور الجديدة</button><div id="passwordRecoveryMessage"></div></form></div><div class="actions"><button class="danger" type="button" onclick="customerLogout()">تسجيل الخروج</button></div><h3>طلباتي وحالة الدفع</h3><div id="customerOrders"></div></div>
 </section>
 <section id="checkout" class="panel page">
 <button class="light back-btn" type="button" onclick="showPage('products')">← العودة للمنتجات</button>
@@ -461,6 +462,12 @@ function openMyOrders(){
  if(!currentUser){showPage('account');showMessage('customerLoginMessage','سجّل الدخول أولًا حتى تظهر طلباتك.','err');return;}
  if(currentAdminRole){showPage('account');return;}
  showPage('account');renderAccount();
+}
+function toggleCustomerAuth(mode){
+ const signup=el('customerSignupForm'),login=el('customerLoginForm');
+ if(!signup||!login)return;
+ signup.classList.toggle('hidden',mode!=='signup');
+ login.classList.toggle('hidden',mode!=='login');
 }
 function showPage(page){
  if((page==='admin'||page==='requests')&&currentUser&&!currentAdminRole){page='account';}
