@@ -84,9 +84,9 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <nav>
 <button class="light" type="button" onclick="showPage('home')">الرئيسية</button>
 <button class="light" type="button" onclick="showPage('products')">المنتجات</button>
-<button class="light" type="button" onclick="showRequestsPage()">الطلبات الجديدة <span id="serviceRequestCount" class="request-count" title="عدد الطلبات">0</span></button>
+<button class="light admin-entry" type="button" onclick="showRequestsPage()">الطلبات الجديدة <span id="serviceRequestCount" class="request-count" title="عدد الطلبات">0</span></button>
 <a class="btn light" href="https://wa.me/201004575343" target="_blank" rel="noopener">واتساب 01004575343</a>
-<button class="light" type="button" onclick="showPage('account')">حسابي / دخول العملاء</button><button class="light" type="button" onclick="showAdmin()">إدارة المتجر</button>
+<button class="light" type="button" onclick="showPage('account')">حسابي / دخول العملاء</button><button class="light admin-entry" type="button" onclick="showAdmin()">إدارة المتجر</button>
 </nav>
 </div>
 </header>
@@ -144,7 +144,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <button class="light back-btn" type="button" onclick="showPage('home')">← الرئيسية</button>
 <div class="top" style="align-items:center">
 <div><h2>🛍️ اكتشف منتجات باسوورد</h2><p class="muted" style="margin:0">اختار المنتج المناسب ليك، وشوف تفاصيله أو ضيفه لسلة الطلبات.</p></div>
-<button type="button" class="soft" onclick="showAdmin()">＋ إضافة / إدارة المنتجات</button>
+<button type="button" class="soft admin-entry" onclick="showAdmin()">＋ إضافة / إدارة المنتجات</button>
 </div>
 <div class="products-toolbar">
 <div class="search-box"><input id="productSearch" type="search" placeholder="ابحث عن اسم المنتج أو وصفه..." oninput="productPage=1;renderProducts()"></div>
@@ -456,10 +456,11 @@ el('repairForm').addEventListener('submit',async e=>{
  e.target.reset();
 });
 function showPage(page){
+ if((page==='admin'||page==='requests')&&currentUser&&!currentAdminRole){page='account';}
  document.querySelectorAll('.page').forEach(section=>section.classList.toggle('active',section.id===page));
  window.scrollTo({top:0,behavior:'smooth'});
 }
-function showAdmin(){showPage('admin');adminTab('overview');}
+function showAdmin(){if(currentUser&&!currentAdminRole){showPage('account');return;}showPage('admin');adminTab('overview');}
 function adminTab(tab){const allowed=['overview','products','requests','orders','admins'];if(!allowed.includes(tab))tab='overview';if(tab==='admins'&&currentAdminRole!=='full')tab='overview';document.querySelectorAll('[data-admin-view]').forEach(v=>v.classList.toggle('active',v.dataset.adminView===tab));document.querySelectorAll('#adminNav [data-admin-tab]').forEach(b=>b.classList.toggle('active',b.dataset.adminTab===tab));document.querySelectorAll('[data-full-only="true"]').forEach(b=>b.classList.toggle('hidden',currentAdminRole!=='full'));}
 
 
@@ -503,7 +504,7 @@ async function saveStorePaymentMethod(event,code){
  const {error}=await db.from('store_payment_methods').update({account_name:f.account_name.value.trim(),account_number:f.account_number.value.trim(),instructions:f.instructions.value.trim(),enabled:f.enabled.checked}).eq('code',code);
  if(error){alert('تعذر حفظ البيانات: '+error.message);return}alert('تم الحفظ.');await loadPaymentMethodsAdmin();
 }
-async function showRequestsPage(){showPage('requests');const content=el('newRequestsContent');if(!currentUser){content.innerHTML='<div class="request">سجّل دخول المدير أولًا لعرض الطلبات.</div>';return;}content.innerHTML='<div class="request">جاري تحميل الطلبات...</div>';try{const {data,error}=await db.from('service_requests').select('*').order('created_at',{ascending:false});if(error)throw error;const rows=data||[];el('serviceRequestCount').textContent=String(rows.length);content.innerHTML=rows.length?rows.map(r=>'<div class="request"><b>'+escapeHTML(r.customer_name||'')+'</b> — '+escapeHTML(r.customer_phone||'')+'<div>'+escapeHTML(r.service_type||'')+' · '+escapeHTML(r.address||'')+'</div><p>'+escapeHTML(r.problem_description||'')+'</p><span class="status">'+escapeHTML(r.status||'new')+'</span><div class="actions"><button class="soft" onclick="updateRequest(\'service_requests\','+Number(r.id)+')">تحديث الحالة</button></div></div>').join(''):'<div class="request">لا توجد طلبات جديدة.</div>';}catch(error){content.innerHTML='<div class="request" style="color:#a52d2d">تعذر تحميل الطلبات: '+escapeHTML(error.message||'خطأ غير معروف')+'</div>';}}
+async function showRequestsPage(){if(!currentAdminRole){showPage(currentUser?'account':'admin');return;}showPage('requests');const content=el('newRequestsContent');if(!currentUser){content.innerHTML='<div class="request">سجّل دخول المدير أولًا لعرض الطلبات.</div>';return;}content.innerHTML='<div class="request">جاري تحميل الطلبات...</div>';try{const {data,error}=await db.from('service_requests').select('*').order('created_at',{ascending:false});if(error)throw error;const rows=data||[];el('serviceRequestCount').textContent=String(rows.length);content.innerHTML=rows.length?rows.map(r=>'<div class="request"><b>'+escapeHTML(r.customer_name||'')+'</b> — '+escapeHTML(r.customer_phone||'')+'<div>'+escapeHTML(r.service_type||'')+' · '+escapeHTML(r.address||'')+'</div><p>'+escapeHTML(r.problem_description||'')+'</p><span class="status">'+escapeHTML(r.status||'new')+'</span><div class="actions"><button class="soft" onclick="updateRequest(\'service_requests\','+Number(r.id)+')">تحديث الحالة</button></div></div>').join(''):'<div class="request">لا توجد طلبات جديدة.</div>';}catch(error){content.innerHTML='<div class="request" style="color:#a52d2d">تعذر تحميل الطلبات: '+escapeHTML(error.message||'خطأ غير معروف')+'</div>';}}
 async function checkSession(){
  const {data}=await db.auth.getSession();
  currentUser=data.session?.user||null;
@@ -519,9 +520,10 @@ async function loadAdminRole(){
  if(!error&&data?.role)currentAdminRole=data.role;
 }
 function updateAdminView(){
- el('loginArea').classList.toggle('hidden',!!currentAdminRole);
+ el('loginArea').classList.toggle('hidden',!!currentAdminRole||!!currentUser);
  el('dashboard').classList.toggle('hidden',!currentUser||!currentAdminRole);
  el('adminManagement').classList.toggle('hidden',currentAdminRole!=='full');
+ document.querySelectorAll('.admin-entry').forEach(b=>b.classList.toggle('hidden',!!currentUser&&!currentAdminRole));
 }
 el('loginForm').addEventListener('submit',async e=>{
  e.preventDefault();
