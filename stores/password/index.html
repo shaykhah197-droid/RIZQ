@@ -238,7 +238,7 @@ function showMessage(id,text,type='ok'){
 function money(value){return Number(value||0).toLocaleString('ar-EG')+' جنيه'}
 async function loadProducts(){
  const grid=el('productsGrid');grid.innerHTML='<p>جاري تحميل المنتجات...</p>';
- const {data,error}=await db.from('products').select('id,name,description,price,available,is_demo,icon,image_url,gallery_urls').eq('available',true).order('created_at',{ascending:false});
+ const {data,error}=await db.from('products').select('id,name,description,price,available,is_demo,image_url,gallery_urls').eq('available',true).order('created_at',{ascending:false});
  if(error){grid.innerHTML='<div class="empty-products">تعذر تحميل المنتجات حاليًا. حاول مرة أخرى لاحقًا.</div>';return}
  products=data||[];renderProducts();
 }
@@ -393,7 +393,6 @@ el('productForm').addEventListener('submit',async e=>{
  description:el('pDesc').value.trim(),
  image_url:imageUrl,
  gallery_urls:galleryUrls,
- icon:el('pIcon').value.trim()||'📦',
  available:el('pAvailable').checked,
  is_demo:false
  };
