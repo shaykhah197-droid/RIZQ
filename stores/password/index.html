@@ -395,10 +395,17 @@ async function loadCustomerOrders(){
  if(error){box.textContent='تعذر تحميل طلباتك.';return}
  box.innerHTML=(data||[]).map(o=>{
   let actions='';
+  if(o.status==='pending_review')actions+='<button class="danger" onclick="cancelCustomerStoreOrder('+JSON.stringify(o.id)+')">إلغاء الطلب</button>';
   if(o.status==='awaiting_customer_confirmation')actions+='<button onclick="confirmStoreOrder('+JSON.stringify(o.id)+')">تأكيد الإجمالي</button>';
   if(o.status==='confirmed'&&o.payment_method!=='cash'&&['awaiting_payment','receipt_rejected'].includes(o.payment_status))actions+='<button class="soft" onclick="uploadStoreReceipt('+JSON.stringify(o.id)+')">رفع إيصال التحويل</button>';
   return '<div class="request"><b>طلب #'+escapeHTML(o.id)+'</b><div>الحالة: '+escapeHTML(o.status)+' · الدفع: '+escapeHTML(o.payment_status)+'</div><div>قيمة المنتجات: '+money(o.subtotal)+' · التوصيل: '+(o.delivery_fee===null?'بانتظار التحديد':money(o.delivery_fee))+' · الإجمالي: '+(o.total===null?'بانتظار التحديد':money(o.total))+'</div>'+actions+'</div>';
  }).join('')||'لا توجد طلبات بعد.';
+}
+async function cancelCustomerStoreOrder(id){
+ if(!confirm('هل أنت متأكد من إلغاء هذا الطلب؟ لا يمكن التراجع عن الإلغاء.'))return;
+ const {error}=await db.rpc('customer_cancel_store_order',{p_order_id:id});
+ if(error){alert('تعذر إلغاء الطلب: '+(error.message||'حاول مرة أخرى.'));return}
+ alert('تم إرسال إلغاء الطلب بنجاح.');await loadCustomerOrders();
 }
 async function confirmStoreOrder(id){
  const {error}=await db.rpc('customer_confirm_store_order',{p_order_id:id});
