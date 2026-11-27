@@ -341,7 +341,7 @@ function checkoutCart(){
  if(!lines.length){alert('السلة فارغة.');return}
  if(!currentUser){showPage('account');renderAccount();showMessage('customerLoginMessage','سجّل الدخول أو أنشئ حسابًا أولًا لإتمام الشراء.','err');return}
  if(!currentUser.email_confirmed_at){showPage('account');showMessage('customerLoginMessage','أكد بريدك الإلكتروني من رسالة التفعيل أولًا.','err');return}
- el('orderName').value=currentUser.user_metadata?.full_name||'';
+ if(!el('orderName').value)el('orderName').value=currentUser.user_metadata?.full_name||'';
  el('checkoutSummary').innerHTML='<b>محتويات الطلب:</b><br>'+lines.map(x=>escapeHTML(x.product.name)+' × '+x.quantity+' — '+money(Number(x.product.price)*x.quantity)).join('<br>')+'<hr>الإجمالي التقريبي: '+money(lines.reduce((n,x)=>n+Number(x.product.price)*x.quantity,0))+'<br><small>رسوم التوصيل تُحدد بعد مراجعة العنوان، ثم تؤكد الإجمالي النهائي.</small>';
  loadCheckoutMethods();showPage('checkout');
 }
