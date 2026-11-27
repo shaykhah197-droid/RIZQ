@@ -18,6 +18,7 @@ header p{margin:5px 0;color:#d7eee2}
 nav,.actions,.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
 button,a.btn{border:0;border-radius:10px;padding:11px 15px;background:var(--green);color:white;font-weight:bold;text-decoration:none;cursor:pointer;font-size:14px}
 button.light,a.light{background:white;color:var(--green);border:1px solid var(--line)}
+body.admin-page-open #navMyOrders,body.admin-page-open #navCheckout{display:none!important}
 button.soft{background:var(--mint);color:var(--green)}
 button.danger{background:#a52d2d}
 button:disabled{opacity:.5;cursor:not-allowed}
@@ -86,7 +87,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <button class="light" type="button" onclick="showPage('products')">المنتجات</button>
 <button class="light admin-entry" type="button" onclick="showRequestsPage()">الطلبات الجديدة <span id="serviceRequestCount" class="request-count" title="عدد الطلبات">0</span></button>
 <a class="btn light" href="https://wa.me/201004575343" target="_blank" rel="noopener">واتساب 01004575343</a>
-<button class="light" type="button" onclick="openMyOrders()">طلباتي</button><button class="light" type="button" onclick="checkoutCart()">إتمام الشراء</button><button class="light" type="button" onclick="showPage('account')">حسابي / دخول العملاء</button><button class="light admin-entry" type="button" onclick="showAdmin()">إدارة المتجر</button>
+<button id="navMyOrders" class="light" type="button" onclick="openMyOrders()">طلباتي</button><button id="navCheckout" class="light" type="button" onclick="checkoutCart()">إتمام الشراء</button><button class="light" type="button" onclick="showPage('account')">حسابي / دخول العملاء</button><button class="light admin-entry" type="button" onclick="showAdmin()">إدارة المتجر</button>
 </nav>
 </div>
 </header>
@@ -234,7 +235,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 </form>
 </div>
 <div id="dashboard" class="hidden">
-<div class="notice">أهلًا بك في لوحة إدارة باسوورد. اختار القسم اللي عايز تشتغل عليه.</div><div class="admin-nav" id="adminNav"><button type="button" data-admin-tab="overview" onclick="adminTab('overview')"><span>📊</span>لوحة التحكم<small>ملخص وإحصائيات المتجر</small></button><button type="button" data-admin-tab="products" onclick="adminTab('products')"><span>📦</span>المنتجات<small>إضافة وتعديل المنتجات</small></button><button type="button" data-admin-tab="orders" onclick="adminTab('orders')"><span>🛒</span>طلبات الشراء<small>الطلبات والدفع</small></button><button type="button" data-admin-tab="payments" onclick="adminTab('payments')"><span>💳</span>طرق الدفع<small>أرقام إنستا باي والمحافظ</small></button><button type="button" data-admin-tab="requests" onclick="adminTab('requests')"><span>📋</span>الطلبات والاستفسارات<small>متابعة وتحديث الحالات</small></button><button type="button" data-admin-tab="admins" data-full-only="true" onclick="adminTab('admins')"><span>👥</span>إدارة المديرين<small>الصلاحيات والحسابات</small></button></div><div id="adminOverview" class="admin-view active"><div class="admin-section-card"><h3>📊 ملخص أداء المتجر</h3><p class="muted">هنا تتابع الأرقام والإحصائيات فقط. لإضافة المنتجات ومتابعة الطلبات وتعديل طرق الدفع، استخدم أقسام إدارة المتجر بالأعلى.</p><div id="storeMetrics" class="grid"><div class="notice">جاري تحميل الإحصائيات...</div></div><button class="light" type="button" onclick="loadStoreMetrics()">🔄 تحديث الإحصائيات</button></div></div>
+<div class="notice">أهلًا بك في لوحة إدارة باسوورد. اختار القسم اللي عايز تشتغل عليه.</div><div class="notice hidden" id="adminOrderAlert" role="status" aria-live="polite"></div><div class="actions"><button type="button" class="soft" id="enableOrderNotifications" onclick="enableOrderNotifications()">🔔 تفعيل إشعارات الطلبات</button></div><div class="admin-nav" id="adminNav"><button type="button" data-admin-tab="overview" onclick="adminTab('overview')"><span>📊</span>لوحة التحكم<small>ملخص وإحصائيات المتجر</small></button><button type="button" data-admin-tab="products" onclick="adminTab('products')"><span>📦</span>المنتجات<small>إضافة وتعديل المنتجات</small></button><button type="button" data-admin-tab="orders" onclick="adminTab('orders')"><span>🛒</span>طلبات الشراء <span id="storeOrderCount" class="request-count hidden">0</span><small>الطلبات والدفع</small></button><button type="button" data-admin-tab="payments" onclick="adminTab('payments')"><span>💳</span>طرق الدفع<small>أرقام إنستا باي والمحافظ</small></button><button type="button" data-admin-tab="requests" onclick="adminTab('requests')"><span>📋</span>الطلبات والاستفسارات<small>متابعة وتحديث الحالات</small></button><button type="button" data-admin-tab="admins" data-full-only="true" onclick="adminTab('admins')"><span>👥</span>إدارة المديرين<small>الصلاحيات والحسابات</small></button></div><div id="adminOverview" class="admin-view active"><div class="admin-section-card"><h3>📊 ملخص أداء المتجر</h3><p class="muted">هنا تتابع الأرقام والإحصائيات فقط. لإضافة المنتجات ومتابعة الطلبات وتعديل طرق الدفع، استخدم أقسام إدارة المتجر بالأعلى.</p><div id="storeMetrics" class="grid"><div class="notice">جاري تحميل الإحصائيات...</div></div><button class="light" type="button" onclick="loadStoreMetrics()">🔄 تحديث الإحصائيات</button></div></div>
 <div id="adminManagement" class="panel admin-view hidden" data-admin-view="admins">
 <h3>👥 إدارة المديرين</h3>
 <p class="muted">اختر نوع الصلاحية قبل إضافة المدير. يجب أن يكون لديه حساب مسجل مسبقًا في المتجر.</p>
@@ -422,7 +423,7 @@ async function changeCustomerPassword(){
  el('profileCurrentPassword').value='';el('profileNewPassword').value='';el('profileConfirmPassword').value='';
  showMessage('profilePasswordMessage','تم تغيير كلمة المرور بنجاح.','success');
 }
-async function customerLogout(){await db.auth.signOut();currentUser=null;currentAdminRole=null;updateAdminView();showPage('account');renderAccount()}
+async function customerLogout(){stopStoreOrderWatcher();document.body.classList.remove('admin-page-open');await db.auth.signOut();currentUser=null;currentAdminRole=null;updateAdminView();showPage('account');renderAccount()}
 async function loadCustomerOrders(){
  if(!currentUser||currentAdminRole)return;
  const box=el('customerOrders');box.textContent='جاري تحميل الطلبات...';
@@ -535,14 +536,56 @@ function toggleCustomerAuth(mode){
 function showPage(page){
  if(page==='account'&&currentUser&&currentAdminRole)page='admin';
  if((page==='admin'||page==='requests')&&currentUser&&!currentAdminRole){page='account';}
+ document.body.classList.toggle('admin-page-open',page==='admin'&&!!currentAdminRole);
  document.querySelectorAll('.page').forEach(section=>section.classList.toggle('active',section.id===page));
  window.scrollTo({top:0,behavior:'smooth'});
 }
 function showAdmin(){if(currentUser&&!currentAdminRole){showPage('account');return;}showPage('admin');adminTab('overview');loadStoreMetrics();}
-function adminTab(tab){const allowed=['overview','products','requests','orders','payments','admins'];if(!allowed.includes(tab))tab='overview';if(tab==='admins'&&currentAdminRole!=='full')tab='overview';document.querySelectorAll('[data-admin-view]').forEach(v=>v.classList.toggle('active',v.dataset.adminView===tab));document.querySelectorAll('#adminNav [data-admin-tab]').forEach(b=>b.classList.toggle('active',b.dataset.adminTab===tab));document.querySelectorAll('[data-full-only="true"]').forEach(b=>b.classList.toggle('hidden',currentAdminRole!=='full'));}
+function adminTab(tab){const allowed=['overview','products','requests','orders','payments','admins'];if(!allowed.includes(tab))tab='overview';if(tab==='admins'&&currentAdminRole!=='full')tab='overview';document.querySelectorAll('[data-admin-view]').forEach(v=>v.classList.toggle('active',v.dataset.adminView===tab));document.querySelectorAll('#adminNav [data-admin-tab]').forEach(b=>b.classList.toggle('active',b.dataset.adminTab===tab));document.querySelectorAll('[data-full-only="true"]').forEach(b=>b.classList.toggle('hidden',currentAdminRole!=='full'));if(tab==='orders')loadStoreOrders();}
 
 
 async function loadStoreMetrics(){if(!currentAdminRole)return;const box=el('storeMetrics');if(!box)return;box.innerHTML='<div class="notice">جاري تحميل الإحصائيات...</div>';const {data,error}=await db.rpc('admin_password_store_metrics');if(error){box.innerHTML='<div class="notice">إحصائيات المتجر تحتاج تجهيز قاعدة البيانات في الخطوة التالية.</div>';return;}const m=data||{};box.innerHTML=[['العملاء المسجلون',m.customers||0],['مشاهدات المنتجات',m.product_views||0],['قيمة المبيعات المؤكدة',money(m.confirmed_sales||0)],['المبالغ المحصلة',money(m.collected_sales||0)]].map(x=>'<div class="notice"><b>'+x[0]+'</b><h2>'+x[1]+'</h2></div>').join('');}
+let storeOrderWatchTimer=null;
+let storeOrderWatchInitialized=false;
+let knownUnreviewedPaidOrders=new Set();
+function updateStoreOrderBadge(count){
+ const badge=el('storeOrderCount');if(!badge)return;
+ badge.textContent=String(count);badge.classList.toggle('hidden',!count);
+ const alert=el('adminOrderAlert');
+ if(alert){alert.classList.toggle('hidden',!count);alert.textContent=count?'🔔 يوجد '+count+' طلب شراء جديد بانتظار مراجعة إيصال الدفع. افتح «طلبات الشراء» لمراجعته.':'لا توجد إيصالات دفع جديدة بانتظار المراجعة.';}
+}
+async function checkNewPaidStoreOrders(){
+ if(!currentAdminRole)return;
+ const {data,error}=await db.from('store_orders').select('id,payment_status,receipt_path,created_at').eq('payment_status','under_review').not('receipt_path','is',null).order('created_at',{ascending:false});
+ if(error){console.warn('تعذر فحص طلبات الشراء الجديدة:',error.message);return;}
+ const rows=data||[],nowIds=new Set(rows.map(o=>o.id));
+ updateStoreOrderBadge(rows.length);
+ if(!storeOrderWatchInitialized){knownUnreviewedPaidOrders=nowIds;storeOrderWatchInitialized=true;return;}
+ const fresh=rows.filter(o=>!knownUnreviewedPaidOrders.has(o.id));
+ knownUnreviewedPaidOrders=nowIds;
+ if(fresh.length){
+  const msg='وصلك '+fresh.length+' طلب شراء جديد مع إيصال دفع للمراجعة.';
+  if('Notification'in window&&Notification.permission==='granted')new Notification('باسوورد - طلب شراء جديد',{body:msg});
+  if(document.visibilityState==='visible')showMessage('adminMessage',msg,'success');
+  if(document.querySelector('[data-admin-view="orders"]')?.classList.contains('active'))await loadStoreOrders();
+ }
+}
+function startStoreOrderWatcher(){
+ if(storeOrderWatchTimer)clearInterval(storeOrderWatchTimer);
+ storeOrderWatchInitialized=false;knownUnreviewedPaidOrders=new Set();
+ checkNewPaidStoreOrders();storeOrderWatchTimer=setInterval(checkNewPaidStoreOrders,20000);
+}
+function stopStoreOrderWatcher(){
+ if(storeOrderWatchTimer)clearInterval(storeOrderWatchTimer);
+ storeOrderWatchTimer=null;storeOrderWatchInitialized=false;knownUnreviewedPaidOrders=new Set();updateStoreOrderBadge(0);
+}
+async function enableOrderNotifications(){
+ if(!('Notification'in window)){alert('المتصفح لا يدعم إشعارات الويب.');return;}
+ const permission=await Notification.requestPermission();
+ const btn=el('enableOrderNotifications');
+ if(btn)btn.textContent=permission==='granted'?'✅ تم تفعيل الإشعارات أثناء فتح الموقع':'🔔 لم يتم السماح بالإشعارات';
+ if(permission==='granted')new Notification('باسوورد',{body:'تم تفعيل إشعارات الطلبات أثناء فتح لوحة المدير.'});
+}
 async function loadStoreOrders(){
  if(!currentAdminRole)return;
  const box=el('storeOrdersAdmin');if(!box)return;box.textContent='جاري تحميل الطلبات...';
@@ -616,6 +659,7 @@ async function applyAuthSession(session,event=''){
   setTimeout(()=>{showPage('account');el('passwordRecoveryPanel')?.classList.remove('hidden');},0);
  }
  if(!currentUser){
+  stopStoreOrderWatcher();document.body.classList.remove('admin-page-open');
   renderAccount();
   loadProducts();
   return;
@@ -625,6 +669,7 @@ async function applyAuthSession(session,event=''){
  if(revision!==authRevision||currentUser?.id!==user.id)return;
  updateAdminView();
  if(currentAdminRole){
+  startStoreOrderWatcher();
   await loadAdminData();
   if(revision!==authRevision||currentUser?.id!==user.id)return;
   await loadStoreMetrics();
@@ -665,6 +710,7 @@ el('loginForm').addEventListener('submit',async e=>{
  await applyAuthSession(data.session,'SIGNED_IN');if(!currentAdminRole){await db.auth.signOut();currentUser=null;currentAdminRole=null;updateAdminView();showMessage('adminMessage','هذا الحساب غير مضاف كمدير للمتجر.','err');return;}adminTab('overview');showPage('admin');
 });
 async function logout(){
+ stopStoreOrderWatcher();document.body.classList.remove('admin-page-open');
  await db.auth.signOut();currentUser=null;updateAdminView();
  showMessage('adminMessage','تم تسجيل الخروج.');
 }
