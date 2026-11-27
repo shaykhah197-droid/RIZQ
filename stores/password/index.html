@@ -394,8 +394,8 @@ el('productForm').addEventListener('submit',async e=>{
  if(file){
   const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
   const path=Date.now()+'-'+Math.random().toString(36).slice(2,9)+'.'+ext;
-  const {error:uploadError}=await db.storage.from('product-images').upload(path,file,{upsert:false,contentType:file.type});
-  if(uploadError){saveBtn.disabled=false;saveBtn.textContent='حفظ المنتج';showMessage('adminMessage','تعذر رفع الصورة. تأكد من إعداد مساحة صور المنتجات في Supabase ثم حاول مرة أخرى.','err');return}
+  const {error:uploadError}=await db.storage.from('product-images').upload(path,file,{upsert:false,contentType:file.type||'image/jpeg'});
+  if(uploadError){console.error('Main image upload error:',uploadError);saveBtn.disabled=false;saveBtn.textContent='حفظ المنتج';showMessage('adminMessage','فشل رفع الصورة: '+(uploadError.message||uploadError.error||'خطأ غير معروف')+' — كود: '+(uploadError.statusCode||uploadError.status||uploadError.code||'غير متاح'),'err');return}
   const {data:urlData}=db.storage.from('product-images').getPublicUrl(path);imageUrl=urlData.publicUrl;
  }
  const galleryFiles=[...el('pGalleryFiles').files];
