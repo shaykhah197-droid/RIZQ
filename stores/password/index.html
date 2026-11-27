@@ -235,7 +235,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 </form>
 </div>
 <div id="dashboard" class="hidden">
-<div class="notice">أهلًا بك في لوحة إدارة باسوورد. اختار القسم اللي عايز تشتغل عليه.</div><div class="notice hidden" id="adminOrderAlert" role="status" aria-live="polite"></div><div class="actions"><button type="button" class="soft" id="enableOrderNotifications" onclick="enableOrderNotifications()">🔔 تفعيل إشعارات الطلبات</button></div><div class="admin-nav" id="adminNav"><button type="button" data-admin-tab="overview" onclick="adminTab('overview')"><span>📊</span>لوحة التحكم<small>ملخص وإحصائيات المتجر</small></button><button type="button" data-admin-tab="products" onclick="adminTab('products')"><span>📦</span>المنتجات<small>إضافة وتعديل المنتجات</small></button><button type="button" data-admin-tab="orders" onclick="adminTab('orders')"><span>🛒</span>طلبات الشراء <span id="storeOrderCount" class="request-count hidden">0</span><small>الطلبات والدفع</small></button><button type="button" data-admin-tab="payments" onclick="adminTab('payments')"><span>💳</span>طرق الدفع<small>أرقام إنستا باي والمحافظ</small></button><button type="button" data-admin-tab="requests" onclick="adminTab('requests')"><span>📋</span>الطلبات والاستفسارات<small>متابعة وتحديث الحالات</small></button><button type="button" data-admin-tab="admins" data-full-only="true" onclick="adminTab('admins')"><span>👥</span>إدارة المديرين<small>الصلاحيات والحسابات</small></button></div><div id="adminOverview" class="admin-view active"><div class="admin-section-card"><h3>📊 ملخص أداء المتجر</h3><p class="muted">هنا تتابع الأرقام والإحصائيات فقط. لإضافة المنتجات ومتابعة الطلبات وتعديل طرق الدفع، استخدم أقسام إدارة المتجر بالأعلى.</p><div id="storeMetrics" class="grid"><div class="notice">جاري تحميل الإحصائيات...</div></div><button class="light" type="button" onclick="loadStoreMetrics()">🔄 تحديث الإحصائيات</button></div></div>
+<div class="notice">أهلًا بك في لوحة إدارة باسوورد. اختار القسم اللي عايز تشتغل عليه.</div><div class="notice hidden" id="adminOrderAlert" role="status" aria-live="polite"></div><div class="actions"><button type="button" class="soft" id="enableOrderNotifications" onclick="enableOrderNotifications()">🔔 تفعيل إشعارات الطلبات</button></div><div class="admin-nav" id="adminNav"><button type="button" data-admin-tab="overview" onclick="adminTab('overview')"><span>📊</span>لوحة التحكم<small>ملخص وإحصائيات المتجر</small></button><button type="button" data-admin-tab="products" onclick="adminTab('products')"><span>📦</span>المنتجات<small>إضافة وتعديل المنتجات</small></button><button type="button" data-admin-tab="orders" onclick="adminTab('orders')"><span>🛒</span>طلبات الشراء <span id="storeOrderCount" class="request-count hidden">0</span><small>الطلبات والدفع</small></button><button type="button" data-admin-tab="neworders" onclick="adminTab('neworders')"><span>🆕</span>الطلبات الجديدة <span id="newStoreOrderCount" class="request-count hidden">0</span><small>كل طلبات العملاء الواردة</small></button><button type="button" data-admin-tab="payments" onclick="adminTab('payments')"><span>💳</span>طرق الدفع<small>أرقام إنستا باي والمحافظ</small></button><button type="button" data-admin-tab="requests" onclick="adminTab('requests')"><span>📋</span>الطلبات والاستفسارات<small>متابعة وتحديث الحالات</small></button><button type="button" data-admin-tab="admins" data-full-only="true" onclick="adminTab('admins')"><span>👥</span>إدارة المديرين<small>الصلاحيات والحسابات</small></button></div><div id="adminOverview" class="admin-view active"><div class="admin-section-card"><h3>📊 ملخص أداء المتجر</h3><p class="muted">هنا تتابع الأرقام والإحصائيات فقط. لإضافة المنتجات ومتابعة الطلبات وتعديل طرق الدفع، استخدم أقسام إدارة المتجر بالأعلى.</p><div id="storeMetrics" class="grid"><div class="notice">جاري تحميل الإحصائيات...</div></div><button class="light" type="button" onclick="loadStoreMetrics()">🔄 تحديث الإحصائيات</button></div></div>
 <div id="adminManagement" class="panel admin-view hidden" data-admin-view="admins">
 <h3>👥 إدارة المديرين</h3>
 <p class="muted">اختر نوع الصلاحية قبل إضافة المدير. يجب أن يكون لديه حساب مسجل مسبقًا في المتجر.</p>
@@ -265,7 +265,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <button type="submit" id="saveProductButton">حفظ المنتج</button>
 <button type="button" class="soft" onclick="resetProductForm()">إلغاء التعديل</button>
 </form></div></div>
-<div class="admin-view" data-admin-view="orders"><div class="admin-section-card"><h3>طلبات الشراء</h3><div id="storeOrdersAdmin">جاري التحميل...</div></div></div><div class="admin-view" data-admin-view="payments"><div class="admin-section-card"><h3>💳 بيانات استقبال المدفوعات</h3><p class="muted">اكتب بيانات كل وسيلة دفع وفعّل الوسائل التي تريد إظهارها للعملاء.</p><div id="paymentMethodsAdmin">جاري التحميل...</div></div></div><div class="admin-view" data-admin-view="requests"><div class="admin-section-card"><div class="admin-topline"><h3>📋 طلبات الصيانة المنزلية</h3><button type="button" class="light" onclick="adminTab('overview')">العودة للأقسام</button></div><div id="serviceRequests">جاري التحميل...</div></div><div class="admin-section-card"><h3>💬 استفسارات المنتجات</h3><div id="productInquiries">جاري التحميل...</div></div></div>
+<div class="admin-view" data-admin-view="orders"><div class="admin-section-card"><h3>طلبات الشراء</h3><div id="storeOrdersAdmin">جاري التحميل...</div></div></div><div class="admin-view" data-admin-view="neworders"><div class="admin-section-card"><div class="admin-topline"><h3>🆕 كل طلبات الشراء الجديدة</h3><button type="button" class="light" onclick="loadStoreOrders()">🔄 تحديث الطلبات</button></div><p class="muted">يعرض هذا القسم كل طلبات العملاء الواردة، سواء كان إيصال الدفع مرفوعًا أو لم يُرفع بعد، مع حالة كل طلب.</p><div id="newStoreOrdersAdmin">جاري تحميل الطلبات...</div></div></div><div class="admin-view" data-admin-view="payments"><div class="admin-section-card"><h3>💳 بيانات استقبال المدفوعات</h3><p class="muted">اكتب بيانات كل وسيلة دفع وفعّل الوسائل التي تريد إظهارها للعملاء.</p><div id="paymentMethodsAdmin">جاري التحميل...</div></div></div><div class="admin-view" data-admin-view="requests"><div class="admin-section-card"><div class="admin-topline"><h3>📋 طلبات الصيانة المنزلية</h3><button type="button" class="light" onclick="adminTab('overview')">العودة للأقسام</button></div><div id="serviceRequests">جاري التحميل...</div></div><div class="admin-section-card"><h3>💬 استفسارات المنتجات</h3><div id="productInquiries">جاري التحميل...</div></div></div>
 </div>
 <div id="adminMessage" aria-live="polite"></div>
 </section>
@@ -432,7 +432,7 @@ async function loadCustomerOrders(){
  const box=el('customerOrders');box.textContent='جاري تحميل الطلبات...';
  const {data,error}=await db.from('store_orders').select('*').order('created_at',{ascending:false});
  if(error){box.textContent='تعذر تحميل طلباتك.';return}
- box.innerHTML=(data||[]).map(o=>{
+ const rendered=(data||[]).map(o=>{
   let actions='';
   if(o.status==='pending_review')actions+='<button class="danger" type="button" onclick="cancelCustomerStoreOrder(\''+o.id+'\')">إلغاء الطلب</button>';
   if(o.status==='awaiting_customer_confirmation')actions+='<button onclick="confirmStoreOrder('+JSON.stringify(o.id)+')">تأكيد الإجمالي</button>';
@@ -544,7 +544,7 @@ function showPage(page){
  window.scrollTo({top:0,behavior:'smooth'});
 }
 function showAdmin(){if(currentUser&&!currentAdminRole){showPage('account');return;}showPage('admin');adminTab('overview');loadStoreMetrics();}
-function adminTab(tab){const allowed=['overview','products','requests','orders','payments','admins'];if(!allowed.includes(tab))tab='overview';if(tab==='admins'&&currentAdminRole!=='full')tab='overview';document.querySelectorAll('[data-admin-view]').forEach(v=>v.classList.toggle('active',v.dataset.adminView===tab));document.querySelectorAll('#adminNav [data-admin-tab]').forEach(b=>b.classList.toggle('active',b.dataset.adminTab===tab));document.querySelectorAll('[data-full-only="true"]').forEach(b=>b.classList.toggle('hidden',currentAdminRole!=='full'));if(tab==='orders')loadStoreOrders();}
+function adminTab(tab){const allowed=['overview','products','requests','orders','neworders','payments','admins'];if(!allowed.includes(tab))tab='overview';if(tab==='admins'&&currentAdminRole!=='full')tab='overview';document.querySelectorAll('[data-admin-view]').forEach(v=>v.classList.toggle('active',v.dataset.adminView===tab));document.querySelectorAll('#adminNav [data-admin-tab]').forEach(b=>b.classList.toggle('active',b.dataset.adminTab===tab));document.querySelectorAll('[data-full-only="true"]').forEach(b=>b.classList.toggle('hidden',currentAdminRole!=='full'));if(tab==='orders'||tab==='neworders')loadStoreOrders();}
 
 
 async function loadStoreMetrics(){if(!currentAdminRole)return;const box=el('storeMetrics');if(!box)return;box.innerHTML='<div class="notice">جاري تحميل الإحصائيات...</div>';const {data,error}=await db.rpc('admin_password_store_metrics');if(error){box.innerHTML='<div class="notice">إحصائيات المتجر تحتاج تجهيز قاعدة البيانات في الخطوة التالية.</div>';return;}const m=data||{};box.innerHTML=[['العملاء المسجلون',m.customers||0],['مشاهدات المنتجات',m.product_views||0],['قيمة المبيعات المؤكدة',money(m.confirmed_sales||0)],['المبالغ المحصلة',money(m.collected_sales||0)]].map(x=>'<div class="notice"><b>'+x[0]+'</b><h2>'+x[1]+'</h2></div>').join('');}
@@ -552,14 +552,13 @@ let storeOrderWatchTimer=null;
 let storeOrderWatchInitialized=false;
 let knownUnreviewedPaidOrders=new Set();
 function updateStoreOrderBadge(count){
- const badge=el('storeOrderCount');if(!badge)return;
- badge.textContent=String(count);badge.classList.toggle('hidden',!count);
+ ['storeOrderCount','newStoreOrderCount'].forEach(id=>{const badge=el(id);if(badge){badge.textContent=String(count);badge.classList.toggle('hidden',!count);}});
  const alert=el('adminOrderAlert');
- if(alert){alert.classList.toggle('hidden',!count);alert.textContent=count?'🔔 يوجد '+count+' طلب شراء جديد بانتظار مراجعة إيصال الدفع. افتح «طلبات الشراء» لمراجعته.':'لا توجد إيصالات دفع جديدة بانتظار المراجعة.';}
+ if(alert){alert.classList.toggle('hidden',!count);alert.textContent=count?'🔔 يوجد '+count+' طلب شراء وارد. افتح «الطلبات الجديدة» لمشاهدة كل الطلبات.':'لا توجد طلبات شراء واردة.';}
 }
 async function checkNewPaidStoreOrders(){
  if(!currentAdminRole)return;
- const {data,error}=await db.from('store_orders').select('id,payment_status,receipt_path,created_at').eq('payment_status','under_review').not('receipt_path','is',null).order('created_at',{ascending:false});
+ const {data,error}=await db.from('store_orders').select('id,payment_status,receipt_path,created_at').order('created_at',{ascending:false});
  if(error){console.warn('تعذر فحص طلبات الشراء الجديدة:',error.message);return;}
  const rows=data||[],nowIds=new Set(rows.map(o=>o.id));
  updateStoreOrderBadge(rows.length);
@@ -567,7 +566,7 @@ async function checkNewPaidStoreOrders(){
  const fresh=rows.filter(o=>!knownUnreviewedPaidOrders.has(o.id));
  knownUnreviewedPaidOrders=nowIds;
  if(fresh.length){
-  const msg='وصلك '+fresh.length+' طلب شراء جديد مع إيصال دفع للمراجعة.';
+  const msg='وصلك '+fresh.length+' طلب شراء جديد.';
   if('Notification'in window&&Notification.permission==='granted')new Notification('باسوورد - طلب شراء جديد',{body:msg});
   if(document.visibilityState==='visible')showMessage('adminMessage',msg,'success');
   if(document.querySelector('[data-admin-view="orders"]')?.classList.contains('active'))await loadStoreOrders();
@@ -591,9 +590,9 @@ async function enableOrderNotifications(){
 }
 async function loadStoreOrders(){
  if(!currentAdminRole)return;
- const box=el('storeOrdersAdmin');if(!box)return;box.textContent='جاري تحميل الطلبات...';
+ const boxes=['storeOrdersAdmin','newStoreOrdersAdmin'].map(el).filter(Boolean);if(!boxes.length)return;boxes.forEach(box=>box.textContent='جاري تحميل الطلبات...');
  const {data,error}=await db.from('store_orders').select('*,store_order_items(*)').order('created_at',{ascending:false});
- if(error){box.textContent='تعذر تحميل الطلبات: '+error.message;return}
+ if(error){boxes.forEach(box=>box.textContent='تعذر تحميل الطلبات: '+error.message);return}
  box.innerHTML=(data||[]).map(o=>{
   const items=(o.store_order_items||[]).map(i=>escapeHTML(i.product_name)+' × '+i.quantity+' ('+money(i.line_total)+')').join('، ');
   let buttons='';
@@ -601,6 +600,7 @@ async function loadStoreOrders(){
   if(o.receipt_path)buttons+='<button class="soft" type="button" data-admin-receipt="'+escapeHTML(o.receipt_path)+'">عرض الإيصال</button>';
   return '<div class="request"><b>طلب #'+escapeHTML(o.id)+'</b><div>العميل: '+escapeHTML(o.customer_name)+' — '+escapeHTML(o.phone)+'</div><div>العنوان: '+escapeHTML(o.village||'')+' '+escapeHTML(o.address||'استلام من المتجر')+'</div><div>المنتجات: '+items+'</div><div>المنتجات: '+money(o.subtotal)+' · التوصيل: '+(o.delivery_type==='pickup'?'لا يوجد': 'يُحصّل عند الاستلام')+' · المبلغ المحوّل المطلوب: '+money(o.subtotal)+'</div><div>الطلب: '+escapeHTML(o.status)+' · الدفع: '+escapeHTML(o.payment_status)+'</div>'+buttons+'</div>';
  }).join('')||'لا توجد طلبات شراء.';
+ boxes.forEach(box=>box.innerHTML=rendered);
 }
 async function setStoreOrderFee(id,fixed){
  const fee=typeof fixed==='number'?fixed:Number(el('fee_'+id)?.value);
