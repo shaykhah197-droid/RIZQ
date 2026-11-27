@@ -81,7 +81,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <nav>
 <button class="light" type="button" onclick="showPage('home')">الرئيسية</button>
 <button class="light" type="button" onclick="showPage('products')">المنتجات</button>
-<button class="light" type="button" onclick="showPage('repair')">طلب صيانة منزلية</button>
+<button class="light" type="button" onclick="showAdminRequests()">الطلبات الجديدة <span id="serviceRequestCount" class="request-count" title="عدد طلبات الصيانة">0</span></button>
 <a class="btn light" href="https://wa.me/201004575343" target="_blank" rel="noopener">واتساب 01004575343</a>
 <button class="light" type="button" onclick="showAdmin()">إدارة المتجر</button>
 </nav>
@@ -216,7 +216,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <button type="submit" id="saveProductButton">حفظ المنتج</button>
 <button type="button" class="soft" onclick="resetProductForm()">إلغاء التعديل</button>
 </form>
-<h3 class="requests-heading"><span>الطلبات الجديدة</span><span id="serviceRequestCount" class="request-count" title="إجمالي طلبات الصيانة المنزلية">0</span></h3>
+<h3>طلبات الصيانة المنزلية</h3>
 <div id="serviceRequests">جاري التحميل...</div>
 <h3>استفسارات المنتجات</h3>
 <div id="productInquiries">جاري التحميل...</div>
@@ -333,6 +333,7 @@ function showPage(page){
  window.scrollTo({top:0,behavior:'smooth'});
 }
 function showAdmin(){showPage('admin');}
+function showAdminRequests(){showAdmin();if(currentUser)setTimeout(()=>el('serviceRequests')?.scrollIntoView({behavior:'smooth',block:'start'}),150);}
 async function checkSession(){
  const {data}=await db.auth.getSession();
  currentUser=data.session?.user||null;
