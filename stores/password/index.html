@@ -439,6 +439,47 @@ function showPage(page){
 function showAdmin(){showPage('admin');adminTab('overview');}
 function adminTab(tab){const allowed=['overview','products','requests','orders','admins'];if(!allowed.includes(tab))tab='overview';if(tab==='admins'&&currentAdminRole!=='full')tab='overview';document.querySelectorAll('[data-admin-view]').forEach(v=>v.classList.toggle('active',v.dataset.adminView===tab));document.querySelectorAll('#adminNav [data-admin-tab]').forEach(b=>b.classList.toggle('active',b.dataset.adminTab===tab));document.querySelectorAll('[data-full-only="true"]').forEach(b=>b.classList.toggle('hidden',currentAdminRole!=='full'));}
 
+
+async function loadStoreOrders(){
+ if(!currentAdminRole)return;
+ const box=el('storeOrdersAdmin');if(!box)return;box.textContent='جاري تحميل الطلبات...';
+ const {data,error}=await db.from('store_orders').select('*,store_order_items(*)').order('created_at',{ascending:false});
+ if(error){box.textContent='تعذر تحميل الطلبات: '+error.message;return}
+ box.innerHTML=(data||[]).map(o=>{
+  const items=(o.store_order_items||[]).map(i=>escapeHTML(i.product_name)+' × '+i.quantity+' ('+money(i.line_total)+')').join('، ');
+  let buttons='';
+  if(o.status==='pending_review'&&o.delivery_type==='delivery')buttons='<label>رسوم التوصيل</label><input id="fee_'+o.id+'" type="number" min="0" step="0.01"><button onclick="setStoreOrderFee('+JSON.stringify(o.id)+')">حفظ الرسوم وإرسال الإجمالي</button>';
+  if(o.status==='pending_review'&&o.delivery_type==='pickup')buttons='<button onclick="setStoreOrderFee('+JSON.stringify(o.id)+',0)">تأكيد الاستلام من المتجر</button>';
+  if(o.payment_status==='under_review')buttons+='<button onclick="reviewStorePayment('+JSON.stringify(o.id)+',\'approved\')">اعتماد الدفع</button><button class="danger" onclick="reviewStorePayment('+JSON.stringify(o.id)+',\'rejected\')">رفض الإيصال</button>';
+  if(o.receipt_path)buttons+='<button class="soft" onclick="openStoreReceipt('+JSON.stringify(o.receipt_path)+')">عرض الإيصال</button>';
+  return '<div class="request"><b>طلب #'+escapeHTML(o.id)+'</b><div>العميل: '+escapeHTML(o.customer_name)+' — '+escapeHTML(o.phone)+'</div><div>العنوان: '+escapeHTML(o.village||'')+' '+escapeHTML(o.address||'استلام من المتجر')+'</div><div>المنتجات: '+items+'</div><div>المنتجات: '+money(o.subtotal)+' · التوصيل: '+(o.delivery_fee===null?'لم يحدد':money(o.delivery_fee))+' · الإجمالي: '+(o.total===null?'لم يحدد':money(o.total))+'</div><div>الطلب: '+escapeHTML(o.status)+' · الدفع: '+escapeHTML(o.payment_status)+'</div>'+buttons+'</div>';
+ }).join('')||'لا توجد طلبات شراء.';
+}
+async function setStoreOrderFee(id,fixed){
+ const fee=typeof fixed==='number'?fixed:Number(el('fee_'+id)?.value);
+ if(!Number.isFinite(fee)||fee<0){alert('أدخل رسوم توصيل صحيحة.');return}
+ const {error}=await db.rpc('admin_set_delivery_fee',{p_order_id:id,p_delivery_fee:fee});
+ if(error){alert('تعذر حفظ الرسوم: '+error.message);return}await loadStoreOrders();
+}
+async function reviewStorePayment(id,decision){
+ const {error}=await db.rpc('admin_review_store_payment',{p_order_id:id,p_decision:decision});
+ if(error){alert('تعذر تحديث الدفع: '+error.message);return}await loadStoreOrders();
+}
+async function openStoreReceipt(path){
+ const {data,error}=await db.storage.from('payment-receipts').createSignedUrl(path,300);
+ if(error){alert('تعذر فتح الإيصال.');return}window.open(data.signedUrl,'_blank','noopener');
+}
+async function loadPaymentMethodsAdmin(){
+ const box=el('paymentMethodsAdmin');if(!box||!currentAdminRole)return;
+ const {data,error}=await db.from('store_payment_methods').select('*').order('sort_order');
+ if(error){box.textContent='تعذر تحميل طرق الدفع.';return}
+ box.innerHTML=(data||[]).map(m=>'<form class="request" onsubmit="saveStorePaymentMethod(event,\''+m.code+'\')"><b>'+escapeHTML(m.provider_name)+'</b><label>اسم صاحب الحساب</label><input name="account_name" value="'+escapeHTML(m.account_name||'')+'"><label>رقم الحساب / المحفظة</label><input name="account_number" value="'+escapeHTML(m.account_number||'')+'"><label>تعليمات التحويل</label><textarea name="instructions">'+escapeHTML(m.instructions||'')+'</textarea><label><input name="enabled" type="checkbox" '+(m.enabled?'checked':'')+' style="width:auto"> تفعيل الطريقة</label><button type="submit">حفظ</button></form>').join('');
+}
+async function saveStorePaymentMethod(event,code){
+ event.preventDefault();if(!currentAdminRole)return;const f=event.currentTarget;
+ const {error}=await db.from('store_payment_methods').update({account_name:f.account_name.value.trim(),account_number:f.account_number.value.trim(),instructions:f.instructions.value.trim(),enabled:f.enabled.checked}).eq('code',code);
+ if(error){alert('تعذر حفظ البيانات: '+error.message);return}alert('تم الحفظ.');await loadPaymentMethodsAdmin();
+}
 async function showRequestsPage(){showPage('requests');const content=el('newRequestsContent');if(!currentUser){content.innerHTML='<div class="request">سجّل دخول المدير أولًا لعرض الطلبات.</div>';return;}content.innerHTML='<div class="request">جاري تحميل الطلبات...</div>';try{const {data,error}=await db.from('service_requests').select('*').order('created_at',{ascending:false});if(error)throw error;const rows=data||[];el('serviceRequestCount').textContent=String(rows.length);content.innerHTML=rows.length?rows.map(r=>'<div class="request"><b>'+escapeHTML(r.customer_name||'')+'</b> — '+escapeHTML(r.customer_phone||'')+'<div>'+escapeHTML(r.service_type||'')+' · '+escapeHTML(r.address||'')+'</div><p>'+escapeHTML(r.problem_description||'')+'</p><span class="status">'+escapeHTML(r.status||'new')+'</span><div class="actions"><button class="soft" onclick="updateRequest(\'service_requests\','+Number(r.id)+')">تحديث الحالة</button></div></div>').join(''):'<div class="request">لا توجد طلبات جديدة.</div>';}catch(error){content.innerHTML='<div class="request" style="color:#a52d2d">تعذر تحميل الطلبات: '+escapeHTML(error.message||'خطأ غير معروف')+'</div>';}}
 async function checkSession(){
  const {data}=await db.auth.getSession();
@@ -556,6 +597,7 @@ async function loadAdminData(){
  products=prod||[];
  await loadProducts();
  await loadRequests();
+ await loadStoreOrders();await loadPaymentMethodsAdmin();
 }
 async function loadRequests(){
  const {data:services,error:sError}=await db.from('service_requests').select('*').order('created_at',{ascending:false});
