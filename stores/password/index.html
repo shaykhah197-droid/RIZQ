@@ -233,7 +233,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 </form>
 </div>
 <div id="dashboard" class="hidden">
-<div class="notice">أهلًا بك في لوحة إدارة باسوورد. اختار القسم اللي عايز تشتغل عليه.</div><div class="admin-nav" id="adminNav"><button type="button" data-admin-tab="overview" onclick="adminTab('overview')"><span>🏠</span>الرئيسية<small>ملخص واختصارات</small></button><button type="button" data-admin-tab="products" onclick="adminTab('products')"><span>📦</span>المنتجات<small>إضافة وتعديل المنتجات</small></button><button type="button" data-admin-tab="orders" onclick="adminTab('orders')"><span>🛒</span>طلبات الشراء<small>الطلبات والدفع</small></button><button type="button" data-admin-tab="payments" onclick="adminTab('payments')"><span>💳</span>طرق الدفع<small>أرقام إنستا باي والمحافظ</small></button><button type="button" data-admin-tab="requests" onclick="adminTab('requests')"><span>📋</span>الطلبات والاستفسارات<small>متابعة وتحديث الحالات</small></button><button type="button" data-admin-tab="admins" data-full-only="true" onclick="adminTab('admins')"><span>👥</span>إدارة المديرين<small>الصلاحيات والحسابات</small></button></div><div id="adminOverview" class="admin-view active"><div class="admin-section-card"><h3>إحصائيات المتجر</h3><div id="storeMetrics" class="grid"><div class="notice">جاري تحميل الإحصائيات...</div></div><button class="light" type="button" onclick="loadStoreMetrics()">تحديث الإحصائيات</button></div><div class="admin-section-card"><h3>لوحة التحكم</h3><p class="muted">كل أدوات الإدارة منظمة في أقسام مستقلة، من غير تمرير طويل.</p><div class="admin-quick"><button type="button" onclick="adminTab('products')">📦<br>إدارة المنتجات</button><button type="button" onclick="adminTab('requests')">📋<br>الطلبات والاستفسارات</button><button type="button" data-full-only="true" onclick="adminTab('admins')">👥<br>إدارة المديرين</button><button type="button" onclick="loadAdminData()">🔄<br>تحديث البيانات</button></div></div></div>
+<div class="notice">أهلًا بك في لوحة إدارة باسوورد. اختار القسم اللي عايز تشتغل عليه.</div><div class="admin-nav" id="adminNav"><button type="button" data-admin-tab="overview" onclick="adminTab('overview')"><span>📊</span>لوحة التحكم<small>ملخص وإحصائيات المتجر</small></button><button type="button" data-admin-tab="products" onclick="adminTab('products')"><span>📦</span>المنتجات<small>إضافة وتعديل المنتجات</small></button><button type="button" data-admin-tab="orders" onclick="adminTab('orders')"><span>🛒</span>طلبات الشراء<small>الطلبات والدفع</small></button><button type="button" data-admin-tab="payments" onclick="adminTab('payments')"><span>💳</span>طرق الدفع<small>أرقام إنستا باي والمحافظ</small></button><button type="button" data-admin-tab="requests" onclick="adminTab('requests')"><span>📋</span>الطلبات والاستفسارات<small>متابعة وتحديث الحالات</small></button><button type="button" data-admin-tab="admins" data-full-only="true" onclick="adminTab('admins')"><span>👥</span>إدارة المديرين<small>الصلاحيات والحسابات</small></button></div><div id="adminOverview" class="admin-view active"><div class="admin-section-card"><h3>📊 ملخص أداء المتجر</h3><p class="muted">هنا تتابع الأرقام والإحصائيات فقط. لإضافة المنتجات ومتابعة الطلبات وتعديل طرق الدفع، استخدم أقسام إدارة المتجر بالأعلى.</p><div id="storeMetrics" class="grid"><div class="notice">جاري تحميل الإحصائيات...</div></div><button class="light" type="button" onclick="loadStoreMetrics()">🔄 تحديث الإحصائيات</button></div></div>
 <div id="adminManagement" class="panel admin-view hidden" data-admin-view="admins">
 <h3>👥 إدارة المديرين</h3>
 <p class="muted">اختر نوع الصلاحية قبل إضافة المدير. يجب أن يكون لديه حساب مسجل مسبقًا في المتجر.</p>
@@ -384,7 +384,7 @@ el('customerLoginForm').addEventListener('submit',async e=>{
  btn.disabled=false;
  if(error){showMessage('customerLoginMessage','تعذر الدخول. تأكد من كلمة المرور وتأكيد البريد الإلكتروني.','err');return}
  currentUser=data.user;await loadAdminRole();updateAdminView();
- if(currentAdminRole){showPage('admin');await loadAdminData();adminTab('overview')}
+ if(currentAdminRole){showPage('admin');await loadAdminData();adminTab('overview');await loadStoreMetrics()}
  else{showPage('account');renderAccount()}
 });
 async function changeCustomerPassword(){
@@ -506,7 +506,7 @@ function showPage(page){
  document.querySelectorAll('.page').forEach(section=>section.classList.toggle('active',section.id===page));
  window.scrollTo({top:0,behavior:'smooth'});
 }
-function showAdmin(){if(currentUser&&!currentAdminRole){showPage('account');return;}showPage('admin');adminTab('overview');}
+function showAdmin(){if(currentUser&&!currentAdminRole){showPage('account');return;}showPage('admin');adminTab('overview');loadStoreMetrics();}
 function adminTab(tab){const allowed=['overview','products','requests','orders','payments','admins'];if(!allowed.includes(tab))tab='overview';if(tab==='admins'&&currentAdminRole!=='full')tab='overview';document.querySelectorAll('[data-admin-view]').forEach(v=>v.classList.toggle('active',v.dataset.adminView===tab));document.querySelectorAll('#adminNav [data-admin-tab]').forEach(b=>b.classList.toggle('active',b.dataset.adminTab===tab));document.querySelectorAll('[data-full-only="true"]').forEach(b=>b.classList.toggle('hidden',currentAdminRole!=='full'));}
 
 
