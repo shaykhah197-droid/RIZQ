@@ -376,10 +376,11 @@ el('productForm').addEventListener('submit',async e=>{
  const id=el('editId').value;
  const saveBtn=el('saveProductButton');saveBtn.disabled=true;saveBtn.textContent='جاري الحفظ...';
  let imageUrl=el('pImageUrl').value.trim()||null;
- let galleryUrls=[];
+ const oldProduct=id?products.find(p=>Number(p.id)===Number(id)):null;
+ let galleryUrls=oldProduct&&Array.isArray(oldProduct.gallery_urls)?[...oldProduct.gallery_urls]:[];
  try{
   const mainFile=el('pImageFile').files[0];
-  if(mainFile&&!imageUrl)imageUrl=await uploadProductImage(mainFile);
+  if(mainFile)imageUrl=await uploadProductImage(mainFile);
   const extraFiles=[...el('pGalleryFiles').files];
   for(const file of extraFiles)galleryUrls.push(await uploadProductImage(file));
  }catch(uploadError){
