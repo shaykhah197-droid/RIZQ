@@ -661,7 +661,7 @@ async function showMaintenanceRequestsPage(){
   if(error)throw error;
   const rows=data||[];
   const badge=el('serviceRequestCount');if(badge){badge.textContent=String(rows.length);badge.classList.toggle('hidden',!rows.length);}
-  content.innerHTML=rows.length?rows.map(r=>'<div class="request"><b>'+escapeHTML(r.customer_name||'')+'</b> — '+escapeHTML(r.customer_phone||'')+'<div>'+escapeHTML(r.service_type||'')+' · '+escapeHTML(r.address||'')+'</div><p>'+escapeHTML(r.problem_description||'')+'</p><span class="status">'+escapeHTML(r.status||'')+'</span><div class="actions"><button class="soft" type="button" onclick="updateRequest(\\'service_requests\\','+Number(r.id)+')">تحديث الحالة</button></div></div>').join(''):'<div class="request">لا توجد طلبات صيانة حتى الآن.</div>';
+  content.innerHTML=rows.length?rows.map(r=>'<div class="request"><b>'+escapeHTML(r.customer_name||'')+'</b> — '+escapeHTML(r.customer_phone||'')+'<div>'+escapeHTML(r.service_type||'')+' · '+escapeHTML(r.address||'')+'</div><p>'+escapeHTML(r.problem_description||'')+'</p><span class="status">'+escapeHTML(r.status||'')+'</span><div class="actions"><button class="soft" type="button" onclick="updateRequest(&quot;service_requests&quot;,'+Number(r.id)+')">تحديث الحالة</button></div></div>').join(''):'<div class="request">لا توجد طلبات صيانة حتى الآن.</div>';
  }catch(error){content.innerHTML='<div class="request" style="color:#a52d2d">تعذر تحميل طلبات الصيانة: '+escapeHTML(error.message||'خطأ غير معروف')+'</div>';}
 }
 async function showRequestsPage(){
