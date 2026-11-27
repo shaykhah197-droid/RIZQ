@@ -82,7 +82,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <nav>
 <button class="light" type="button" onclick="showPage('home')">الرئيسية</button>
 <button class="light" type="button" onclick="showPage('products')">المنتجات</button>
-<div class="requests-menu"><button class="light" type="button" onclick="toggleAdminRequests()">الطلبات الجديدة <span id="serviceRequestCount" class="request-count" title="عدد الطلبات">0</span></button><div id="adminRequestsDropdown" class="requests-dropdown hidden"><h3>الطلبات الجديدة</h3><div id="quickServiceRequests">اضغط لعرض الطلبات.</div></div></div>
+<button class="light" type="button" onclick="showRequestsPage()">الطلبات الجديدة <span id="serviceRequestCount" class="request-count" title="عدد الطلبات">0</span></button>
 <a class="btn light" href="https://wa.me/201004575343" target="_blank" rel="noopener">واتساب 01004575343</a>
 <button class="light" type="button" onclick="showAdmin()">إدارة المتجر</button>
 </nav>
@@ -163,6 +163,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 </div>
 </section>
 <div id="productDetail" class="product-detail hidden" onclick="if(event.target===this)closeProductDetail()"></div>
+<section id="requests" class="panel page"><button class="light back-btn" type="button" onclick="showPage('home')">← الرئيسية</button><h2>الطلبات الجديدة</h2><div id="newRequestsContent">جاري تحميل الطلبات...</div></section>
 <section id="repair" class="service page">
 <button class="light back-btn" type="button" onclick="showPage(\'home\')">← الرئيسية</button>
 <h2>🧰 طلب صيانة منزلية</h2>
@@ -334,7 +335,7 @@ function showPage(page){
  window.scrollTo({top:0,behavior:'smooth'});
 }
 function showAdmin(){showPage('admin');}
-async function toggleAdminRequests(){const panel=el('adminRequestsDropdown');const content=el('quickServiceRequests');const opening=panel.classList.contains('hidden');panel.classList.toggle('hidden');if(!opening)return;if(!currentUser){content.innerHTML='<div class="request" style="color:#a52d2d">سجّل دخول المدير أولًا لعرض الطلبات.</div>';return;}content.innerHTML='<div class="request">جاري تحميل الطلبات...</div>';try{const {data,error}=await db.from('service_requests').select('*').order('created_at',{ascending:false});if(error)throw error;const rows=data||[];el('serviceRequestCount').textContent=String(rows.length);content.innerHTML=rows.length?rows.map(r=>'<div class="request"><b>'+escapeHTML(r.customer_name||'')+'</b> — '+escapeHTML(r.customer_phone||'')+'<div>'+escapeHTML(r.service_type||'')+' · '+escapeHTML(r.address||'')+'</div><p>'+escapeHTML(r.problem_description||'')+'</p><span class="status">'+escapeHTML(r.status||'new')+'</span><div class="actions"><button class="soft" onclick="updateRequest(\'service_requests\','+Number(r.id)+')">تحديث الحالة</button></div></div>').join(''):'<div class="request">لا توجد طلبات جديدة.</div>';}catch(error){content.innerHTML='<div class="request" style="color:#a52d2d">تعذر تحميل الطلبات: '+escapeHTML(error.message||'خطأ غير معروف')+'</div>';}}
+async function showRequestsPage(){showPage('requests');const content=el('newRequestsContent');if(!currentUser){content.innerHTML='<div class="request">سجّل دخول المدير أولًا لعرض الطلبات.</div>';return;}content.innerHTML='<div class="request">جاري تحميل الطلبات...</div>';try{const {data,error}=await db.from('service_requests').select('*').order('created_at',{ascending:false});if(error)throw error;const rows=data||[];el('serviceRequestCount').textContent=String(rows.length);content.innerHTML=rows.length?rows.map(r=>'<div class="request"><b>'+escapeHTML(r.customer_name||'')+'</b> — '+escapeHTML(r.customer_phone||'')+'<div>'+escapeHTML(r.service_type||'')+' · '+escapeHTML(r.address||'')+'</div><p>'+escapeHTML(r.problem_description||'')+'</p><span class="status">'+escapeHTML(r.status||'new')+'</span><div class="actions"><button class="soft" onclick="updateRequest(\'service_requests\','+Number(r.id)+')">تحديث الحالة</button></div></div>').join(''):'<div class="request">لا توجد طلبات جديدة.</div>';}catch(error){content.innerHTML='<div class="request" style="color:#a52d2d">تعذر تحميل الطلبات: '+escapeHTML(error.message||'خطأ غير معروف')+'</div>';}}
 async function checkSession(){
  const {data}=await db.auth.getSession();
  currentUser=data.session?.user||null;
