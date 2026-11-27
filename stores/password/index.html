@@ -183,7 +183,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <label>كلمة المرور</label><input id="customerPassword" type="password" required>
 <button id="customerLoginButton" type="submit">دخول</button><div id="customerLoginMessage"></div><button class="light" type="button" onclick="sendPasswordReset()">نسيت كلمة المرور؟ استعادة كلمة المرور</button><div id="passwordResetMessage"></div>
 </form></div>
-<div id="customerAccount" class="hidden"><div id="customerWelcome" class="notice"></div><div class="actions"><button type="button" class="light" onclick="toggleCustomerProfile()">تعديل بياناتي</button><button type="button" class="danger" onclick="customerLogout()">تسجيل الخروج</button></div><form id="customerProfileForm" class="admin-section-card hidden"><h3>تعديل بياناتي</h3><label>الاسم</label><input id="profileFullName" maxlength="150" required><label>رقم الهاتف</label><input id="profilePhone" maxlength="25" inputmode="tel"><label>البريد الإلكتروني</label><input id="profileEmail" type="email" disabled><button type="submit">حفظ البيانات</button><div id="profileMessage"></div></form><div id="passwordRecoveryPanel" class="notice hidden"><h3>تعيين كلمة مرور جديدة</h3><form id="passwordRecoveryForm"><label>كلمة المرور الجديدة</label><input id="newCustomerPassword" type="password" minlength="6" required><label>تأكيد كلمة المرور</label><input id="newCustomerPassword2" type="password" minlength="6" required><button type="submit">حفظ كلمة المرور الجديدة</button><div id="passwordRecoveryMessage"></div></form></div></div>
+<div id="customerAccount" class="hidden"><div id="customerWelcome" class="notice"></div><div class="actions"><button type="button" class="light" onclick="toggleCustomerProfile()">تعديل بياناتي</button><button type="button" class="danger" onclick="customerLogout()">تسجيل الخروج</button></div><form id="customerProfileForm" class="admin-section-card hidden"><h3>تعديل بياناتي</h3><label>الاسم</label><input id="profileFullName" maxlength="150" required><label>رقم الهاتف</label><input id="profilePhone" maxlength="25" inputmode="tel"><label>البريد الإلكتروني</label><input id="profileEmail" type="email" disabled><button type="submit">حفظ البيانات</button><div id="profileMessage"></div><hr><h3>تغيير كلمة المرور</h3><label>كلمة المرور الحالية</label><input id="profileCurrentPassword" type="password" autocomplete="current-password"><label>كلمة المرور الجديدة</label><input id="profileNewPassword" type="password" minlength="8" autocomplete="new-password"><label>تأكيد كلمة المرور الجديدة</label><input id="profileConfirmPassword" type="password" minlength="8" autocomplete="new-password"><button type="button" onclick="changeCustomerPassword()">تغيير كلمة المرور</button><div id="profilePasswordMessage"></div></form><div id="passwordRecoveryPanel" class="notice hidden"><h3>تعيين كلمة مرور جديدة</h3><form id="passwordRecoveryForm"><label>كلمة المرور الجديدة</label><input id="newCustomerPassword" type="password" minlength="6" required><label>تأكيد كلمة المرور</label><input id="newCustomerPassword2" type="password" minlength="6" required><button type="submit">حفظ كلمة المرور الجديدة</button><div id="passwordRecoveryMessage"></div></form></div></div>
 </section>
 <section id="myOrders" class="panel page"><button class="light back-btn" type="button" onclick="showPage('home')">← الرئيسية</button><h2>📦 طلباتي وحالة الدفع</h2><div id="customerOrders"></div></section>
 <section id="checkout" class="panel page">
@@ -387,6 +387,19 @@ el('customerLoginForm').addEventListener('submit',async e=>{
  if(currentAdminRole){showPage('admin');await loadAdminData();adminTab('overview')}
  else{showPage('account');renderAccount()}
 });
+async function changeCustomerPassword(){
+ if(!currentUser||currentAdminRole)return;
+ const current=el('profileCurrentPassword').value,newPass=el('profileNewPassword').value,confirmPass=el('profileConfirmPassword').value;
+ if(!current||!newPass||!confirmPass){showMessage('profilePasswordMessage','اكتب كلمة المرور الحالية والجديدة وتأكيدها.','err');return;}
+ if(newPass.length<8){showMessage('profilePasswordMessage','كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف.','err');return;}
+ if(newPass!==confirmPass){showMessage('profilePasswordMessage','تأكيد كلمة المرور غير مطابق.','err');return;}
+ const {error:verifyError}=await db.auth.signInWithPassword({email:currentUser.email,password:current});
+ if(verifyError){showMessage('profilePasswordMessage','كلمة المرور الحالية غير صحيحة.','err');return;}
+ const {error}=await db.auth.updateUser({password:newPass});
+ if(error){showMessage('profilePasswordMessage','تعذر تغيير كلمة المرور: '+error.message,'err');return;}
+ el('profileCurrentPassword').value='';el('profileNewPassword').value='';el('profileConfirmPassword').value='';
+ showMessage('profilePasswordMessage','تم تغيير كلمة المرور بنجاح.','success');
+}
 async function customerLogout(){await db.auth.signOut();currentUser=null;currentAdminRole=null;updateAdminView();showPage('account');renderAccount()}
 async function loadCustomerOrders(){
  if(!currentUser||currentAdminRole)return;
