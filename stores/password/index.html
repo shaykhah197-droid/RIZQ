@@ -426,7 +426,7 @@ async function loadAdminData(){
  if(prodError){showMessage('adminMessage','تعذر تحميل بيانات الإدارة. تأكد من حساب المدير وصلاحياته.','err');return}
  products=prod||[];
  el('adminProducts').innerHTML=products.map(p=>`
- <div class="admin-product"><div><b>${escapeHTML(p.name)}</b><div class="muted">${money(p.price)} · ${p.available?'متوفر':'غير متوفر'}</div></div>
+ <div class="admin-product"><div style="display:flex;align-items:center;gap:12px;min-width:0"><div style="width:76px;height:64px;flex:0 0 76px;background:#f1f7f3;border-radius:9px;display:grid;place-items:center;overflow:hidden"><img src="${escapeHTML(p.image_url||'')}" alt="${escapeHTML(p.name)}" style="width:100%;height:100%;object-fit:contain;padding:4px" onerror="this.style.display='none';this.nextElementSibling.classList.remove('hidden')"><span class="hidden">${escapeHTML(p.icon||'💻')}</span></div><div><b>${escapeHTML(p.name)}</b><div class="muted">${money(p.price)} · ${p.available?'متوفر':'غير متوفر'}</div></div></div>
  <div class="actions"><button class="admin-detail-btn" onclick="showAdminProductDetail(${Number(p.id)})">التفاصيل</button><button class="soft" onclick="editProduct(${Number(p.id)})">تعديل</button><button class="danger" onclick="deleteProduct(${Number(p.id)})">حذف</button></div></div>`).join('')||'لا توجد منتجات.';
  await loadProducts();
  await loadRequests();
