@@ -704,7 +704,7 @@ function isStoreOrderUnacted(o){const s=String(o.status||'').toLowerCase(),p=Str
 async function showMaintenanceRequestsPage(){
  if(!currentAdminRole){showPage(currentUser?'account':'admin');return;}showPage('maintenanceRequests');if(!maintenanceRequestDay)maintenanceRequestDay=cairoDateValue();const di=el('maintenanceRequestDate');if(di)di.value=maintenanceRequestDay;const content=el('maintenanceRequestsContent');content.innerHTML='<div class="request">جاري تحميل طلبات الصيانة...</div>';
  try{const {data,error}=await db.from('service_requests').select('*').order('created_at',{ascending:false});if(error)throw error;const all=data||[],rows=all.filter(r=>requestDateInCairo(r.created_at)===maintenanceRequestDay);const badge=el('serviceRequestCount');if(badge){badge.textContent=String(all.length);badge.classList.toggle('hidden',!all.length);}
- content.innerHTML=rows.length?rows.map(r=>'<div class="request"><b>'+escapeHTML(r.customer_name||'')+'</b> — '+escapeHTML(r.customer_phone||'')+'<div>'+escapeHTML(r.service_type||'')+' · '+escapeHTML(r.address||'')+'</div><p>'+escapeHTML(r.problem_description||'')+'</p><span class="status">'+escapeHTML(r.status||'')+'</span><div class="actions"><button class="soft" type="button" onclick="updateRequest(&quot;service_requests&quot;,'+Number(r.id)+')">تحديث الحالة</button></div></div>').join(''):'<div class="request">لا توجد طلبات صيانة في هذا التاريخ.</div>';
+ content.innerHTML=rows.length?rows.map(r=>'<div class="request"><b>'+escapeHTML(r.customer_name||'')+'</b> — '+escapeHTML(r.customer_phone||'')+'<div>'+escapeHTML(r.service_type||'')+' · '+escapeHTML(r.address||'')+'</div><p>'+escapeHTML(r.problem_description||'')+'</p><span class="status">'+escapeHTML(r.status||'')+'</span>'+(r.rejection_reason?'<p class="muted">سبب الرفض: '+escapeHTML(r.rejection_reason)+'</p>':'')+(r.status==='new'?'<div class="actions"><button type="button" onclick="reviewServiceRequest('+Number(r.id)+',\'accepted\')">قبول الطلب</button><button class="danger" type="button" onclick="reviewServiceRequest('+Number(r.id)+',\'rejected\')">رفض الطلب</button></div>':'')+'</div>').join(''):'<div class="request">لا توجد طلبات صيانة في هذا التاريخ.</div>';
  }catch(e){content.innerHTML='<div class="request" style="color:#a52d2d">تعذر تحميل طلبات الصيانة: '+escapeHTML(e.message||'خطأ غير معروف')+'</div>';}
 }
 async function showRequestsPage(){
@@ -928,6 +928,17 @@ async function removeStoreAdmin(email){
 }
 el('fullAdminForm').addEventListener('submit',async e=>{e.preventDefault();await addStoreAdmin(el('fullAdminEmail').value,'full');e.target.reset();});
 el('limitedAdminForm').addEventListener('submit',async e=>{e.preventDefault();await addStoreAdmin(el('limitedAdminEmail').value,'limited');e.target.reset();});
+async function reviewServiceRequest(id,decision){
+ if(!currentAdminRole||!id||!['accepted','rejected'].includes(decision))return;
+ let reason=null;
+ if(decision==='rejected'){reason=prompt('اكتب سبب رفض طلب الصيانة ليظهر في سجل الطلب:');if(reason===null)return;reason=reason.trim();if(!reason){alert('اكتب سبب الرفض أولًا.');return;}}
+ const patch={status:decision};
+ if(decision==='rejected')patch.rejection_reason=reason;else patch.rejection_reason=null;
+ const {error}=await db.from('service_requests').update(patch).eq('id',id);
+ if(error){alert('تعذر تحديث طلب الصيانة: '+error.message);return;}
+ if(el('maintenanceRequests')?.classList.contains('active'))await showMaintenanceRequestsPage();
+ await loadRequests();
+}
 async function updateRequest(table,id){
  const status=prompt('اكتب الحالة الجديدة: new أو contacted أو completed أو cancelled','contacted');
  if(!status)return;
